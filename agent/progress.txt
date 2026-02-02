@@ -195,3 +195,45 @@ This file tracks progress on the dash project features.
   - frontend/src/composables/useProm.spec.ts (new)
 - Blockers/notes for next iteration:
   - None. Ready to proceed with PromQL Query Editor.
+
+## UI - PromQL Query Editor - 2026-02-02
+- What was done:
+  - Added missing Prometheus query API endpoint to backend:
+    - GET /api/datasources/prometheus/query handler
+    - Accepts query, start, end, step parameters
+    - Returns JSON format with status, data, error
+    - Backend tests for parameter validation
+  - Created QueryEditor.vue component with:
+    - Textarea for PromQL input with monospace font
+    - "Run Query" button to test queries before saving
+    - Ctrl+Enter keyboard shortcut to run query
+    - Error display for invalid queries (from Prometheus API)
+    - Query results preview section showing:
+      - Number of series returned
+      - Metric labels extracted from results
+      - Table with metric, latest value, and data point count
+    - Loading state during query execution
+    - Clears results when query changes
+  - Integrated QueryEditor into PanelEditModal:
+    - Replaced JSON textarea with QueryEditor component
+    - Panel query now stored as { promql: "..." } format
+    - Query loaded from panel config when editing
+    - Works for both create and edit panel modes
+  - Added comprehensive tests:
+    - 16 tests for QueryEditor component
+    - 9 updated tests for PanelEditModal with QueryEditor integration
+    - All 122 frontend tests passing
+    - All backend tests passing
+- Files changed:
+  - backend/internal/handlers/prometheus.go (new)
+  - backend/internal/handlers/prometheus_test.go (new)
+  - backend/internal/models/datasource.go (new)
+  - backend/cmd/api/main.go - added Prometheus route
+  - backend/go.mod, go.sum - added Prometheus dependencies
+  - frontend/src/components/QueryEditor.vue (new)
+  - frontend/src/components/QueryEditor.spec.ts (new)
+  - frontend/src/components/PanelEditModal.vue - integrated QueryEditor
+  - frontend/src/components/PanelEditModal.spec.ts - updated tests
+- PR: (pending)
+- Blockers/notes for next iteration:
+  - None. Ready to proceed with Line Chart Component.

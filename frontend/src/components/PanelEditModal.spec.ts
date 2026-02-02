@@ -4,6 +4,9 @@ import PanelEditModal from './PanelEditModal.vue'
 import * as api from '../api/panels'
 
 vi.mock('../api/panels')
+vi.mock('../composables/useProm', () => ({
+  queryPrometheus: vi.fn()
+}))
 
 describe('PanelEditModal', () => {
   const dashboardId = 'dashboard-123'
@@ -18,7 +21,8 @@ describe('PanelEditModal', () => {
     })
     expect(wrapper.find('input#title').exists()).toBe(true)
     expect(wrapper.find('select#type').exists()).toBe(true)
-    expect(wrapper.find('textarea#query').exists()).toBe(true)
+    // QueryEditor component is now used instead of textarea
+    expect(wrapper.findComponent({ name: 'QueryEditor' }).exists()).toBe(true)
   })
 
   it('shows "Add Panel" title when creating new panel', () => {
@@ -62,14 +66,36 @@ describe('PanelEditModal', () => {
     expect(wrapper.text()).toContain('Title is required')
   })
 
-  it('shows error for invalid JSON in query', async () => {
+  it('saves panel with PromQL query from QueryEditor', async () => {
+    vi.mocked(api.createPanel).mockResolvedValue({
+      id: '123',
+      dashboard_id: dashboardId,
+      title: 'Panel with Query',
+      type: 'line_chart',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: { promql: 'up' },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    })
+
     const wrapper = mount(PanelEditModal, {
       props: { dashboardId }
     })
-    await wrapper.find('input#title').setValue('Test Panel')
-    await wrapper.find('textarea#query').setValue('invalid json')
+    await wrapper.find('input#title').setValue('Panel with Query')
+
+    // Simulate QueryEditor emitting an update
+    const queryEditor = wrapper.findComponent({ name: 'QueryEditor' })
+    await queryEditor.vm.$emit('update:modelValue', 'up')
+
     await wrapper.find('form').trigger('submit')
-    expect(wrapper.text()).toContain('Invalid JSON in query field')
+    await flushPromises()
+
+    expect(api.createPanel).toHaveBeenCalledWith(dashboardId, {
+      title: 'Panel with Query',
+      type: 'line_chart',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: { promql: 'up' }
+    })
   })
 
   it('calls createPanel API on submit when creating', async () => {
