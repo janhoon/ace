@@ -282,6 +282,7 @@ const previewData = computed(() => {
 .preview-table-wrapper {
   max-height: 200px;
   overflow-y: auto;
+  background: white;
 }
 
 .preview-table {
@@ -295,6 +296,7 @@ const previewData = computed(() => {
   padding: 0.5rem 0.75rem;
   text-align: left;
   border-bottom: 1px solid #e0e0e0;
+  color: #2c3e50;
 }
 
 .preview-table th {
@@ -302,6 +304,7 @@ const previewData = computed(() => {
   font-weight: 500;
   position: sticky;
   top: 0;
+  color: #2c3e50;
 }
 
 .preview-table tr:last-child td {
@@ -317,6 +320,7 @@ const previewData = computed(() => {
 
 .metric-cell code {
   font-size: 0.75rem;
+  color: #2c3e50;
 }
 
 .no-data {

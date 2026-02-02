@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { GridLayout, GridItem } from 'vue-grid-layout'
+import { GridLayout, GridItem } from 'vue3-grid-layout-next'
 import type { Dashboard } from '../types/dashboard'
 import type { Panel as PanelType, GridPos } from '../types/panel'
 import { getDashboard } from '../api/dashboards'

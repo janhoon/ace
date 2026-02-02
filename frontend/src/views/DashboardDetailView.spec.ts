@@ -58,8 +58,8 @@ vi.mock('../api/panels', () => ({
   updatePanel: vi.fn(() => Promise.resolve())
 }))
 
-// Mock vue-grid-layout
-vi.mock('vue-grid-layout', () => ({
+// Mock vue3-grid-layout-next
+vi.mock('vue3-grid-layout-next', () => ({
   GridLayout: {
     name: 'GridLayout',
     template: '<div class="grid-layout"><slot /></div>',
