@@ -5,6 +5,7 @@ import type { Panel } from '../types/panel'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useProm } from '../composables/useProm'
 import LineChart, { type ChartSeries } from './LineChart.vue'
+import PieChart, { type PieDataItem } from './PieChart.vue'
 
 const props = defineProps<{
   panel: Panel
@@ -50,6 +51,24 @@ const chartSeries = computed<ChartSeries[]>(() => {
   }))
 })
 
+// Transform chartData to PieChart data format (use latest value from each series)
+const pieData = computed<PieDataItem[]>(() => {
+  return chartData.value.series.map((s) => ({
+    name: s.name,
+    value: s.data.length > 0 ? s.data[s.data.length - 1].value : 0,
+  }))
+})
+
+// Extract pie chart config from panel query
+const pieConfig = computed(() => {
+  const query = props.panel.query || {}
+  return {
+    displayAs: (query.displayAs === 'donut' ? 'donut' : 'pie') as 'pie' | 'donut',
+    showLegend: query.showLegend !== false,
+    showLabels: query.showLabels !== false,
+  }
+})
+
 // Subscribe to time range refresh
 onRefresh(() => {
   if (promqlQuery.value) {
@@ -59,6 +78,7 @@ onRefresh(() => {
 
 const hasQuery = computed(() => !!promqlQuery.value)
 const isLineChart = computed(() => props.panel.type === 'line_chart')
+const isPieChart = computed(() => props.panel.type === 'pie')
 </script>
 
 <template>
@@ -90,6 +110,14 @@ const isLineChart = computed(() => props.panel.type === 'line_chart')
       </div>
       <div v-else-if="isLineChart && chartSeries.length > 0" class="chart-container">
         <LineChart :series="chartSeries" />
+      </div>
+      <div v-else-if="isPieChart && pieData.length > 0" class="chart-container">
+        <PieChart
+          :data="pieData"
+          :display-as="pieConfig.displayAs"
+          :show-legend="pieConfig.showLegend"
+          :show-labels="pieConfig.showLabels"
+        />
       </div>
       <div v-else-if="chartSeries.length === 0" class="panel-state panel-no-data">
         <BarChart3 :size="24" />

@@ -23,8 +23,22 @@ const panelType = ref(props.panel?.type || 'line_chart')
 const promqlQuery = ref(
   typeof props.panel?.query?.promql === 'string' ? props.panel.query.promql : ''
 )
+
+// Pie chart-specific options
+const pieDisplayAs = ref<'pie' | 'donut'>(
+  props.panel?.query?.displayAs === 'donut' ? 'donut' : 'pie'
+)
+const pieShowLegend = ref(
+  props.panel?.query?.showLegend !== false
+)
+const pieShowLabels = ref(
+  props.panel?.query?.showLabels !== false
+)
+
 const loading = ref(false)
 const error = ref<string | null>(null)
+
+const isPieType = computed(() => panelType.value === 'pie')
 
 async function handleSubmit() {
   if (!title.value.trim()) {
@@ -32,10 +46,21 @@ async function handleSubmit() {
     return
   }
 
-  // Build query config with promql
-  const query: Record<string, unknown> | undefined = promqlQuery.value.trim()
-    ? { promql: promqlQuery.value.trim() }
-    : undefined
+  // Build query config
+  const query: Record<string, unknown> = {}
+
+  if (promqlQuery.value.trim()) {
+    query.promql = promqlQuery.value.trim()
+  }
+
+  // Add pie chart-specific config if pie type is selected
+  if (isPieType.value) {
+    query.displayAs = pieDisplayAs.value
+    query.showLegend = pieShowLegend.value
+    query.showLabels = pieShowLabels.value
+  }
+
+  const finalQuery = Object.keys(query).length > 0 ? query : undefined
 
   loading.value = true
   error.value = null
@@ -45,14 +70,14 @@ async function handleSubmit() {
       await updatePanel(props.panel.id, {
         title: title.value.trim(),
         type: panelType.value,
-        query
+        query: finalQuery
       })
     } else {
       await createPanel(props.dashboardId, {
         title: title.value.trim(),
         type: panelType.value,
         grid_pos: { x: 0, y: 0, w: 6, h: 4 },
-        query
+        query: finalQuery
       })
     }
     emit('saved')
@@ -93,6 +118,7 @@ async function handleSubmit() {
             <select id="type" v-model="panelType" :disabled="loading">
               <option value="line_chart">Line Chart</option>
               <option value="bar_chart">Bar Chart</option>
+              <option value="pie">Pie Chart</option>
               <option value="gauge">Gauge</option>
               <option value="stat">Stat</option>
               <option value="table">Table</option>
@@ -106,6 +132,43 @@ async function handleSubmit() {
             v-model="promqlQuery"
             :disabled="loading"
           />
+        </div>
+
+        <!-- Pie Chart Configuration -->
+        <div v-if="isPieType" class="pie-config">
+          <div class="config-header">
+            <h4>Pie Chart Options</h4>
+          </div>
+
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label for="pie-display">Display Style</label>
+              <select id="pie-display" v-model="pieDisplayAs" :disabled="loading">
+                <option value="pie">Pie</option>
+                <option value="donut">Donut</option>
+              </select>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  v-model="pieShowLegend"
+                  :disabled="loading"
+                />
+                <span>Show Legend</span>
+              </label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  v-model="pieShowLabels"
+                  :disabled="loading"
+                />
+                <span>Show Labels</span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <div v-if="error" class="error-message">{{ error }}</div>
@@ -335,5 +398,55 @@ form {
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-primary-hover);
+}
+
+/* Pie chart configuration styles */
+.pie-config {
+  border-top: 1px solid var(--border-primary);
+  padding-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.config-header h4 {
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  align-items: end;
+}
+
+.form-row-3 .form-group {
+  margin-bottom: 0;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.checkbox-label span {
+  user-select: none;
 }
 </style>
