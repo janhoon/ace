@@ -169,7 +169,7 @@
       "TEST: Save query → panel stores query in config (database)",
       "TEST: Edit panel → query editor loads saved query"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Visualization - Line Chart Component",

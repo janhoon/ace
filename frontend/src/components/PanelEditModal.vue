@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import type { Panel } from '../types/panel'
 import { createPanel, updatePanel } from '../api/panels'
+import QueryEditor from './QueryEditor.vue'
 
 const props = defineProps<{
   panel?: Panel
@@ -17,7 +18,10 @@ const isEditing = computed(() => !!props.panel)
 
 const title = ref(props.panel?.title || '')
 const panelType = ref(props.panel?.type || 'line_chart')
-const queryStr = ref(props.panel?.query ? JSON.stringify(props.panel.query, null, 2) : '')
+// Extract promql from query config, or use empty string
+const promqlQuery = ref(
+  typeof props.panel?.query?.promql === 'string' ? props.panel.query.promql : ''
+)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -27,15 +31,10 @@ async function handleSubmit() {
     return
   }
 
-  let query: Record<string, unknown> | undefined
-  if (queryStr.value.trim()) {
-    try {
-      query = JSON.parse(queryStr.value.trim())
-    } catch {
-      error.value = 'Invalid JSON in query field'
-      return
-    }
-  }
+  // Build query config with promql
+  const query: Record<string, unknown> | undefined = promqlQuery.value.trim()
+    ? { promql: promqlQuery.value.trim() }
+    : undefined
 
   loading.value = true
   error.value = null
@@ -96,14 +95,10 @@ async function handleSubmit() {
         </div>
 
         <div class="form-group">
-          <label for="query">Query (JSON)</label>
-          <textarea
-            id="query"
-            v-model="queryStr"
-            placeholder='{"promql": "up"}'
-            rows="4"
+          <QueryEditor
+            v-model="promqlQuery"
             :disabled="loading"
-          ></textarea>
+          />
         </div>
 
         <div v-if="error" class="error">{{ error }}</div>
@@ -140,7 +135,9 @@ async function handleSubmit() {
   border-radius: 8px;
   padding: 0;
   width: 100%;
-  max-width: 480px;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal-header {
