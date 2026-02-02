@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Settings, Activity } from 'lucide-vue-next'
+import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
+
+const isExpanded = ref(true)
 
 interface NavItem {
   icon: typeof LayoutDashboard
@@ -26,12 +29,24 @@ function isActive(path: string): boolean {
 function navigate(path: string) {
   router.push(path)
 }
+
+function toggleSidebar() {
+  isExpanded.value = !isExpanded.value
+}
+
+defineExpose({ isExpanded })
 </script>
 
 <template>
-  <aside class="sidebar">
-    <div class="sidebar-logo">
-      <Activity class="logo-icon" :size="24" />
+  <aside class="sidebar" :class="{ expanded: isExpanded }">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <Activity class="logo-icon" :size="24" />
+        <span v-if="isExpanded" class="logo-text">Dash</span>
+      </div>
+      <button class="toggle-btn" @click="toggleSidebar" :title="isExpanded ? 'Collapse' : 'Expand'">
+        <component :is="isExpanded ? ChevronLeft : ChevronRight" :size="16" />
+      </button>
     </div>
 
     <nav class="sidebar-nav">
@@ -42,10 +57,11 @@ function navigate(path: string) {
           class="nav-item"
           :class="{ active: isActive(item.path) }"
           @click="navigate(item.path)"
-          :title="item.label"
+          :title="isExpanded ? undefined : item.label"
         >
           <component :is="item.icon" :size="20" />
-          <span class="nav-tooltip">{{ item.label }}</span>
+          <span v-if="isExpanded" class="nav-label">{{ item.label }}</span>
+          <span v-else class="nav-tooltip">{{ item.label }}</span>
         </button>
       </div>
 
@@ -56,10 +72,11 @@ function navigate(path: string) {
           class="nav-item"
           :class="{ active: isActive(item.path) }"
           @click="navigate(item.path)"
-          :title="item.label"
+          :title="isExpanded ? undefined : item.label"
         >
           <component :is="item.icon" :size="20" />
-          <span class="nav-tooltip">{{ item.label }}</span>
+          <span v-if="isExpanded" class="nav-label">{{ item.label }}</span>
+          <span v-else class="nav-tooltip">{{ item.label }}</span>
         </button>
       </div>
     </nav>
@@ -79,18 +96,64 @@ function navigate(path: string) {
   top: 0;
   bottom: 0;
   z-index: 50;
+  transition: width 0.2s ease;
 }
 
-.sidebar-logo {
+.sidebar.expanded {
+  width: 200px;
+}
+
+.sidebar-header {
   height: 56px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 0 0.5rem;
   border-bottom: 1px solid var(--border-primary);
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-left: 0.25rem;
 }
 
 .logo-icon {
   color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar:not(.expanded) .toggle-btn {
+  margin: 0 auto;
 }
 
 .sidebar-nav {
@@ -110,18 +173,25 @@ function navigate(path: string) {
 
 .nav-item {
   position: relative;
-  width: 40px;
   height: 40px;
-  margin: 0 auto;
+  margin: 0 0.5rem;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.75rem;
+  padding: 0 0.75rem;
   background: transparent;
   border: none;
   border-radius: 8px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.sidebar:not(.expanded) .nav-item {
+  width: 40px;
+  margin: 0 auto;
+  padding: 0;
+  justify-content: center;
 }
 
 .nav-item:hover {
@@ -144,6 +214,18 @@ function navigate(path: string) {
   height: 20px;
   background: var(--accent-primary);
   border-radius: 0 3px 3px 0;
+}
+
+.sidebar:not(.expanded) .nav-item.active::before {
+  left: -4px;
+}
+
+.nav-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-tooltip {
@@ -176,7 +258,7 @@ function navigate(path: string) {
   border-right-color: var(--border-secondary);
 }
 
-.nav-item:hover .nav-tooltip {
+.sidebar:not(.expanded) .nav-item:hover .nav-tooltip {
   opacity: 1;
   visibility: visible;
 }
