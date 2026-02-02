@@ -24,3 +24,18 @@ Starting work on authentication, SSO, and visualization features.
   - backend/internal/auth/password_test.go - password tests
   - backend/internal/handlers/auth_test.go - handler tests
 - PR: #14
+
+## Feature 6: Auth - Multi-Auth Linking - 2026-02-02
+- What was done:
+  - SSO flows already support automatic email-based linking (implemented in Google/Microsoft SSO)
+  - Added GET /api/auth/me/methods - Lists user's auth methods (password + SSO providers)
+  - Added DELETE /api/auth/me/methods/{id} - Unlinks an auth method
+  - Password treated as virtual auth method with id=uuid.Nil
+  - Protection against unlinking last auth method (returns 400 error)
+  - Password can be removed by passing uuid.Nil, leaving only SSO methods
+  - SSO methods stored in user_auth_methods table
+- Files changed:
+  - backend/internal/handlers/auth.go (added GetAuthMethods, UnlinkAuthMethod)
+  - backend/internal/handlers/auth_test.go (added tests)
+  - backend/cmd/api/main.go (added routes)
+- PR: https://github.com/janhoon/dash/pull/18

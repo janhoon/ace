@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/db"
@@ -324,5 +325,139 @@ func TestMeWithoutToken(t *testing.T) {
 
 	if meW.Code != http.StatusUnauthorized {
 		t.Errorf("Expected status 401 for missing token, got %d", meW.Code)
+	}
+}
+
+func TestGetAuthMethods(t *testing.T) {
+	if testPool == nil {
+		t.Skip("Database not available")
+	}
+
+	ctx := context.Background()
+
+	// Cleanup and register user with password
+	testPool.Exec(ctx, "DELETE FROM users WHERE email = 'testmethods@example.com'")
+
+	regBody := `{"email":"testmethods@example.com","password":"TestPassword123!","name":"Test Methods User"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	testAuthHandler.Register(regW, regReq)
+
+	var regResponse AuthResponse
+	json.NewDecoder(regW.Body).Decode(&regResponse)
+
+	// Get auth methods
+	methodsReq := httptest.NewRequest("GET", "/api/auth/me/methods", nil)
+	methodsReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
+	methodsW := httptest.NewRecorder()
+
+	wrappedHandler := auth.RequireAuth(testJWTManager, testAuthHandler.GetAuthMethods)
+	wrappedHandler(methodsW, methodsReq)
+
+	if methodsW.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", methodsW.Code, methodsW.Body.String())
+	}
+
+	var methods []AuthMethodResponse
+	if err := json.NewDecoder(methodsW.Body).Decode(&methods); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	// Should have at least password method
+	if len(methods) < 1 {
+		t.Error("Expected at least one auth method (password)")
+	}
+
+	// First method should be password
+	if len(methods) > 0 && methods[0].Provider != "password" {
+		t.Errorf("Expected first method to be password, got %s", methods[0].Provider)
+	}
+}
+
+func TestUnlinkLastAuthMethodFails(t *testing.T) {
+	if testPool == nil {
+		t.Skip("Database not available")
+	}
+
+	ctx := context.Background()
+
+	// Cleanup and register user with only password
+	testPool.Exec(ctx, "DELETE FROM users WHERE email = 'testunlink@example.com'")
+
+	regBody := `{"email":"testunlink@example.com","password":"TestPassword123!","name":"Test Unlink User"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	testAuthHandler.Register(regW, regReq)
+
+	var regResponse AuthResponse
+	json.NewDecoder(regW.Body).Decode(&regResponse)
+
+	// Try to unlink password (uuid.Nil)
+	unlinkReq := httptest.NewRequest("DELETE", "/api/auth/me/methods/00000000-0000-0000-0000-000000000000", nil)
+	unlinkReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
+	unlinkReq.SetPathValue("id", "00000000-0000-0000-0000-000000000000")
+	unlinkW := httptest.NewRecorder()
+
+	wrappedHandler := auth.RequireAuth(testJWTManager, testAuthHandler.UnlinkAuthMethod)
+	wrappedHandler(unlinkW, unlinkReq)
+
+	if unlinkW.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for unlinking last method, got %d: %s", unlinkW.Code, unlinkW.Body.String())
+	}
+}
+
+func TestUnlinkSSOMethod(t *testing.T) {
+	if testPool == nil {
+		t.Skip("Database not available")
+	}
+
+	ctx := context.Background()
+
+	// Cleanup and create user with password + SSO
+	testPool.Exec(ctx, "DELETE FROM users WHERE email = 'testunlinksso@example.com'")
+
+	// Create user with password
+	regBody := `{"email":"testunlinksso@example.com","password":"TestPassword123!","name":"Test Unlink SSO"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	testAuthHandler.Register(regW, regReq)
+
+	var regResponse AuthResponse
+	json.NewDecoder(regW.Body).Decode(&regResponse)
+
+	// Get user ID
+	claims, _ := testJWTManager.VerifyAccessToken(regResponse.AccessToken)
+	userID := claims.UserID
+
+	// Add SSO method
+	var methodID uuid.UUID
+	testPool.QueryRow(ctx,
+		`INSERT INTO user_auth_methods (user_id, provider, provider_user_id)
+		 VALUES ($1, 'google', 'google-123') RETURNING id`,
+		userID,
+	).Scan(&methodID)
+	defer testPool.Exec(ctx, `DELETE FROM user_auth_methods WHERE user_id = $1`, userID)
+
+	// Unlink SSO method
+	unlinkReq := httptest.NewRequest("DELETE", "/api/auth/me/methods/"+methodID.String(), nil)
+	unlinkReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
+	unlinkReq.SetPathValue("id", methodID.String())
+	unlinkW := httptest.NewRecorder()
+
+	wrappedHandler := auth.RequireAuth(testJWTManager, testAuthHandler.UnlinkAuthMethod)
+	wrappedHandler(unlinkW, unlinkReq)
+
+	if unlinkW.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", unlinkW.Code, unlinkW.Body.String())
+	}
+
+	// Verify method is gone
+	var count int
+	testPool.QueryRow(ctx, `SELECT COUNT(*) FROM user_auth_methods WHERE id = $1`, methodID).Scan(&count)
+	if count != 0 {
+		t.Error("SSO method should be deleted")
 	}
 }

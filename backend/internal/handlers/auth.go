@@ -271,6 +271,139 @@ func (h *AuthHandler) GetJWTManager() *auth.JWTManager {
 	return h.jwtManager
 }
 
+// AuthMethodResponse represents an auth method for the user
+type AuthMethodResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Provider  string    `json:"provider"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// GetAuthMethods returns the current user's linked auth methods
+func (h *AuthHandler) GetAuthMethods(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	// Get auth methods
+	rows, err := h.pool.Query(ctx,
+		`SELECT id, provider, created_at FROM user_auth_methods WHERE user_id = $1 ORDER BY created_at`,
+		userID,
+	)
+	if err != nil {
+		http.Error(w, `{"error":"failed to get auth methods"}`, http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	methods := []AuthMethodResponse{}
+	for rows.Next() {
+		var method AuthMethodResponse
+		if err := rows.Scan(&method.ID, &method.Provider, &method.CreatedAt); err != nil {
+			http.Error(w, `{"error":"failed to scan auth method"}`, http.StatusInternalServerError)
+			return
+		}
+		methods = append(methods, method)
+	}
+
+	// Check if user has password auth
+	var hasPassword bool
+	err = h.pool.QueryRow(ctx,
+		`SELECT password_hash IS NOT NULL FROM users WHERE id = $1`,
+		userID,
+	).Scan(&hasPassword)
+	if err != nil && err != pgx.ErrNoRows {
+		http.Error(w, `{"error":"failed to check password auth"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Add password as a virtual auth method if user has one
+	if hasPassword {
+		methods = append([]AuthMethodResponse{{
+			ID:       uuid.Nil, // Special ID for password
+			Provider: "password",
+		}}, methods...)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(methods)
+}
+
+// UnlinkAuthMethod removes an auth method from the current user
+func (h *AuthHandler) UnlinkAuthMethod(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	methodID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid method id"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	// Count total auth methods (password + SSO methods)
+	var methodCount int
+	err = h.pool.QueryRow(ctx,
+		`SELECT
+			(SELECT COUNT(*) FROM user_auth_methods WHERE user_id = $1) +
+			(SELECT CASE WHEN password_hash IS NOT NULL THEN 1 ELSE 0 END FROM users WHERE id = $1)`,
+		userID,
+	).Scan(&methodCount)
+	if err != nil {
+		http.Error(w, `{"error":"failed to count auth methods"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if methodCount <= 1 {
+		http.Error(w, `{"error":"cannot remove last auth method"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Handle special case for password (uuid.Nil)
+	if methodID == uuid.Nil {
+		// Remove password by setting it to null
+		result, err := h.pool.Exec(ctx,
+			`UPDATE users SET password_hash = NULL, updated_at = NOW() WHERE id = $1 AND password_hash IS NOT NULL`,
+			userID,
+		)
+		if err != nil {
+			http.Error(w, `{"error":"failed to remove password"}`, http.StatusInternalServerError)
+			return
+		}
+		if result.RowsAffected() == 0 {
+			http.Error(w, `{"error":"password not found"}`, http.StatusNotFound)
+			return
+		}
+	} else {
+		// Delete SSO auth method
+		result, err := h.pool.Exec(ctx,
+			`DELETE FROM user_auth_methods WHERE id = $1 AND user_id = $2`,
+			methodID, userID,
+		)
+		if err != nil {
+			http.Error(w, `{"error":"failed to remove auth method"}`, http.StatusInternalServerError)
+			return
+		}
+		if result.RowsAffected() == 0 {
+			http.Error(w, `{"error":"auth method not found"}`, http.StatusNotFound)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "auth method removed"})
+}
+
 // validatePassword checks password requirements
 func validatePassword(password string) error {
 	if len(password) < 8 {
