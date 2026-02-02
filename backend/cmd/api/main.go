@@ -46,6 +46,13 @@ func main() {
 	mux.HandleFunc("PUT /api/dashboards/{id}", dashboardHandler.Update)
 	mux.HandleFunc("DELETE /api/dashboards/{id}", dashboardHandler.Delete)
 
+	// Panel routes
+	panelHandler := handlers.NewPanelHandler(pool)
+	mux.HandleFunc("POST /api/dashboards/{id}/panels", panelHandler.Create)
+	mux.HandleFunc("GET /api/dashboards/{id}/panels", panelHandler.ListByDashboard)
+	mux.HandleFunc("PUT /api/panels/{id}", panelHandler.Update)
+	mux.HandleFunc("DELETE /api/panels/{id}", panelHandler.Delete)
+
 	// Apply CORS middleware
 	handler := corsMiddleware(mux)
 

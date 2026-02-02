@@ -1,0 +1,113 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { listPanels, createPanel, updatePanel, deletePanel } from './panels'
+
+describe('Panel API', () => {
+  const mockFetch = vi.fn()
+  const originalFetch = global.fetch
+
+  beforeEach(() => {
+    global.fetch = mockFetch
+    mockFetch.mockClear()
+  })
+
+  afterEach(() => {
+    global.fetch = originalFetch
+  })
+
+  describe('listPanels', () => {
+    it('fetches panels for a dashboard from API', async () => {
+      const mockData = [{ id: '1', title: 'Test Panel' }]
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockData)
+      })
+
+      const result = await listPanels('dashboard-123')
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/api/dashboards/dashboard-123/panels')
+      expect(result).toEqual(mockData)
+    })
+
+    it('throws error on failure', async () => {
+      mockFetch.mockResolvedValue({ ok: false })
+      await expect(listPanels('dashboard-123')).rejects.toThrow('Failed to fetch panels')
+    })
+  })
+
+  describe('createPanel', () => {
+    it('creates panel via API', async () => {
+      const mockData = { id: '1', title: 'New Panel' }
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockData)
+      })
+
+      const result = await createPanel('dashboard-123', {
+        title: 'New Panel',
+        grid_pos: { x: 0, y: 0, w: 6, h: 4 }
+      })
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/api/dashboards/dashboard-123/panels',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'New Panel',
+            grid_pos: { x: 0, y: 0, w: 6, h: 4 }
+          })
+        })
+      )
+      expect(result).toEqual(mockData)
+    })
+
+    it('throws error on failure', async () => {
+      mockFetch.mockResolvedValue({ ok: false })
+      await expect(createPanel('dashboard-123', {
+        title: 'Test',
+        grid_pos: { x: 0, y: 0, w: 6, h: 4 }
+      })).rejects.toThrow('Failed to create panel')
+    })
+  })
+
+  describe('updatePanel', () => {
+    it('updates panel via API', async () => {
+      const mockData = { id: '1', title: 'Updated' }
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockData)
+      })
+
+      const result = await updatePanel('panel-1', { title: 'Updated' })
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/api/panels/panel-1',
+        expect.objectContaining({
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Updated' })
+        })
+      )
+      expect(result).toEqual(mockData)
+    })
+
+    it('throws error on failure', async () => {
+      mockFetch.mockResolvedValue({ ok: false })
+      await expect(updatePanel('1', { title: 'Test' })).rejects.toThrow('Failed to update panel')
+    })
+  })
+
+  describe('deletePanel', () => {
+    it('deletes panel via API', async () => {
+      mockFetch.mockResolvedValue({ ok: true })
+
+      await deletePanel('panel-1')
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/api/panels/panel-1',
+        expect.objectContaining({ method: 'DELETE' })
+      )
+    })
+
+    it('throws error on failure', async () => {
+      mockFetch.mockResolvedValue({ ok: false })
+      await expect(deletePanel('1')).rejects.toThrow('Failed to delete panel')
+    })
+  })
+})
