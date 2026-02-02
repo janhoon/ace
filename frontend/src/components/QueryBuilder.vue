@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { Search, Plus, X, Code, Layers, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import MonacoQueryEditor from './MonacoQueryEditor.vue'
 import {
@@ -44,6 +44,9 @@ const {
   setQuery
 } = useQueryBuilder(props.modelValue)
 
+// Track when we're emitting to avoid reacting to our own changes
+const isEmitting = ref(false)
+
 // Metric search
 const metricSearch = ref('')
 const showMetricDropdown = ref(false)
@@ -76,6 +79,20 @@ const aggregationRequiresK = computed(() => {
   return func && 'requiresK' in func && func.requiresK
 })
 
+// Check if builder mode is available
+// Builder is unavailable if there's a code query that can't be represented in builder
+const builderAvailable = computed(() => {
+  // If there's no query, builder is available
+  if (!codeQuery.value) return true
+  // If we're in builder mode with a generated query, builder is available
+  if (mode.value === 'builder' && generatedQuery.value) return true
+  // If the code query matches the generated query, builder is available
+  if (codeQuery.value === generatedQuery.value) return true
+  // If there's a code query but no metric selected (can't parse), builder is unavailable
+  if (codeQuery.value && !metric.value) return false
+  return true
+})
+
 // Load metadata on mount
 onMounted(async () => {
   await Promise.all([loadMetrics(), loadLabels()])
@@ -83,13 +100,19 @@ onMounted(async () => {
 
 // Sync with v-model
 watch(() => props.modelValue, (newValue) => {
+  // Ignore changes triggered by our own emit
+  if (isEmitting.value) return
   if (newValue !== activeQuery.value) {
     setQuery(newValue)
   }
 })
 
 watch(activeQuery, (newValue) => {
+  isEmitting.value = true
   emit('update:modelValue', newValue)
+  nextTick(() => {
+    isEmitting.value = false
+  })
 })
 
 // Select metric
@@ -129,7 +152,8 @@ function getLabelValues(labelName: string): string[] {
         class="mode-btn"
         :class="{ active: mode === 'builder' }"
         @click="mode = 'builder'"
-        :disabled="disabled"
+        :disabled="disabled || !builderAvailable"
+        :title="!builderAvailable ? 'Query cannot be edited in builder mode' : ''"
       >
         <Layers :size="14" />
         <span>Builder</span>
@@ -395,6 +419,11 @@ function getLabelValues(labelName: string): string[] {
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.mode-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .mode-btn:hover:not(:disabled) {

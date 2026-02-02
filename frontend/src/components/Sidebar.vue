@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass, LogOut } from 'lucide-vue-next'
 import OrganizationDropdown from './OrganizationDropdown.vue'
@@ -9,7 +9,7 @@ import { useAuth } from '../composables/useAuth'
 
 const route = useRoute()
 const router = useRouter()
-const { fetchOrganizations, clearOrganizations } = useOrganization()
+const { fetchOrganizations, clearOrganizations, currentOrg } = useOrganization()
 const { logout, user } = useAuth()
 
 const isExpanded = ref(true)
@@ -26,9 +26,13 @@ const navItems: NavItem[] = [
   { icon: Compass, label: 'Explore', path: '/explore' },
 ]
 
-const bottomNavItems: NavItem[] = [
-  { icon: Settings, label: 'Settings', path: '/settings' },
-]
+// Settings path is dynamic based on current organization
+const settingsPath = computed(() => {
+  if (currentOrg.value) {
+    return `/settings/org/${currentOrg.value.id}`
+  }
+  return null
+})
 
 function isActive(path: string): boolean {
   return route.path.startsWith(path)
@@ -88,16 +92,15 @@ defineExpose({ isExpanded })
 
       <div class="nav-bottom">
         <button
-          v-for="item in bottomNavItems"
-          :key="item.path"
+          v-if="settingsPath"
           class="nav-item"
-          :class="{ active: isActive(item.path) }"
-          @click="navigate(item.path)"
-          :title="isExpanded ? undefined : item.label"
+          :class="{ active: isActive('/settings') }"
+          @click="navigate(settingsPath)"
+          :title="isExpanded ? undefined : 'Settings'"
         >
-          <component :is="item.icon" :size="20" />
-          <span v-if="isExpanded" class="nav-label">{{ item.label }}</span>
-          <span v-else class="nav-tooltip">{{ item.label }}</span>
+          <Settings :size="20" />
+          <span v-if="isExpanded" class="nav-label">Settings</span>
+          <span v-else class="nav-tooltip">Settings</span>
         </button>
         <div v-if="isExpanded && user" class="user-info">
           <span class="user-email">{{ user.email }}</span>

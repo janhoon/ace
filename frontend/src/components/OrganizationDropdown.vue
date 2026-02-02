@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ChevronDown, Plus, Settings, Check } from 'lucide-vue-next'
+import { ChevronDown, Plus, Check } from 'lucide-vue-next'
 import { useOrganization } from '../composables/useOrganization'
 
 defineProps<{
@@ -12,7 +11,6 @@ const emit = defineEmits<{
   createOrg: []
 }>()
 
-const router = useRouter()
 const { organizations, currentOrg, selectOrganization, fetchOrganizations } = useOrganization()
 
 const dropdownOpen = ref(false)
@@ -45,13 +43,6 @@ function handleSelectOrg(orgId: string) {
 function handleCreateOrg() {
   dropdownOpen.value = false
   emit('createOrg')
-}
-
-function handleOrgSettings() {
-  dropdownOpen.value = false
-  if (currentOrg.value) {
-    router.push(`/settings/org/${currentOrg.value.id}`)
-  }
 }
 </script>
 
@@ -95,11 +86,6 @@ function handleOrgSettings() {
         <button class="dropdown-action" @click="handleCreateOrg">
           <Plus :size="16" />
           <span>Create Organization</span>
-        </button>
-
-        <button v-if="currentOrg?.role === 'admin'" class="dropdown-action" @click="handleOrgSettings">
-          <Settings :size="16" />
-          <span>Organization Settings</span>
         </button>
       </div>
     </Teleport>
