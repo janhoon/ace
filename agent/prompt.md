@@ -38,7 +38,8 @@ You are working on the "dash" project - a Grafana-like monitoring dashboard.
 - PR: [will be added after creation]
 ```
 
-8. **Commit:** `git add -A && git commit -m "feat: [description]"`
+8. **Commit:** `git add . && git reset agent/prd.json agent/progress.txt 2>/dev/null; git commit -m "feat: [description]"` 
+   - **NEVER commit prd.json or progress.txt** (they are gitignored working files)
 
 9. **Push:** `git push origin HEAD`
 
