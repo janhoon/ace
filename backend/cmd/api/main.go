@@ -99,7 +99,7 @@ func main() {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	log.Println("Server stopped")
+	log.Println("Server exiting")
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
