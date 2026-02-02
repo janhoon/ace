@@ -48,10 +48,22 @@ const gaugeThresholds = ref<Threshold[]>(
     : [{ value: 80, color: '#ff6b6b' }]
 )
 
+// Pie chart-specific options
+const pieDisplayAs = ref<'pie' | 'donut'>(
+  props.panel?.query?.displayAs === 'donut' ? 'donut' : 'pie'
+)
+const pieShowLegend = ref(
+  props.panel?.query?.showLegend !== false
+)
+const pieShowLabels = ref(
+  props.panel?.query?.showLabels !== false
+)
+
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 const isGaugeType = computed(() => panelType.value === 'gauge')
+const isPieType = computed(() => panelType.value === 'pie')
 
 function addThreshold() {
   const lastValue = gaugeThresholds.value.length > 0
@@ -84,6 +96,13 @@ async function handleSubmit() {
     query.unit = gaugeUnit.value
     query.decimals = gaugeDecimals.value
     query.thresholds = gaugeThresholds.value
+  }
+
+  // Add pie chart-specific config if pie type is selected
+  if (isPieType.value) {
+    query.displayAs = pieDisplayAs.value
+    query.showLegend = pieShowLegend.value
+    query.showLabels = pieShowLabels.value
   }
 
   const finalQuery = Object.keys(query).length > 0 ? query : undefined
@@ -144,6 +163,7 @@ async function handleSubmit() {
             <select id="type" v-model="panelType" :disabled="loading">
               <option value="line_chart">Line Chart</option>
               <option value="bar_chart">Bar Chart</option>
+              <option value="pie">Pie Chart</option>
               <option value="gauge">Gauge</option>
               <option value="stat">Stat</option>
               <option value="table">Table</option>
@@ -243,6 +263,47 @@ async function handleSubmit() {
               <p v-if="gaugeThresholds.length === 0" class="thresholds-empty">
                 No thresholds configured. Values below any threshold will show green.
               </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pie Chart Configuration -->
+        <div v-if="isPieType" class="pie-config">
+          <div class="config-header">
+            <h4>Pie Chart Options</h4>
+          </div>
+
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label for="pie-display">Display Style</label>
+              <select id="pie-display" v-model="pieDisplayAs" :disabled="loading">
+                <option value="pie">Pie</option>
+                <option value="donut">Donut</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="pie-legend">Show Legend</label>
+              <div class="checkbox-wrapper">
+                <input
+                  id="pie-legend"
+                  v-model="pieShowLegend"
+                  type="checkbox"
+                  :disabled="loading"
+                />
+                <label for="pie-legend">Display legend</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="pie-labels">Show Labels</label>
+              <div class="checkbox-wrapper">
+                <input
+                  id="pie-labels"
+                  v-model="pieShowLabels"
+                  type="checkbox"
+                  :disabled="loading"
+                />
+                <label for="pie-labels">Display value labels</label>
+              </div>
             </div>
           </div>
         </div>
