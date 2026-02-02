@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import type { Panel } from '../types/panel'
+import { useTimeRange } from '../composables/useTimeRange'
+import { useProm, type ChartSeries } from '../composables/useProm'
+import LineChart from './LineChart.vue'
 
-defineProps<{
+const props = defineProps<{
   panel: Panel
 }>()
 
@@ -9,6 +13,51 @@ defineEmits<{
   edit: [panel: Panel]
   delete: [panel: Panel]
 }>()
+
+const { timeRange, onRefresh } = useTimeRange()
+
+// Extract PromQL query from panel config
+const promqlQuery = computed(() => {
+  if (props.panel.query && typeof props.panel.query.promql === 'string') {
+    return props.panel.query.promql
+  }
+  return ''
+})
+
+// Create refs for useProm inputs
+const queryRef = ref(promqlQuery.value)
+const startRef = computed(() => Math.floor(timeRange.value.start / 1000))
+const endRef = computed(() => Math.floor(timeRange.value.end / 1000))
+
+// Watch for query changes
+watch(promqlQuery, (newQuery) => {
+  queryRef.value = newQuery
+}, { immediate: true })
+
+const { chartData, loading, error, fetch: fetchData } = useProm({
+  query: queryRef,
+  start: startRef,
+  end: endRef,
+  autoFetch: true,
+})
+
+// Transform chartData to LineChart series format
+const chartSeries = computed<ChartSeries[]>(() => {
+  return chartData.value.series.map((s) => ({
+    name: s.name,
+    data: s.data,
+  }))
+})
+
+// Subscribe to time range refresh
+onRefresh(() => {
+  if (promqlQuery.value) {
+    fetchData()
+  }
+})
+
+const hasQuery = computed(() => !!promqlQuery.value)
+const isLineChart = computed(() => props.panel.type === 'line_chart')
 </script>
 
 <template>
@@ -25,20 +74,34 @@ defineEmits<{
       </div>
     </div>
     <div class="panel-content">
-      <slot>
-        <div class="panel-placeholder">
-          <span class="panel-type">{{ panel.type }}</span>
-          <p>Panel content will be rendered here</p>
-        </div>
-      </slot>
+      <div v-if="loading" class="panel-loading">
+        Loading...
+      </div>
+      <div v-else-if="error" class="panel-error">
+        {{ error }}
+      </div>
+      <div v-else-if="!hasQuery" class="panel-placeholder">
+        <span class="panel-type">{{ panel.type }}</span>
+        <p>No query configured. Edit this panel to add a PromQL query.</p>
+      </div>
+      <div v-else-if="isLineChart && chartSeries.length > 0" class="chart-container">
+        <LineChart :series="chartSeries" />
+      </div>
+      <div v-else-if="chartSeries.length === 0" class="panel-no-data">
+        <p>No data returned for the selected time range.</p>
+      </div>
+      <div v-else class="panel-placeholder">
+        <span class="panel-type">{{ panel.type }}</span>
+        <p>Visualization type not supported yet.</p>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .panel {
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: #1e1e1e;
+  border: 1px solid #333;
   border-radius: 4px;
   display: flex;
   flex-direction: column;
@@ -51,15 +114,15 @@ defineEmits<{
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f8f9fa;
+  border-bottom: 1px solid #333;
+  background: #252526;
 }
 
 .panel-title {
   margin: 0;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: #ccc;
 }
 
 .panel-actions {
@@ -69,15 +132,16 @@ defineEmits<{
 
 .btn {
   padding: 0.25rem 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid #555;
   border-radius: 4px;
-  background: white;
+  background: #333;
+  color: #ccc;
   cursor: pointer;
   font-size: 0.75rem;
 }
 
 .btn:hover {
-  background: #f5f5f5;
+  background: #444;
 }
 
 .btn-icon {
@@ -90,16 +154,26 @@ defineEmits<{
 }
 
 .btn-danger:hover {
-  background: #fdf2f2;
+  background: #4a2020;
 }
 
 .panel-content {
   flex: 1;
-  padding: 1rem;
-  overflow: auto;
+  padding: 0.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.panel-placeholder {
+.chart-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.panel-placeholder,
+.panel-loading,
+.panel-error,
+.panel-no-data {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -109,17 +183,22 @@ defineEmits<{
   text-align: center;
 }
 
+.panel-error {
+  color: #e74c3c;
+}
+
 .panel-type {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: #e0e0e0;
+  background: #333;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   margin-bottom: 0.5rem;
 }
 
-.panel-placeholder p {
+.panel-placeholder p,
+.panel-no-data p {
   margin: 0;
   font-size: 0.875rem;
 }
