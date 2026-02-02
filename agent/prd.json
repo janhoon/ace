@@ -119,7 +119,7 @@
       "TEST: User with both can login via either",
       "TEST: Attempt to unlink last method → error"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Organization - Management",

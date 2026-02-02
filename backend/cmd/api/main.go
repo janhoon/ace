@@ -71,6 +71,8 @@ func main() {
 	mux.HandleFunc("POST /api/auth/register", authHandler.Register)
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.HandleFunc("GET /api/auth/me", auth.RequireAuth(jwtManager, authHandler.Me))
+	mux.HandleFunc("GET /api/auth/me/methods", auth.RequireAuth(jwtManager, authHandler.GetAuthMethods))
+	mux.HandleFunc("DELETE /api/auth/me/methods/{id}", auth.RequireAuth(jwtManager, authHandler.UnlinkAuthMethod))
 	mux.HandleFunc("POST /api/auth/refresh", authHandler.Refresh)
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 	mux.HandleFunc("POST /api/auth/logout-all", auth.RequireAuth(jwtManager, authHandler.LogoutAll))

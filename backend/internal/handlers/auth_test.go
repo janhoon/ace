@@ -585,3 +585,73 @@ func TestRefreshInvalidToken(t *testing.T) {
 		t.Errorf("Expected status 401 for invalid token, got %d", refreshW.Code)
 	}
 }
+
+func TestGetAuthMethods(t *testing.T) {
+	if testPool == nil {
+		t.Skip("Database not available")
+	}
+
+	ctx := context.Background()
+	testPool.Exec(ctx, "DELETE FROM users WHERE email = 'testgetmethods@example.com'")
+
+	regBody := `{"email":"testgetmethods@example.com","password":"TestPassword123!","name":"Test Methods"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	testAuthHandler.Register(regW, regReq)
+
+	var regResponse AuthResponse
+	json.NewDecoder(regW.Body).Decode(&regResponse)
+
+	getReq := httptest.NewRequest("GET", "/api/auth/me/methods", nil)
+	getReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
+	getW := httptest.NewRecorder()
+
+	wrappedHandler := auth.RequireAuth(testJWTManager, testAuthHandler.GetAuthMethods)
+	wrappedHandler(getW, getReq)
+
+	if getW.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", getW.Code, getW.Body.String())
+	}
+
+	var methods []AuthMethodResponse
+	json.NewDecoder(getW.Body).Decode(&methods)
+
+	if len(methods) != 1 {
+		t.Errorf("Expected 1 auth method, got %d", len(methods))
+	}
+
+	if methods[0].Provider != "password" {
+		t.Errorf("Expected password provider, got %s", methods[0].Provider)
+	}
+}
+
+func TestUnlinkLastAuthMethodFails(t *testing.T) {
+	if testPool == nil {
+		t.Skip("Database not available")
+	}
+
+	ctx := context.Background()
+	testPool.Exec(ctx, "DELETE FROM users WHERE email = 'testunlink@example.com'")
+
+	regBody := `{"email":"testunlink@example.com","password":"TestPassword123!","name":"Test Unlink User"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	testAuthHandler.Register(regW, regReq)
+
+	var regResponse AuthResponse
+	json.NewDecoder(regW.Body).Decode(&regResponse)
+
+	unlinkReq := httptest.NewRequest("DELETE", "/api/auth/me/methods/00000000-0000-0000-0000-000000000000", nil)
+	unlinkReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
+	unlinkReq.SetPathValue("id", "00000000-0000-0000-0000-000000000000")
+	unlinkW := httptest.NewRecorder()
+
+	wrappedHandler := auth.RequireAuth(testJWTManager, testAuthHandler.UnlinkAuthMethod)
+	wrappedHandler(unlinkW, unlinkReq)
+
+	if unlinkW.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for unlinking last method, got %d: %s", unlinkW.Code, unlinkW.Body.String())
+	}
+}
