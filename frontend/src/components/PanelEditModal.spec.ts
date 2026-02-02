@@ -5,25 +5,10 @@ import * as api from '../api/panels'
 
 vi.mock('../api/panels')
 vi.mock('../composables/useProm', () => ({
-  queryPrometheus: vi.fn()
-}))
-
-// Mock MonacoQueryEditor component (Monaco doesn't work in test environment)
-vi.mock('./MonacoQueryEditor.vue', () => ({
-  default: {
-    name: 'MonacoQueryEditor',
-    props: ['modelValue', 'disabled', 'height', 'placeholder'],
-    emits: ['update:modelValue', 'submit'],
-    template: `
-      <textarea
-        id="promql-query-input"
-        :value="modelValue"
-        :disabled="disabled"
-        :placeholder="placeholder"
-        @input="$emit('update:modelValue', $event.target.value)"
-      ></textarea>
-    `
-  }
+  queryPrometheus: vi.fn(),
+  fetchMetrics: vi.fn().mockResolvedValue([]),
+  fetchLabels: vi.fn().mockResolvedValue([]),
+  fetchLabelValues: vi.fn().mockResolvedValue([])
 }))
 
 describe('PanelEditModal', () => {
@@ -33,14 +18,15 @@ describe('PanelEditModal', () => {
     vi.clearAllMocks()
   })
 
-  it('renders form fields', () => {
+  it('renders form fields', async () => {
     const wrapper = mount(PanelEditModal, {
       props: { dashboardId }
     })
+    await flushPromises()
     expect(wrapper.find('input#title').exists()).toBe(true)
     expect(wrapper.find('select#type').exists()).toBe(true)
-    // MonacoQueryEditor component (mocked as textarea)
-    expect(wrapper.find('#promql-query-input').exists()).toBe(true)
+    // QueryBuilder component is now used
+    expect(wrapper.findComponent({ name: 'QueryBuilder' }).exists()).toBe(true)
   })
 
   it('shows "Add Panel" title when creating new panel', () => {
@@ -84,7 +70,7 @@ describe('PanelEditModal', () => {
     expect(wrapper.text()).toContain('Title is required')
   })
 
-  it('saves panel with PromQL query from MonacoQueryEditor', async () => {
+  it('saves panel with PromQL query from QueryBuilder', async () => {
     vi.mocked(api.createPanel).mockResolvedValue({
       id: '123',
       dashboard_id: dashboardId,
@@ -99,11 +85,12 @@ describe('PanelEditModal', () => {
     const wrapper = mount(PanelEditModal, {
       props: { dashboardId }
     })
+    await flushPromises()
     await wrapper.find('input#title').setValue('Panel with Query')
 
-    // Simulate MonacoQueryEditor input
-    const queryInput = wrapper.find('#promql-query-input')
-    await queryInput.setValue('up')
+    // Simulate QueryBuilder emitting an update
+    const queryBuilder = wrapper.findComponent({ name: 'QueryBuilder' })
+    await queryBuilder.vm.$emit('update:modelValue', 'up')
 
     await wrapper.find('form').trigger('submit')
     await flushPromises()

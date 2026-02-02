@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Play, AlertCircle, History, X } from 'lucide-vue-next'
-import MonacoQueryEditor from '../components/MonacoQueryEditor.vue'
+import QueryBuilder from '../components/QueryBuilder.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import LineChart from '../components/LineChart.vue'
 import { useTimeRange } from '../composables/useTimeRange'
@@ -145,11 +145,12 @@ const seriesCount = computed(() => chartSeries.value.length)
 
     <div class="explore-content">
       <div class="query-section">
-        <div class="query-header">
-          <label class="query-label">PromQL Query</label>
-          <div class="query-header-actions">
+        <div class="query-builder-wrapper">
+          <QueryBuilder v-model="query" :disabled="loading" />
+
+          <!-- History button -->
+          <div v-if="queryHistory.length > 0" class="history-container">
             <button
-              v-if="queryHistory.length > 0"
               class="history-btn"
               :class="{ active: showHistory }"
               @click="showHistory = !showHistory"
@@ -158,34 +159,24 @@ const seriesCount = computed(() => chartSeries.value.length)
               <History :size="16" />
               <span>History</span>
             </button>
-          </div>
-        </div>
 
-        <div class="query-editor-container">
-          <MonacoQueryEditor
-            v-model="query"
-            :disabled="loading"
-            :height="120"
-            placeholder="Enter a PromQL query, e.g., up, rate(http_requests_total[5m])"
-            @submit="runQuery"
-          />
-
-          <!-- Query history dropdown -->
-          <div v-if="showHistory && queryHistory.length > 0" class="history-dropdown">
-            <div class="history-header">
-              <span>Recent Queries</span>
-              <button class="clear-history-btn" @click="clearHistory" title="Clear history">
-                <X :size="14" />
+            <!-- Query history dropdown -->
+            <div v-if="showHistory" class="history-dropdown">
+              <div class="history-header">
+                <span>Recent Queries</span>
+                <button class="clear-history-btn" @click="clearHistory" title="Clear history">
+                  <X :size="14" />
+                </button>
+              </div>
+              <button
+                v-for="(q, index) in queryHistory"
+                :key="index"
+                class="history-item"
+                @click="selectHistoryQuery(q)"
+              >
+                <code>{{ q }}</code>
               </button>
             </div>
-            <button
-              v-for="(q, index) in queryHistory"
-              :key="index"
-              class="history-item"
-              @click="selectHistoryQuery(q)"
-            >
-              <code>{{ q }}</code>
-            </button>
           </div>
         </div>
 
@@ -282,24 +273,13 @@ const seriesCount = computed(() => chartSeries.value.length)
   border-radius: 12px;
 }
 
-.query-header {
+.query-builder-wrapper {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.query-header-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.query-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.query-editor-container {
+.history-container {
   position: relative;
 }
 
@@ -307,7 +287,7 @@ const seriesCount = computed(() => chartSeries.value.length)
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 1rem;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
   border-radius: 6px;
@@ -327,7 +307,7 @@ const seriesCount = computed(() => chartSeries.value.length)
 .history-dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  right: 0;
+  left: 0;
   width: 350px;
   max-height: 300px;
   overflow-y: auto;

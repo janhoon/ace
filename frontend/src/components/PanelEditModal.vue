@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { X } from 'lucide-vue-next'
 import type { Panel } from '../types/panel'
 import { createPanel, updatePanel } from '../api/panels'
-import MonacoQueryEditor from './MonacoQueryEditor.vue'
+import QueryBuilder from './QueryBuilder.vue'
 
 const props = defineProps<{
   panel?: Panel
@@ -100,13 +100,11 @@ async function handleSubmit() {
           </div>
         </div>
 
-        <div class="form-group query-editor-group">
-          <label>PromQL Query</label>
-          <MonacoQueryEditor
+        <div class="form-group query-builder-group">
+          <label>Query</label>
+          <QueryBuilder
             v-model="promqlQuery"
             :disabled="loading"
-            :height="120"
-            placeholder="Enter a PromQL query..."
           />
         </div>
 
@@ -224,7 +222,7 @@ form {
   min-width: 160px;
 }
 
-.query-editor-group {
+.query-builder-group {
   border-top: 1px solid var(--border-primary);
   padding-top: 1.25rem;
 }

@@ -6,7 +6,10 @@ import Explore from './Explore.vue'
 // Mock the composables
 vi.mock('../composables/useProm', () => ({
   queryPrometheus: vi.fn(),
-  transformToChartData: vi.fn()
+  transformToChartData: vi.fn(),
+  fetchMetrics: vi.fn().mockResolvedValue([]),
+  fetchLabels: vi.fn().mockResolvedValue([]),
+  fetchLabelValues: vi.fn().mockResolvedValue([])
 }))
 
 vi.mock('../composables/useTimeRange', () => ({
@@ -96,16 +99,16 @@ describe('Explore', () => {
     expect(wrapper.find('.mock-time-range-picker').exists()).toBe(true)
   })
 
-  it('displays query input textarea', () => {
+  it('displays query builder component', async () => {
     const wrapper = mount(Explore, {
       global: {
         plugins: [router]
       }
     })
+    await flushPromises()
 
-    const textarea = wrapper.find('#promql-query-input')
-    expect(textarea.exists()).toBe(true)
-    expect(textarea.attributes('placeholder')).toContain('PromQL query')
+    // QueryBuilder component is now used
+    expect(wrapper.findComponent({ name: 'QueryBuilder' }).exists()).toBe(true)
   })
 
   it('displays Run Query button', () => {
@@ -137,9 +140,12 @@ describe('Explore', () => {
         plugins: [router]
       }
     })
+    await flushPromises()
 
-    const textarea = wrapper.find('#promql-query-input')
-    await textarea.setValue('up')
+    // Simulate QueryBuilder emitting an update
+    const queryBuilder = wrapper.findComponent({ name: 'QueryBuilder' })
+    await queryBuilder.vm.$emit('update:modelValue', 'up')
+    await wrapper.vm.$nextTick()
 
     const runButton = wrapper.find('.btn-run')
     expect(runButton.attributes('disabled')).toBeUndefined()
@@ -185,9 +191,12 @@ describe('Explore', () => {
         plugins: [router]
       }
     })
+    await flushPromises()
 
-    const textarea = wrapper.find('#promql-query-input')
-    await textarea.setValue('up')
+    // Simulate QueryBuilder emitting an update
+    const queryBuilder = wrapper.findComponent({ name: 'QueryBuilder' })
+    await queryBuilder.vm.$emit('update:modelValue', 'up')
+    await wrapper.vm.$nextTick()
 
     const runButton = wrapper.find('.btn-run')
     await runButton.trigger('click')
@@ -207,9 +216,12 @@ describe('Explore', () => {
         plugins: [router]
       }
     })
+    await flushPromises()
 
-    const textarea = wrapper.find('#promql-query-input')
-    await textarea.setValue('invalid{')
+    // Simulate QueryBuilder emitting an update
+    const queryBuilder = wrapper.findComponent({ name: 'QueryBuilder' })
+    await queryBuilder.vm.$emit('update:modelValue', 'invalid{')
+    await wrapper.vm.$nextTick()
 
     const runButton = wrapper.find('.btn-run')
     await runButton.trigger('click')
@@ -232,9 +244,12 @@ describe('Explore', () => {
         plugins: [router]
       }
     })
+    await flushPromises()
 
-    const textarea = wrapper.find('#promql-query-input')
-    await textarea.setValue('up')
+    // Simulate QueryBuilder emitting an update
+    const queryBuilder = wrapper.findComponent({ name: 'QueryBuilder' })
+    await queryBuilder.vm.$emit('update:modelValue', 'up')
+    await wrapper.vm.$nextTick()
 
     const runButton = wrapper.find('.btn-run')
     await runButton.trigger('click')
@@ -280,9 +295,12 @@ describe('Explore', () => {
         plugins: [router]
       }
     })
+    await flushPromises()
 
-    const textarea = wrapper.find('#promql-query-input')
-    await textarea.setValue('up')
+    // Simulate QueryBuilder emitting an update
+    const queryBuilder = wrapper.findComponent({ name: 'QueryBuilder' })
+    await queryBuilder.vm.$emit('update:modelValue', 'up')
+    await wrapper.vm.$nextTick()
 
     const runButton = wrapper.find('.btn-run')
     await runButton.trigger('click')
@@ -305,9 +323,12 @@ describe('Explore', () => {
         plugins: [router]
       }
     })
+    await flushPromises()
 
-    const textarea = wrapper.find('#promql-query-input')
-    await textarea.setValue('nonexistent_metric')
+    // Simulate QueryBuilder emitting an update
+    const queryBuilder = wrapper.findComponent({ name: 'QueryBuilder' })
+    await queryBuilder.vm.$emit('update:modelValue', 'nonexistent_metric')
+    await wrapper.vm.$nextTick()
 
     const runButton = wrapper.find('.btn-run')
     await runButton.trigger('click')
@@ -332,9 +353,12 @@ describe('Explore', () => {
         plugins: [router]
       }
     })
+    await flushPromises()
 
-    const textarea = wrapper.find('#promql-query-input')
-    await textarea.setValue('up')
+    // Simulate QueryBuilder emitting an update
+    const queryBuilder = wrapper.findComponent({ name: 'QueryBuilder' })
+    await queryBuilder.vm.$emit('update:modelValue', 'up')
+    await wrapper.vm.$nextTick()
 
     const runButton = wrapper.find('.btn-run')
     await runButton.trigger('click')
@@ -377,8 +401,7 @@ describe('Explore', () => {
         plugins: [router]
       }
     })
-
-    await wrapper.vm.$nextTick()
+    await flushPromises()
 
     const historyBtn = wrapper.find('.history-btn')
     await historyBtn.trigger('click')
@@ -386,8 +409,9 @@ describe('Explore', () => {
     const historyItems = wrapper.findAll('.history-item')
     await historyItems[0].trigger('click')
 
-    const textarea = wrapper.find('#promql-query-input')
-    expect((textarea.element as HTMLTextAreaElement).value).toBe('up')
+    // The query should be selected - verify the QueryBuilder received the value
+    const queryBuilder = wrapper.findComponent({ name: 'QueryBuilder' })
+    expect(queryBuilder.props('modelValue')).toBe('up')
   })
 
   it('clears history when clear button is clicked', async () => {

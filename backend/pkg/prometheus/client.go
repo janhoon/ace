@@ -93,16 +93,9 @@ func (c *Client) Query(ctx context.Context, query string, ts time.Time) (*QueryR
 	return transformResult(result), nil
 }
 
-// MetadataResult represents the result of a metadata query (labels, metrics, etc.)
-type MetadataResult struct {
-	Status string   `json:"status"`
-	Data   []string `json:"data,omitempty"`
-	Error  string   `json:"error,omitempty"`
-}
-
-// LabelNames returns all available label names
-func (c *Client) LabelNames(ctx context.Context) (*MetadataResult, error) {
-	labels, warnings, err := c.api.LabelNames(ctx, nil, time.Time{}, time.Time{})
+// LabelNames returns all label names from Prometheus
+func (c *Client) LabelNames(ctx context.Context) ([]string, error) {
+	names, warnings, err := c.api.LabelNames(ctx, nil, time.Now().Add(-24*time.Hour), time.Now())
 
 	if len(warnings) > 0 {
 		for _, w := range warnings {
@@ -111,21 +104,15 @@ func (c *Client) LabelNames(ctx context.Context) (*MetadataResult, error) {
 	}
 
 	if err != nil {
-		return &MetadataResult{
-			Status: "error",
-			Error:  err.Error(),
-		}, nil
+		return nil, fmt.Errorf("failed to get label names: %w", err)
 	}
 
-	return &MetadataResult{
-		Status: "success",
-		Data:   labels,
-	}, nil
+	return names, nil
 }
 
-// LabelValues returns all values for a specific label
-func (c *Client) LabelValues(ctx context.Context, label string) (*MetadataResult, error) {
-	values, warnings, err := c.api.LabelValues(ctx, label, nil, time.Time{}, time.Time{})
+// LabelValues returns all values for a given label name from Prometheus
+func (c *Client) LabelValues(ctx context.Context, label string) ([]string, error) {
+	values, warnings, err := c.api.LabelValues(ctx, label, nil, time.Now().Add(-24*time.Hour), time.Now())
 
 	if len(warnings) > 0 {
 		for _, w := range warnings {
@@ -134,22 +121,16 @@ func (c *Client) LabelValues(ctx context.Context, label string) (*MetadataResult
 	}
 
 	if err != nil {
-		return &MetadataResult{
-			Status: "error",
-			Error:  err.Error(),
-		}, nil
+		return nil, fmt.Errorf("failed to get label values for %s: %w", label, err)
 	}
 
-	// Convert model.LabelValue slice to string slice
+	// Convert model.LabelValues to []string
 	result := make([]string, len(values))
 	for i, v := range values {
 		result[i] = string(v)
 	}
 
-	return &MetadataResult{
-		Status: "success",
-		Data:   result,
-	}, nil
+	return result, nil
 }
 
 // transformResult converts Prometheus model.Value to our QueryResult format

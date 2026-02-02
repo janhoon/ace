@@ -36,6 +36,53 @@
       "TEST: Run query from builder → executes generated PromQL successfully",
       "TEST: Metric dropdown loads from Prometheus API",
       "TEST: Label values autocomplete from Prometheus API"
+<<<<<<< HEAD
+    ],
+    "passes": true
+  },
+  {
+    "category": "Feature - Monaco Editor with PromQL IntelliSense",
+    "description": "Replace basic textarea with VS Code's Monaco Editor for advanced autocomplete, syntax highlighting, and error detection for PromQL queries.",
+    "requirements": {
+      "monaco_editor": "Integrate Monaco Editor (VS Code editor)",
+      "syntax_highlighting": "PromQL syntax highlighting with custom language definition",
+      "autocomplete": "IntelliSense for metrics, functions, labels, values, operators",
+      "hover_tooltips": "Function documentation on hover",
+      "error_detection": "Syntax error detection with red underlines",
+      "context_aware": "Context-aware suggestions (labels after {, values after =)",
+      "performance": "Optimized with caching and debouncing"
+    },
+    "steps": [
+      "Install dependencies: npm install monaco-editor",
+      "Frontend: Create MonacoQueryEditor.vue component (wrapper for Monaco)",
+      "Frontend: Create promql/language.ts (PromQL language definition with keywords, operators, patterns)",
+      "Frontend: Create promql/completionProvider.ts (autocomplete logic)",
+      "Frontend: Create promql/hoverProvider.ts (hover tooltips for functions)",
+      "Frontend: Configure Monaco editor options (dark theme, no minimap, line numbers, word wrap)",
+      "Frontend: Implement registerCompletionItemProvider for autocomplete",
+      "Frontend: Implement registerHoverProvider for function tooltips",
+      "Frontend: Implement context-aware autocomplete (metrics at start, labels after {, values after =)",
+      "Frontend: Add autocomplete for metric names (fetch from /api/datasources/prometheus/metrics)",
+      "Frontend: Add autocomplete for functions (static list: rate, sum, avg, count, etc.)",
+      "Frontend: Add autocomplete for label names (fetch from /api/datasources/prometheus/labels)",
+      "Frontend: Add autocomplete for label values (fetch from /api/datasources/prometheus/label/:name/values)",
+      "Frontend: Add hover documentation for PromQL functions (rate, sum, avg, etc.)",
+      "Frontend: Implement caching for metrics/labels (5-10 min)",
+      "Frontend: Implement debouncing for label value fetches (250ms)",
+      "Frontend: Replace QueryEditor.vue with MonacoQueryEditor in Explore.vue",
+      "Frontend: Replace QueryEditor.vue with MonacoQueryEditor in PanelEditModal.vue",
+      "Frontend: Configure lazy loading for Monaco (code splitting)",
+      "TEST: Type metric name → autocomplete suggests matching metrics",
+      "TEST: Type { → suggests label names",
+      "TEST: Select label, type = → suggests label values",
+      "TEST: Press Ctrl+Space → shows all completions",
+      "TEST: Hover over 'rate' → shows function documentation",
+      "TEST: Invalid PromQL syntax → red underline appears",
+      "TEST: Multi-line queries work correctly",
+      "TEST: Editor responsive and fast (no lag when typing)",
+      "TEST: Editor works in both Explore page and panel editor"
+=======
+>>>>>>> origin/master
     ],
     "passes": true
   },
@@ -81,6 +128,6 @@
       "TEST: Editor responsive and fast (no lag when typing)",
       "TEST: Editor works in both Explore page and panel editor"
     ],
-    "passes": true
+    "passes": false
   }
 ]

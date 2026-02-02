@@ -64,7 +64,7 @@ func main() {
 	mux.HandleFunc("GET /api/datasources/prometheus/query", prometheusHandler.Query)
 	mux.HandleFunc("GET /api/datasources/prometheus/metrics", prometheusHandler.Metrics)
 	mux.HandleFunc("GET /api/datasources/prometheus/labels", prometheusHandler.Labels)
-	mux.HandleFunc("GET /api/datasources/prometheus/label/{label}/values", prometheusHandler.LabelValues)
+	mux.HandleFunc("GET /api/datasources/prometheus/label/{name}/values", prometheusHandler.LabelValues)
 
 	// Apply CORS middleware
 	handler := corsMiddleware(mux)
@@ -99,7 +99,7 @@ func main() {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	log.Println("Server stopped")
+	log.Println("Server exiting")
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
