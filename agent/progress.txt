@@ -237,3 +237,40 @@ This file tracks progress on the dash project features.
 - PR: (pending)
 - Blockers/notes for next iteration:
   - None. Ready to proceed with Line Chart Component.
+
+## Visualization - Line Chart Component - 2026-02-02
+- What was done:
+  - Added ECharts dependencies (echarts, vue-echarts)
+  - Created LineChart.vue component with:
+    - ECharts integration using vue-echarts
+    - X-axis configured for timestamps (formatted as HH:mm:ss)
+    - Y-axis with auto-scaling for metric values
+    - Support for multiple series with legend
+    - Tooltip showing timestamp + value on hover
+    - Dark theme styling to match Grafana aesthetic
+    - Grid lines for readability
+    - Responsive sizing with ResizeObserver
+    - Smooth line rendering
+  - Integrated LineChart into Panel.vue:
+    - Panel now fetches data using useProm composable
+    - Displays LineChart when panel type is 'line_chart' and has data
+    - Shows loading state during data fetch
+    - Shows error state on fetch failure
+    - Shows "No query configured" when no PromQL query set
+    - Shows "No data returned" when query returns empty results
+    - Applied dark theme styling to panels
+    - Chart automatically refetches on time range changes
+  - Added comprehensive tests:
+    - 13 tests for LineChart component
+    - 8 updated tests for Panel with chart integration
+    - All 138 frontend tests passing
+    - All backend tests passing
+- Files changed:
+  - frontend/package.json - added echarts, vue-echarts dependencies
+  - frontend/src/components/LineChart.vue (new)
+  - frontend/src/components/LineChart.spec.ts (new)
+  - frontend/src/components/Panel.vue - integrated LineChart and useProm
+  - frontend/src/components/Panel.spec.ts - updated tests
+- PR: (pending)
+- Blockers/notes for next iteration:
+  - None. Ready to proceed with Auto-Refresh for Panels.

@@ -193,7 +193,7 @@
       "TEST: Hover over data point → tooltip shows time + value",
       "TEST: Chart resizes when panel is resized"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Feature - Auto-Refresh for Panels",
