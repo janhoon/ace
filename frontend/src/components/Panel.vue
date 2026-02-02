@@ -5,7 +5,9 @@ import type { Panel } from '../types/panel'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useProm } from '../composables/useProm'
 import LineChart, { type ChartSeries } from './LineChart.vue'
-import StatPanel, { type Threshold, type DataPoint } from './StatPanel.vue'
+import GaugeChart, { type Threshold } from './GaugeChart.vue'
+import PieChart, { type PieDataItem } from './PieChart.vue'
+import StatPanel, { type DataPoint } from './StatPanel.vue'
 
 const props = defineProps<{
   panel: Panel
@@ -18,55 +20,93 @@ defineEmits<{
 
 const { timeRange, onRefresh } = useTimeRange()
 
-// Extract PromQL query from panel config
-const promqlQuery = computed(() => {
-  if (props.panel.query && typeof props.panel.query.promql === 'string') {
-    return props.panel.query.promql
+// Setup Prometheus query
+const promqlQuery = computed(() => props.panel.query?.promql || '')
+const { data, loading, error, refetch } = useProm(promqlQuery)
+
+// Auto-refresh on time range change
+watch([timeRange, onRefresh], () => {
+  if (hasQuery.value) {
+    refetch()
   }
-  return ''
 })
 
-// Create refs for useProm inputs
-const queryRef = ref(promqlQuery.value)
-const startRef = computed(() => Math.floor(timeRange.value.start / 1000))
-const endRef = computed(() => Math.floor(timeRange.value.end / 1000))
+// Transform Prometheus data to chart series
+const chartData = computed(() => {
+  if (!data.value?.data?.result) {
+    return { series: [] }
+  }
 
-// Watch for query changes
-watch(promqlQuery, (newQuery) => {
-  queryRef.value = newQuery
-}, { immediate: true })
+  const series: ChartSeries[] = data.value.data.result.map((result: any) => ({
+    name: result.metric.__name__ || JSON.stringify(result.metric),
+    data: (result.values || []).map(([timestamp, value]: [number, string]) => ({
+      timestamp: timestamp * 1000,
+      value: parseFloat(value),
+    })),
+  }))
 
-const { chartData, loading, error, fetch: fetchData } = useProm({
-  query: queryRef,
-  start: startRef,
-  end: endRef,
-  autoFetch: true,
+  return { series }
 })
 
-// Transform chartData to LineChart series format
-const chartSeries = computed<ChartSeries[]>(() => {
+const chartSeries = computed(() => {
   return chartData.value.series.map((s) => ({
-    name: s.name,
-    data: s.data,
+    ...s,
+    data: s.data.map((d) => ({
+      timestamp: d.timestamp,
+      value: d.value,
+    })),
   }))
 })
 
-// Get stat panel value and data from first series
-const statValue = computed(() => {
+// Get the latest value for gauge chart (from first series)
+const gaugeValue = computed(() => {
   if (chartData.value.series.length === 0) return 0
   const firstSeries = chartData.value.series[0]
   if (firstSeries.data.length === 0) return 0
   return firstSeries.data[firstSeries.data.length - 1].value
 })
 
-const statPreviousValue = computed(() => {
-  if (chartData.value.series.length === 0) return undefined
-  const firstSeries = chartData.value.series[0]
-  if (firstSeries.data.length < 2) return undefined
-  return firstSeries.data[firstSeries.data.length - 2].value
+// Extract gauge config from panel query
+const gaugeConfig = computed(() => {
+  const query = props.panel.query || {}
+  return {
+    min: typeof query.min === 'number' ? query.min : 0,
+    max: typeof query.max === 'number' ? query.max : 100,
+    unit: typeof query.unit === 'string' ? query.unit : '',
+    decimals: typeof query.decimals === 'number' ? query.decimals : 2,
+    thresholds: Array.isArray(query.thresholds)
+      ? (query.thresholds as Threshold[])
+      : [],
+  }
 })
 
-const statSparklineData = computed<DataPoint[]>(() => {
+// Transform chartData to PieChart data format (use latest value from each series)
+const pieData = computed<PieDataItem[]>(() => {
+  return chartData.value.series.map((s) => ({
+    name: s.name,
+    value: s.data.length > 0 ? s.data[s.data.length - 1].value : 0,
+  }))
+})
+
+// Extract pie chart config from panel query
+const pieConfig = computed(() => {
+  const query = props.panel.query || {}
+  return {
+    displayAs: (query.displayAs === 'donut' ? 'donut' : 'pie') as 'pie' | 'donut',
+    showLegend: query.showLegend !== false,
+    showLabels: query.showLabels !== false,
+  }
+})
+
+// Trigger initial fetch
+watch(
+  () => props.panel,
+  () => refetch(),
+  { immediate: true }
+)
+
+// Transform data to StatPanel format
+const statData = computed<DataPoint[]>(() => {
   if (chartData.value.series.length === 0) return []
   const firstSeries = chartData.value.series[0]
   return firstSeries.data.map((d) => ({
@@ -75,7 +115,7 @@ const statSparklineData = computed<DataPoint[]>(() => {
   }))
 })
 
-// Extract stat config from panel query
+// Extract stat panel config
 const statConfig = computed(() => {
   const query = props.panel.query || {}
   return {
@@ -83,21 +123,14 @@ const statConfig = computed(() => {
     decimals: typeof query.decimals === 'number' ? query.decimals : 2,
     showTrend: query.showTrend !== false,
     showSparkline: query.showSparkline !== false,
-    thresholds: Array.isArray(query.thresholds)
-      ? (query.thresholds as Threshold[])
-      : [],
-  }
-})
-
-// Subscribe to time range refresh
-onRefresh(() => {
-  if (promqlQuery.value) {
-    fetchData()
+    thresholds: Array.isArray(query.thresholds) ? (query.thresholds as Threshold[]) : [],
   }
 })
 
 const hasQuery = computed(() => !!promqlQuery.value)
 const isLineChart = computed(() => props.panel.type === 'line_chart')
+const isGaugeChart = computed(() => props.panel.type === 'gauge')
+const isPieChart = computed(() => props.panel.type === 'pie')
 const isStatPanel = computed(() => props.panel.type === 'stat')
 </script>
 
@@ -106,36 +139,52 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
     <div class="panel-header">
       <h3 class="panel-title">{{ panel.title }}</h3>
       <div class="panel-actions">
-        <button class="btn-icon" @click="$emit('edit', panel)" title="Edit">
-          <Pencil :size="14" />
+        <button class="panel-action-btn" @click="$emit('edit', panel)" title="Edit panel">
+          <Pencil :size="16" />
         </button>
-        <button class="btn-icon btn-icon-danger" @click="$emit('delete', panel)" title="Delete">
-          <Trash2 :size="14" />
+        <button class="panel-action-btn" @click="$emit('delete', panel)" title="Delete panel">
+          <Trash2 :size="16" />
         </button>
       </div>
     </div>
-    <div class="panel-content">
-      <div v-if="loading" class="panel-state">
-        <div class="loading-spinner"></div>
-        <span>Loading...</span>
+    <div class="panel-body">
+      <div v-if="!hasQuery" class="panel-state panel-no-query">
+        <BarChart3 :size="48" class="icon-muted" />
+        <p class="text-muted">No query configured</p>
+        <button class="btn-primary" @click="$emit('edit', panel)">Configure Panel</button>
+      </div>
+      <div v-else-if="loading" class="panel-state">
+        <div class="spinner"></div>
+        <p class="text-muted">Loading data...</p>
       </div>
       <div v-else-if="error" class="panel-state panel-error">
-        <AlertCircle :size="24" />
-        <span>{{ error }}</span>
-      </div>
-      <div v-else-if="!hasQuery" class="panel-state panel-placeholder">
-        <BarChart3 :size="32" />
-        <span class="panel-type">{{ panel.type }}</span>
-        <p>No query configured</p>
+        <AlertCircle :size="48" class="icon-error" />
+        <p class="error-text">{{ error }}</p>
       </div>
       <div v-else-if="isLineChart && chartSeries.length > 0" class="chart-container">
         <LineChart :series="chartSeries" />
       </div>
-      <div v-else-if="isStatPanel && chartSeries.length > 0" class="chart-container">
+      <div v-else-if="isGaugeChart && chartSeries.length > 0" class="chart-container">
+        <GaugeChart
+          :value="gaugeValue"
+          :min="gaugeConfig.min"
+          :max="gaugeConfig.max"
+          :unit="gaugeConfig.unit"
+          :decimals="gaugeConfig.decimals"
+          :thresholds="gaugeConfig.thresholds"
+        />
+      </div>
+      <div v-else-if="isPieChart && pieData.length > 0" class="chart-container">
+        <PieChart
+          :data="pieData"
+          :display-as="pieConfig.displayAs"
+          :show-legend="pieConfig.showLegend"
+          :show-labels="pieConfig.showLabels"
+        />
+      </div>
+      <div v-else-if="isStatPanel && statData.length > 0" class="chart-container">
         <StatPanel
-          :value="statValue"
-          :previous-value="statPreviousValue"
-          :data="statSparklineData"
+          :data="statData"
           :label="panel.title"
           :unit="statConfig.unit"
           :decimals="statConfig.decimals"
@@ -145,12 +194,8 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
         />
       </div>
       <div v-else-if="chartSeries.length === 0" class="panel-state panel-no-data">
-        <BarChart3 :size="24" />
-        <p>No data for selected range</p>
-      </div>
-      <div v-else class="panel-state panel-placeholder">
-        <span class="panel-type">{{ panel.type }}</span>
-        <p>Visualization not supported</p>
+        <AlertCircle :size="48" class="icon-warning" />
+        <p class="text-muted">No data available</p>
       </div>
     </div>
   </div>
@@ -158,81 +203,58 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
 
 <style scoped>
 .panel {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-primary);
+  background: white;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 150px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.panel:hover {
-  border-color: var(--border-secondary);
 }
 
 .panel-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-primary);
-  background: var(--bg-tertiary);
-  border-radius: 8px 8px 0 0;
-  cursor: move;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
 .panel-title {
-  margin: 0;
-  font-size: 0.8125rem;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #334155;
+  margin: 0;
 }
 
 .panel-actions {
   display: flex;
-  gap: 0.25rem;
-  opacity: 0;
-  transition: opacity 0.2s;
+  gap: 4px;
 }
 
-.panel:hover .panel-actions {
-  opacity: 1;
-}
-
-.btn-icon {
+.panel-action-btn {
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  color: var(--text-secondary);
-  cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-icon:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.panel-action-btn:hover {
+  background: #e2e8f0;
+  color: #334155;
 }
 
-.btn-icon-danger:hover {
-  background: rgba(255, 107, 107, 0.15);
-  color: var(--accent-danger);
-}
-
-.panel-content {
+.panel-body {
   flex: 1;
-  padding: 0.75rem;
-  overflow: hidden;
+  padding: 16px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -243,46 +265,75 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
 }
 
 .panel-state {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  gap: 0.5rem;
-  color: var(--text-tertiary);
-  text-align: center;
+  gap: 12px;
 }
 
-.panel-state p,
-.panel-state span {
-  font-size: 0.75rem;
-  margin: 0;
+.panel-no-query,
+.panel-no-data {
+  color: #94a3b8;
 }
 
 .panel-error {
-  color: var(--accent-danger);
+  color: #ef4444;
 }
 
-.panel-type {
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background: var(--bg-tertiary);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  color: var(--text-secondary);
+.icon-muted {
+  color: #cbd5e1;
 }
 
-.loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--border-primary);
-  border-top-color: var(--accent-primary);
+.icon-warning {
+  color: #f59e0b;
+}
+
+.icon-error {
+  color: #ef4444;
+}
+
+.text-muted {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 14px;
+  margin: 0;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.btn-primary {
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
 }
 </style>

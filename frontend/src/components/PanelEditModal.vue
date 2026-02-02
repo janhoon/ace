@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { X, Plus, Trash2 } from 'lucide-vue-next'
 import type { Panel } from '../types/panel'
 import { createPanel, updatePanel } from '../api/panels'
@@ -8,7 +8,6 @@ import QueryBuilder from './QueryBuilder.vue'
 interface Threshold {
   value: number
   color: string
-  background?: string
 }
 
 const props = defineProps<{
@@ -28,6 +27,36 @@ const panelType = ref(props.panel?.type || 'line_chart')
 // Extract promql from query config, or use empty string
 const promqlQuery = ref(
   typeof props.panel?.query?.promql === 'string' ? props.panel.query.promql : ''
+)
+
+// Gauge-specific options
+const gaugeMin = ref(
+  typeof props.panel?.query?.min === 'number' ? props.panel.query.min : 0
+)
+const gaugeMax = ref(
+  typeof props.panel?.query?.max === 'number' ? props.panel.query.max : 100
+)
+const gaugeUnit = ref(
+  typeof props.panel?.query?.unit === 'string' ? props.panel.query.unit : ''
+)
+const gaugeDecimals = ref(
+  typeof props.panel?.query?.decimals === 'number' ? props.panel.query.decimals : 2
+)
+const gaugeThresholds = ref<Threshold[]>(
+  Array.isArray(props.panel?.query?.thresholds)
+    ? (props.panel.query.thresholds as Threshold[])
+    : [{ value: 80, color: '#ff6b6b' }]
+)
+
+// Pie chart-specific options
+const pieDisplayAs = ref<'pie' | 'donut'>(
+  props.panel?.query?.displayAs === 'donut' ? 'donut' : 'pie'
+)
+const pieShowLegend = ref(
+  props.panel?.query?.showLegend !== false
+)
+const pieShowLabels = ref(
+  props.panel?.query?.showLabels !== false
 )
 
 // Stat panel-specific options
@@ -52,13 +81,26 @@ const statThresholds = ref<Threshold[]>(
 const loading = ref(false)
 const error = ref<string | null>(null)
 
+const isGaugeType = computed(() => panelType.value === 'gauge')
+const isPieType = computed(() => panelType.value === 'pie')
 const isStatType = computed(() => panelType.value === 'stat')
+
+function addThreshold() {
+  const lastValue = gaugeThresholds.value.length > 0
+    ? gaugeThresholds.value[gaugeThresholds.value.length - 1].value + 10
+    : 50
+  gaugeThresholds.value.push({ value: lastValue, color: '#feca57' })
+}
+
+function removeThreshold(index: number) {
+  gaugeThresholds.value.splice(index, 1)
+}
 
 function addStatThreshold() {
   const lastValue = statThresholds.value.length > 0
     ? statThresholds.value[statThresholds.value.length - 1].value + 10
-    : 80
-  statThresholds.value.push({ value: lastValue, color: '#ff6b6b', background: 'rgba(255, 107, 107, 0.1)' })
+    : 50
+  statThresholds.value.push({ value: lastValue, color: '#feca57' })
 }
 
 function removeStatThreshold(index: number) {
@@ -78,13 +120,31 @@ async function handleSubmit() {
     query.promql = promqlQuery.value.trim()
   }
 
+  // Add gauge-specific config if gauge type is selected
+  if (isGaugeType.value) {
+    query.min = gaugeMin.value
+    query.max = gaugeMax.value
+    query.unit = gaugeUnit.value
+    query.decimals = gaugeDecimals.value
+    query.thresholds = gaugeThresholds.value
+  }
+
+  // Add pie chart-specific config if pie type is selected
+  if (isPieType.value) {
+    query.displayAs = pieDisplayAs.value
+    query.showLegend = pieShowLegend.value
+    query.showLabels = pieShowLabels.value
+  }
+
   // Add stat panel-specific config if stat type is selected
   if (isStatType.value) {
     query.unit = statUnit.value
     query.decimals = statDecimals.value
     query.showTrend = statShowTrend.value
     query.showSparkline = statShowSparkline.value
-    query.thresholds = statThresholds.value
+    if (statThresholds.value.length > 0) {
+      query.thresholds = statThresholds.value
+    }
   }
 
   const finalQuery = Object.keys(query).length > 0 ? query : undefined
@@ -145,6 +205,7 @@ async function handleSubmit() {
             <select id="type" v-model="panelType" :disabled="loading">
               <option value="line_chart">Line Chart</option>
               <option value="bar_chart">Bar Chart</option>
+              <option value="pie">Pie Chart</option>
               <option value="gauge">Gauge</option>
               <option value="stat">Stat</option>
               <option value="table">Table</option>
@@ -158,6 +219,135 @@ async function handleSubmit() {
             v-model="promqlQuery"
             :disabled="loading"
           />
+        </div>
+
+        <!-- Gauge Configuration -->
+        <div v-if="isGaugeType" class="gauge-config">
+          <div class="config-header">
+            <h4>Gauge Options</h4>
+          </div>
+
+          <div class="form-row form-row-4">
+            <div class="form-group">
+              <label for="gauge-min">Min</label>
+              <input
+                id="gauge-min"
+                v-model.number="gaugeMin"
+                type="number"
+                :disabled="loading"
+              />
+            </div>
+            <div class="form-group">
+              <label for="gauge-max">Max</label>
+              <input
+                id="gauge-max"
+                v-model.number="gaugeMax"
+                type="number"
+                :disabled="loading"
+              />
+            </div>
+            <div class="form-group">
+              <label for="gauge-unit">Unit</label>
+              <input
+                id="gauge-unit"
+                v-model="gaugeUnit"
+                type="text"
+                placeholder="%"
+                :disabled="loading"
+              />
+            </div>
+            <div class="form-group">
+              <label for="gauge-decimals">Decimals</label>
+              <input
+                id="gauge-decimals"
+                v-model.number="gaugeDecimals"
+                type="number"
+                min="0"
+                max="10"
+                :disabled="loading"
+              />
+            </div>
+          </div>
+
+          <div class="thresholds-section">
+            <div class="thresholds-header">
+              <label>Thresholds</label>
+              <button type="button" class="btn btn-sm" @click="addThreshold" :disabled="loading">
+                <Plus :size="14" />
+                Add
+              </button>
+            </div>
+            <div class="thresholds-list">
+              <div v-for="(threshold, index) in gaugeThresholds" :key="index" class="threshold-row">
+                <input
+                  v-model.number="threshold.value"
+                  type="number"
+                  placeholder="Value"
+                  :disabled="loading"
+                  class="threshold-value"
+                />
+                <input
+                  v-model="threshold.color"
+                  type="color"
+                  :disabled="loading"
+                  class="threshold-color"
+                />
+                <button
+                  type="button"
+                  class="btn-icon btn-icon-danger"
+                  @click="removeThreshold(index)"
+                  :disabled="loading"
+                  title="Remove threshold"
+                >
+                  <Trash2 :size="14" />
+                </button>
+              </div>
+              <p v-if="gaugeThresholds.length === 0" class="thresholds-empty">
+                No thresholds configured. Values below any threshold will show green.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pie Chart Configuration -->
+        <div v-if="isPieType" class="pie-config">
+          <div class="config-header">
+            <h4>Pie Chart Options</h4>
+          </div>
+
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label for="pie-display">Display Style</label>
+              <select id="pie-display" v-model="pieDisplayAs" :disabled="loading">
+                <option value="pie">Pie</option>
+                <option value="donut">Donut</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="pie-legend">Show Legend</label>
+              <div class="checkbox-wrapper">
+                <input
+                  id="pie-legend"
+                  v-model="pieShowLegend"
+                  type="checkbox"
+                  :disabled="loading"
+                />
+                <label for="pie-legend">Display legend</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="pie-labels">Show Labels</label>
+              <div class="checkbox-wrapper">
+                <input
+                  id="pie-labels"
+                  v-model="pieShowLabels"
+                  type="checkbox"
+                  :disabled="loading"
+                />
+                <label for="pie-labels">Display value labels</label>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Stat Panel Configuration -->
@@ -191,31 +381,31 @@ async function handleSubmit() {
           </div>
 
           <div class="form-row form-row-2">
-            <div class="form-group checkbox-group">
-              <label class="checkbox-label">
+            <div class="form-group">
+              <label>
                 <input
                   type="checkbox"
                   v-model="statShowTrend"
                   :disabled="loading"
                 />
-                <span>Show Trend Indicator</span>
+                Show Trend Indicator
               </label>
             </div>
-            <div class="form-group checkbox-group">
-              <label class="checkbox-label">
+            <div class="form-group">
+              <label>
                 <input
                   type="checkbox"
                   v-model="statShowSparkline"
                   :disabled="loading"
                 />
-                <span>Show Sparkline</span>
+                Show Sparkline
               </label>
             </div>
           </div>
 
           <div class="thresholds-section">
             <div class="thresholds-header">
-              <label>Thresholds</label>
+              <label>Thresholds (Optional)</label>
               <button type="button" class="btn btn-sm" @click="addStatThreshold" :disabled="loading">
                 <Plus :size="14" />
                 Add
@@ -235,7 +425,6 @@ async function handleSubmit() {
                   type="color"
                   :disabled="loading"
                   class="threshold-color"
-                  title="Text color"
                 />
                 <button
                   type="button"
@@ -248,7 +437,7 @@ async function handleSubmit() {
                 </button>
               </div>
               <p v-if="statThresholds.length === 0" class="thresholds-empty">
-                No thresholds configured. Value will use default text color.
+                No thresholds configured.
               </p>
             </div>
           </div>
@@ -483,8 +672,8 @@ form {
   background: var(--accent-primary-hover);
 }
 
-/* Stat panel configuration styles */
-.stat-config {
+/* Gauge configuration styles */
+.gauge-config {
   border-top: 1px solid var(--border-primary);
   padding-top: 1.25rem;
   margin-bottom: 1.25rem;
@@ -497,40 +686,14 @@ form {
   color: var(--text-primary);
 }
 
-.form-row-2 {
+.form-row-4 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  align-items: end;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
 }
 
-.form-row-2 .form-group {
+.form-row-4 .form-group {
   margin-bottom: 0.75rem;
-}
-
-.checkbox-group {
-  display: flex;
-  align-items: center;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: var(--text-primary);
-}
-
-.checkbox-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--accent-primary);
-  cursor: pointer;
-}
-
-.checkbox-label span {
-  user-select: none;
 }
 
 .thresholds-section {
@@ -551,17 +714,12 @@ form {
 }
 
 .btn-sm {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
   padding: 0.375rem 0.625rem;
   font-size: 0.75rem;
+  gap: 0.25rem;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
   color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
 .btn-sm:hover:not(:disabled) {
