@@ -150,7 +150,7 @@
       "TEST: Invalid PromQL query → returns 400 error with message",
       "TEST: Frontend useProm composable fetches and transforms data correctly"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "UI - PromQL Query Editor",
