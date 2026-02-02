@@ -1,0 +1,156 @@
+package prometheus
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/prometheus/client_golang/api"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
+)
+
+// Client wraps the Prometheus API client
+type Client struct {
+	api v1.API
+}
+
+// QueryResult represents the result of a Prometheus query
+type QueryResult struct {
+	Status string      `json:"status"`
+	Data   *QueryData  `json:"data,omitempty"`
+	Error  string      `json:"error,omitempty"`
+}
+
+// QueryData contains the result type and values
+type QueryData struct {
+	ResultType string         `json:"resultType"`
+	Result     []MetricResult `json:"result"`
+}
+
+// MetricResult represents a single metric with its values
+type MetricResult struct {
+	Metric map[string]string `json:"metric"`
+	Values [][]interface{}   `json:"values"`
+}
+
+// NewClient creates a new Prometheus client with the given URL
+func NewClient(prometheusURL string) (*Client, error) {
+	client, err := api.NewClient(api.Config{
+		Address: prometheusURL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Prometheus client: %w", err)
+	}
+
+	return &Client{
+		api: v1.NewAPI(client),
+	}, nil
+}
+
+// QueryRange executes a range query against Prometheus
+func (c *Client) QueryRange(ctx context.Context, query string, start, end time.Time, step time.Duration) (*QueryResult, error) {
+	result, warnings, err := c.api.QueryRange(ctx, query, v1.Range{
+		Start: start,
+		End:   end,
+		Step:  step,
+	})
+
+	if len(warnings) > 0 {
+		// Log warnings but don't fail
+		for _, w := range warnings {
+			fmt.Printf("Prometheus warning: %s\n", w)
+		}
+	}
+
+	if err != nil {
+		return &QueryResult{
+			Status: "error",
+			Error:  err.Error(),
+		}, nil
+	}
+
+	return transformResult(result), nil
+}
+
+// Query executes an instant query against Prometheus
+func (c *Client) Query(ctx context.Context, query string, ts time.Time) (*QueryResult, error) {
+	result, warnings, err := c.api.Query(ctx, query, ts)
+
+	if len(warnings) > 0 {
+		for _, w := range warnings {
+			fmt.Printf("Prometheus warning: %s\n", w)
+		}
+	}
+
+	if err != nil {
+		return &QueryResult{
+			Status: "error",
+			Error:  err.Error(),
+		}, nil
+	}
+
+	return transformResult(result), nil
+}
+
+// transformResult converts Prometheus model.Value to our QueryResult format
+func transformResult(value model.Value) *QueryResult {
+	result := &QueryResult{
+		Status: "success",
+		Data: &QueryData{
+			ResultType: value.Type().String(),
+			Result:     []MetricResult{},
+		},
+	}
+
+	switch v := value.(type) {
+	case model.Matrix:
+		for _, stream := range v {
+			metricResult := MetricResult{
+				Metric: make(map[string]string),
+				Values: make([][]interface{}, 0, len(stream.Values)),
+			}
+
+			// Extract metric labels
+			for name, value := range stream.Metric {
+				metricResult.Metric[string(name)] = string(value)
+			}
+
+			// Extract values as [timestamp, value] pairs
+			for _, sample := range stream.Values {
+				metricResult.Values = append(metricResult.Values, []interface{}{
+					float64(sample.Timestamp) / 1000, // Convert milliseconds to seconds
+					sample.Value.String(),
+				})
+			}
+
+			result.Data.Result = append(result.Data.Result, metricResult)
+		}
+
+	case model.Vector:
+		for _, sample := range v {
+			metricResult := MetricResult{
+				Metric: make(map[string]string),
+				Values: [][]interface{}{
+					{float64(sample.Timestamp) / 1000, sample.Value.String()},
+				},
+			}
+
+			for name, value := range sample.Metric {
+				metricResult.Metric[string(name)] = string(value)
+			}
+
+			result.Data.Result = append(result.Data.Result, metricResult)
+		}
+
+	case *model.Scalar:
+		result.Data.Result = append(result.Data.Result, MetricResult{
+			Metric: map[string]string{},
+			Values: [][]interface{}{
+				{float64(v.Timestamp) / 1000, v.Value.String()},
+			},
+		})
+	}
+
+	return result
+}
