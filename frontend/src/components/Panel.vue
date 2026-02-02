@@ -7,6 +7,7 @@ import { useProm } from '../composables/useProm'
 import LineChart, { type ChartSeries } from './LineChart.vue'
 import GaugeChart, { type Threshold } from './GaugeChart.vue'
 import PieChart, { type PieDataItem } from './PieChart.vue'
+import StatPanel, { type DataPoint } from './StatPanel.vue'
 
 const props = defineProps<{
   panel: Panel
@@ -104,10 +105,33 @@ watch(
   { immediate: true }
 )
 
+// Transform data to StatPanel format
+const statData = computed<DataPoint[]>(() => {
+  if (chartData.value.series.length === 0) return []
+  const firstSeries = chartData.value.series[0]
+  return firstSeries.data.map((d) => ({
+    timestamp: d.timestamp,
+    value: d.value,
+  }))
+})
+
+// Extract stat panel config
+const statConfig = computed(() => {
+  const query = props.panel.query || {}
+  return {
+    unit: typeof query.unit === 'string' ? query.unit : '',
+    decimals: typeof query.decimals === 'number' ? query.decimals : 2,
+    showTrend: query.showTrend !== false,
+    showSparkline: query.showSparkline !== false,
+    thresholds: Array.isArray(query.thresholds) ? (query.thresholds as Threshold[]) : [],
+  }
+})
+
 const hasQuery = computed(() => !!promqlQuery.value)
 const isLineChart = computed(() => props.panel.type === 'line_chart')
 const isGaugeChart = computed(() => props.panel.type === 'gauge')
 const isPieChart = computed(() => props.panel.type === 'pie')
+const isStatPanel = computed(() => props.panel.type === 'stat')
 </script>
 
 <template>
@@ -156,6 +180,17 @@ const isPieChart = computed(() => props.panel.type === 'pie')
           :display-as="pieConfig.displayAs"
           :show-legend="pieConfig.showLegend"
           :show-labels="pieConfig.showLabels"
+        />
+      </div>
+      <div v-else-if="isStatPanel && statData.length > 0" class="chart-container">
+        <StatPanel
+          :data="statData"
+          :label="panel.title"
+          :unit="statConfig.unit"
+          :decimals="statConfig.decimals"
+          :thresholds="statConfig.thresholds"
+          :show-trend="statConfig.showTrend"
+          :show-sparkline="statConfig.showSparkline"
         />
       </div>
       <div v-else-if="chartSeries.length === 0" class="panel-state panel-no-data">

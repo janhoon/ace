@@ -59,11 +59,31 @@ const pieShowLabels = ref(
   props.panel?.query?.showLabels !== false
 )
 
+// Stat panel-specific options
+const statUnit = ref(
+  typeof props.panel?.query?.unit === 'string' ? props.panel.query.unit : ''
+)
+const statDecimals = ref(
+  typeof props.panel?.query?.decimals === 'number' ? props.panel.query.decimals : 2
+)
+const statShowTrend = ref(
+  props.panel?.query?.showTrend !== false
+)
+const statShowSparkline = ref(
+  props.panel?.query?.showSparkline !== false
+)
+const statThresholds = ref<Threshold[]>(
+  Array.isArray(props.panel?.query?.thresholds)
+    ? (props.panel.query.thresholds as Threshold[])
+    : []
+)
+
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 const isGaugeType = computed(() => panelType.value === 'gauge')
 const isPieType = computed(() => panelType.value === 'pie')
+const isStatType = computed(() => panelType.value === 'stat')
 
 function addThreshold() {
   const lastValue = gaugeThresholds.value.length > 0
@@ -74,6 +94,17 @@ function addThreshold() {
 
 function removeThreshold(index: number) {
   gaugeThresholds.value.splice(index, 1)
+}
+
+function addStatThreshold() {
+  const lastValue = statThresholds.value.length > 0
+    ? statThresholds.value[statThresholds.value.length - 1].value + 10
+    : 50
+  statThresholds.value.push({ value: lastValue, color: '#feca57' })
+}
+
+function removeStatThreshold(index: number) {
+  statThresholds.value.splice(index, 1)
 }
 
 async function handleSubmit() {
@@ -103,6 +134,17 @@ async function handleSubmit() {
     query.displayAs = pieDisplayAs.value
     query.showLegend = pieShowLegend.value
     query.showLabels = pieShowLabels.value
+  }
+
+  // Add stat panel-specific config if stat type is selected
+  if (isStatType.value) {
+    query.unit = statUnit.value
+    query.decimals = statDecimals.value
+    query.showTrend = statShowTrend.value
+    query.showSparkline = statShowSparkline.value
+    if (statThresholds.value.length > 0) {
+      query.thresholds = statThresholds.value
+    }
   }
 
   const finalQuery = Object.keys(query).length > 0 ? query : undefined
@@ -304,6 +346,99 @@ async function handleSubmit() {
                 />
                 <label for="pie-labels">Display value labels</label>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stat Panel Configuration -->
+        <div v-if="isStatType" class="stat-config">
+          <div class="config-header">
+            <h4>Stat Panel Options</h4>
+          </div>
+
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label for="stat-unit">Unit</label>
+              <input
+                id="stat-unit"
+                v-model="statUnit"
+                type="text"
+                placeholder="%"
+                :disabled="loading"
+              />
+            </div>
+            <div class="form-group">
+              <label for="stat-decimals">Decimals</label>
+              <input
+                id="stat-decimals"
+                v-model.number="statDecimals"
+                type="number"
+                min="0"
+                max="10"
+                :disabled="loading"
+              />
+            </div>
+          </div>
+
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="statShowTrend"
+                  :disabled="loading"
+                />
+                Show Trend Indicator
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="statShowSparkline"
+                  :disabled="loading"
+                />
+                Show Sparkline
+              </label>
+            </div>
+          </div>
+
+          <div class="thresholds-section">
+            <div class="thresholds-header">
+              <label>Thresholds (Optional)</label>
+              <button type="button" class="btn btn-sm" @click="addStatThreshold" :disabled="loading">
+                <Plus :size="14" />
+                Add
+              </button>
+            </div>
+            <div class="thresholds-list">
+              <div v-for="(threshold, index) in statThresholds" :key="index" class="threshold-row">
+                <input
+                  v-model.number="threshold.value"
+                  type="number"
+                  placeholder="Value"
+                  :disabled="loading"
+                  class="threshold-value"
+                />
+                <input
+                  v-model="threshold.color"
+                  type="color"
+                  :disabled="loading"
+                  class="threshold-color"
+                />
+                <button
+                  type="button"
+                  class="btn-icon btn-icon-danger"
+                  @click="removeStatThreshold(index)"
+                  :disabled="loading"
+                  title="Remove threshold"
+                >
+                  <Trash2 :size="14" />
+                </button>
+              </div>
+              <p v-if="statThresholds.length === 0" class="thresholds-empty">
+                No thresholds configured.
+              </p>
             </div>
           </div>
         </div>
