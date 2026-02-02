@@ -7,18 +7,21 @@ import (
 )
 
 type Dashboard struct {
-	ID          uuid.UUID  `json:"id"`
-	Title       string     `json:"title"`
-	Description *string    `json:"description,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-	UserID      *string    `json:"user_id,omitempty"`
+	ID             uuid.UUID  `json:"id"`
+	Title          string     `json:"title"`
+	Description    *string    `json:"description,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	UserID         *string    `json:"user_id,omitempty"`
+	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
+	CreatedBy      *uuid.UUID `json:"created_by,omitempty"`
 }
 
 type CreateDashboardRequest struct {
-	Title       string  `json:"title"`
-	Description *string `json:"description,omitempty"`
-	UserID      *string `json:"user_id,omitempty"`
+	Title          string     `json:"title"`
+	Description    *string    `json:"description,omitempty"`
+	UserID         *string    `json:"user_id,omitempty"`
+	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
 }
 
 type UpdateDashboardRequest struct {

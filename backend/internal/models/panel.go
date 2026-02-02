@@ -23,6 +23,7 @@ type Panel struct {
 	Query       json.RawMessage `json:"query,omitempty"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
+	CreatedBy   *uuid.UUID      `json:"created_by,omitempty"`
 }
 
 type CreatePanelRequest struct {
