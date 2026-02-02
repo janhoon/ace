@@ -1,36 +1,26 @@
 # Progress Log
 
-Starting work on multi-tenancy and authentication system.
+Starting work on authentication, SSO, and visualization features.
 
-## Feature 1: Multi-tenancy Database Schema - 2026-02-02
+## Feature 1: Multi-tenancy Database Schema - COMPLETE
+- PR #13 merged
+- All tables and models created
 
+## Feature 2: Auth - Core Authentication System - 2026-02-02
 - What was done:
-  - Created SQL migration file at backend/internal/db/migrations/006_multi_tenancy.sql
-  - Added organizations table (id, name, slug, timestamps) with unique slug constraint
-  - Added users table (id, email, password_hash, name, timestamps) with unique email
-  - Added organization_memberships table with role constraint (admin, editor, viewer)
-  - Added user_auth_methods table for SSO providers
-  - Added sso_configs table for per-org Google/Microsoft SSO configuration
-  - Added prometheus_datasources table for per-org data sources
-  - Modified dashboards table to include organization_id and created_by columns
-  - Modified panels table to include created_by column
-  - Added indexes on organization_id, user_id, email, slug for performance
-  - Added foreign key constraints with CASCADE deletes
-  - Created default 'Personal' organization for existing data
-  - Updated migrations.go with all new migrations
-  - Created Go models for Organization, User, OrganizationMembership, UserAuthMethod, SSOConfig, PrometheusDatasource
-  - Updated Dashboard and Panel models with new fields
-  - Added migration tests (migrations_test.go)
-
+  - Added JWT (RS256, 4096-bit) authentication with golang-jwt/jwt/v5
+  - Implemented Argon2id password hashing (time=3, memory=64MB, parallelism=4)
+  - Created auth middleware for protected routes
+  - Added endpoints: POST /api/auth/register, POST /api/auth/login, GET /api/auth/me
+  - JWT includes: sub (user_id), email, name, exp, iat (15 min expiry)
+  - Password validation: min 8 chars, uppercase, lowercase, digit
 - Files changed:
-  - backend/internal/db/migrations/006_multi_tenancy.sql (new)
-  - backend/internal/db/migrations.go (updated)
-  - backend/internal/db/migrations_test.go (new)
-  - backend/internal/models/organization.go (new)
-  - backend/internal/models/user.go (new)
-  - backend/internal/models/sso_config.go (new)
-  - backend/internal/models/prometheus_datasource.go (new)
-  - backend/internal/models/dashboard.go (updated)
-  - backend/internal/models/panel.go (updated)
-
-- PR: https://github.com/janhoon/dash/pull/13
+  - backend/internal/auth/jwt.go - RSA key generation, token signing/verification
+  - backend/internal/auth/password.go - Argon2id hash and verify
+  - backend/internal/auth/middleware.go - JWT middleware for protected routes
+  - backend/internal/handlers/auth.go - register, login, me endpoints
+  - backend/cmd/api/main.go - added auth routes
+  - backend/internal/auth/jwt_test.go - JWT tests
+  - backend/internal/auth/password_test.go - password tests
+  - backend/internal/handlers/auth_test.go - handler tests
+- PR: #14

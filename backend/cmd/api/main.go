@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/db"
 	"github.com/janhoon/dash/backend/internal/handlers"
 )
@@ -38,11 +39,23 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
+	// Initialize JWT manager
+	jwtManager, err := auth.NewJWTManager()
+	if err != nil {
+		log.Fatalf("Failed to initialize JWT manager: %v", err)
+	}
+
 	// Setup router
 	mux := http.NewServeMux()
 
 	// Health check endpoint
 	mux.HandleFunc("GET /api/health", handlers.HealthCheck)
+
+	// Auth routes
+	authHandler := handlers.NewAuthHandler(pool, jwtManager)
+	mux.HandleFunc("POST /api/auth/register", authHandler.Register)
+	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
+	mux.HandleFunc("GET /api/auth/me", auth.RequireAuth(jwtManager, authHandler.Me))
 
 	// Dashboard routes
 	dashboardHandler := handlers.NewDashboardHandler(pool)

@@ -3,10 +3,12 @@ module github.com/janhoon/dash/backend
 go 1.25.6
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.5
+	golang.org/x/crypto v0.47.0
 )
 
 require (
@@ -20,6 +22,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
