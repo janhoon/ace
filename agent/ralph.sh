@@ -22,23 +22,13 @@ for i in $(seq 1 "$iterations"); do
 
   echo "$result"
 
-  # Check for PR created (feature complete, waiting for merge)
-  if [[ "$result" == *"<promise>PR_CREATED</promise>"* ]]; then
-    echo "PR created, stopping. Merge the PR, then run release.sh to publish the final build."
-    exit 0
-  fi
-
-  # Check for full completion
+  # Check for full completion (all features done)
   if [[ "$result" == *"<promise>COMPLETE</promise>"* ]]; then
     echo "All features complete!"
     exit 0
   fi
   
-  # Check for release completion
-  if [[ "$result" == *"<promise>RELEASE_COMPLETE</promise>"* ]]; then
-    echo "Release published!"
-    exit 0
-  fi
+  # Note: No longer stopping at PR_CREATED - keep working on next feature!
 done
 
 echo "Reached iteration limit. Review progress and continue if needed."

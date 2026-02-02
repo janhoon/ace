@@ -8,54 +8,66 @@ You are working on the "dash" project - a Grafana-like monitoring dashboard.
 - Database: PostgreSQL (metadata)
 - Data Source: Prometheus
 
-## Instructions
+## Continuous Development Mode
 
-1. Find the highest priority feature to work on and work only on that feature. YOU decide
-which feature to work on that has not been completed - it might not be the first feature.
+**Work through multiple features without stopping!** Create a PR for each feature and continue to the next one.
 
-2. Run type checks and tests:
+## Instructions (Per Feature)
+
+1. **Find next feature:** Pick the highest priority incomplete feature from prd.json
+
+2. **Run tests:**
    - Frontend: `cd frontend && npm run type-check && npm run test`
    - Backend: `cd backend && go test ./...`
-   - Make sure they are passing
 
-3. Update the PRD with the work that was done (set passes: true when complete)
+3. **Track feature number:** Count how many features have passes=true. Next feature is that number + 1.
 
-4. Append the progress.txt file with the progress that was made. This is for the next person working on the codebase.
-Example output for progress.txt:
+4. **Create feature branch:**
+   - Branch name: `feat/N-short-name` (e.g., `feat/4-time-picker`)
+   - Checkout from latest master: `git checkout master && git pull origin master && git checkout -b feat/N-short-name`
 
+5. **Implement the feature** (just this one feature, nothing else)
+
+6. **Update PRD:** Set `passes: true` for completed feature
+
+7. **Update progress.txt:**
 ```
-## [Feature Name] - [timestamp]
+## Feature N: [Name] - [timestamp]
 - What was done:
 - Files changed:
-- Blockers/notes for next iteration:
+- PR: [will be added after creation]
 ```
 
-5. Make a git commit of this feature
+8. **Commit:** `git add -A && git commit -m "feat: [description]"`
 
-6. Push the branch to GitHub:
-   - Create a feature branch if not already on one
-   - Use descriptive branch name: feat/feature-name
-   - Push: `git push origin HEAD`
+9. **Push:** `git push origin HEAD`
 
-7. Create a Pull Request on GitHub:
-   - Use `gh pr create` with appropriate title and description
-   - Describe what was implemented and what testing is needed
-   - Reference the feature from the PRD
-   - Include any setup/testing instructions
-   - Capture the PR URL from the output
+10. **Create PR:**
+```bash
+gh pr create --title "feat: [Feature Name]" --body "Implements [feature description]
 
-ONLY WORK ON A SINGLE FEATURE!
+- [x] Tests passing
+- [x] Type checks passing
+- [x] Ready for review"
+```
 
-After creating the PR, output:
+11. **Return to master:** `git checkout master` (ready for next feature)
 
-<promise>PR_CREATED</promise>
+12. **Continue:** Move to next feature - DO NOT STOP!
 
-This signals that the feature is complete and ready for review. The loop will stop here.
+## Only Stop When:
 
-DO NOT continue to the next feature. DO NOT output <promise>COMPLETE</promise> unless ALL features in the PRD have passes: true.
+- All features have `passes: true` → output `<promise>COMPLETE</promise>`
+- Iteration limit reached (let Ralph script handle this)
 
-## When ALL Features are Complete
+**DO NOT** output `<promise>PR_CREATED</promise>` anymore - just keep working!
 
-If all features in prd.json have "passes": true, output:
+## Summary Format (after each feature):
 
-<promise>COMPLETE</promise>
+```
+✅ Feature N complete: [Name]
+   PR: [URL]
+   Branch: feat/N-name
+   
+🔄 Moving to next feature...
+```
