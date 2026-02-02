@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { X } from 'lucide-vue-next'
+import { X, Plus, Trash2 } from 'lucide-vue-next'
 import type { Panel } from '../types/panel'
 import { createPanel, updatePanel } from '../api/panels'
 import QueryBuilder from './QueryBuilder.vue'
+
+interface Threshold {
+  value: number
+  color: string
+  background?: string
+}
 
 const props = defineProps<{
   panel?: Panel
@@ -23,8 +29,41 @@ const panelType = ref(props.panel?.type || 'line_chart')
 const promqlQuery = ref(
   typeof props.panel?.query?.promql === 'string' ? props.panel.query.promql : ''
 )
+
+// Stat panel-specific options
+const statUnit = ref(
+  typeof props.panel?.query?.unit === 'string' ? props.panel.query.unit : ''
+)
+const statDecimals = ref(
+  typeof props.panel?.query?.decimals === 'number' ? props.panel.query.decimals : 2
+)
+const statShowTrend = ref(
+  props.panel?.query?.showTrend !== false
+)
+const statShowSparkline = ref(
+  props.panel?.query?.showSparkline !== false
+)
+const statThresholds = ref<Threshold[]>(
+  Array.isArray(props.panel?.query?.thresholds)
+    ? (props.panel.query.thresholds as Threshold[])
+    : []
+)
+
 const loading = ref(false)
 const error = ref<string | null>(null)
+
+const isStatType = computed(() => panelType.value === 'stat')
+
+function addStatThreshold() {
+  const lastValue = statThresholds.value.length > 0
+    ? statThresholds.value[statThresholds.value.length - 1].value + 10
+    : 80
+  statThresholds.value.push({ value: lastValue, color: '#ff6b6b', background: 'rgba(255, 107, 107, 0.1)' })
+}
+
+function removeStatThreshold(index: number) {
+  statThresholds.value.splice(index, 1)
+}
 
 async function handleSubmit() {
   if (!title.value.trim()) {
@@ -32,10 +71,23 @@ async function handleSubmit() {
     return
   }
 
-  // Build query config with promql
-  const query: Record<string, unknown> | undefined = promqlQuery.value.trim()
-    ? { promql: promqlQuery.value.trim() }
-    : undefined
+  // Build query config
+  const query: Record<string, unknown> = {}
+
+  if (promqlQuery.value.trim()) {
+    query.promql = promqlQuery.value.trim()
+  }
+
+  // Add stat panel-specific config if stat type is selected
+  if (isStatType.value) {
+    query.unit = statUnit.value
+    query.decimals = statDecimals.value
+    query.showTrend = statShowTrend.value
+    query.showSparkline = statShowSparkline.value
+    query.thresholds = statThresholds.value
+  }
+
+  const finalQuery = Object.keys(query).length > 0 ? query : undefined
 
   loading.value = true
   error.value = null
@@ -45,14 +97,14 @@ async function handleSubmit() {
       await updatePanel(props.panel.id, {
         title: title.value.trim(),
         type: panelType.value,
-        query
+        query: finalQuery
       })
     } else {
       await createPanel(props.dashboardId, {
         title: title.value.trim(),
         type: panelType.value,
         grid_pos: { x: 0, y: 0, w: 6, h: 4 },
-        query
+        query: finalQuery
       })
     }
     emit('saved')
@@ -106,6 +158,100 @@ async function handleSubmit() {
             v-model="promqlQuery"
             :disabled="loading"
           />
+        </div>
+
+        <!-- Stat Panel Configuration -->
+        <div v-if="isStatType" class="stat-config">
+          <div class="config-header">
+            <h4>Stat Panel Options</h4>
+          </div>
+
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label for="stat-unit">Unit</label>
+              <input
+                id="stat-unit"
+                v-model="statUnit"
+                type="text"
+                placeholder="%"
+                :disabled="loading"
+              />
+            </div>
+            <div class="form-group">
+              <label for="stat-decimals">Decimals</label>
+              <input
+                id="stat-decimals"
+                v-model.number="statDecimals"
+                type="number"
+                min="0"
+                max="10"
+                :disabled="loading"
+              />
+            </div>
+          </div>
+
+          <div class="form-row form-row-2">
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  v-model="statShowTrend"
+                  :disabled="loading"
+                />
+                <span>Show Trend Indicator</span>
+              </label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  v-model="statShowSparkline"
+                  :disabled="loading"
+                />
+                <span>Show Sparkline</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="thresholds-section">
+            <div class="thresholds-header">
+              <label>Thresholds</label>
+              <button type="button" class="btn btn-sm" @click="addStatThreshold" :disabled="loading">
+                <Plus :size="14" />
+                Add
+              </button>
+            </div>
+            <div class="thresholds-list">
+              <div v-for="(threshold, index) in statThresholds" :key="index" class="threshold-row">
+                <input
+                  v-model.number="threshold.value"
+                  type="number"
+                  placeholder="Value"
+                  :disabled="loading"
+                  class="threshold-value"
+                />
+                <input
+                  v-model="threshold.color"
+                  type="color"
+                  :disabled="loading"
+                  class="threshold-color"
+                  title="Text color"
+                />
+                <button
+                  type="button"
+                  class="btn-icon btn-icon-danger"
+                  @click="removeStatThreshold(index)"
+                  :disabled="loading"
+                  title="Remove threshold"
+                >
+                  <Trash2 :size="14" />
+                </button>
+              </div>
+              <p v-if="statThresholds.length === 0" class="thresholds-empty">
+                No thresholds configured. Value will use default text color.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div v-if="error" class="error-message">{{ error }}</div>
@@ -335,5 +481,169 @@ form {
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-primary-hover);
+}
+
+/* Stat panel configuration styles */
+.stat-config {
+  border-top: 1px solid var(--border-primary);
+  padding-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.config-header h4 {
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: end;
+}
+
+.form-row-2 .form-group {
+  margin-bottom: 0.75rem;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.checkbox-label span {
+  user-select: none;
+}
+
+.thresholds-section {
+  margin-top: 1rem;
+}
+
+.thresholds-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.thresholds-header label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-sm:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.thresholds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.threshold-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.threshold-value {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.threshold-value:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.threshold-color {
+  width: 40px;
+  height: 36px;
+  padding: 2px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.threshold-color::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.threshold-color::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-icon-danger:hover {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--accent-danger);
+}
+
+.thresholds-empty {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin: 0;
+  padding: 0.5rem;
+  text-align: center;
 }
 </style>

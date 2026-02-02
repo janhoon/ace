@@ -5,6 +5,7 @@ import type { Panel } from '../types/panel'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useProm } from '../composables/useProm'
 import LineChart, { type ChartSeries } from './LineChart.vue'
+import StatPanel, { type Threshold, type DataPoint } from './StatPanel.vue'
 
 const props = defineProps<{
   panel: Panel
@@ -50,6 +51,44 @@ const chartSeries = computed<ChartSeries[]>(() => {
   }))
 })
 
+// Get stat panel value and data from first series
+const statValue = computed(() => {
+  if (chartData.value.series.length === 0) return 0
+  const firstSeries = chartData.value.series[0]
+  if (firstSeries.data.length === 0) return 0
+  return firstSeries.data[firstSeries.data.length - 1].value
+})
+
+const statPreviousValue = computed(() => {
+  if (chartData.value.series.length === 0) return undefined
+  const firstSeries = chartData.value.series[0]
+  if (firstSeries.data.length < 2) return undefined
+  return firstSeries.data[firstSeries.data.length - 2].value
+})
+
+const statSparklineData = computed<DataPoint[]>(() => {
+  if (chartData.value.series.length === 0) return []
+  const firstSeries = chartData.value.series[0]
+  return firstSeries.data.map((d) => ({
+    timestamp: d.timestamp,
+    value: d.value,
+  }))
+})
+
+// Extract stat config from panel query
+const statConfig = computed(() => {
+  const query = props.panel.query || {}
+  return {
+    unit: typeof query.unit === 'string' ? query.unit : '',
+    decimals: typeof query.decimals === 'number' ? query.decimals : 2,
+    showTrend: query.showTrend !== false,
+    showSparkline: query.showSparkline !== false,
+    thresholds: Array.isArray(query.thresholds)
+      ? (query.thresholds as Threshold[])
+      : [],
+  }
+})
+
 // Subscribe to time range refresh
 onRefresh(() => {
   if (promqlQuery.value) {
@@ -59,6 +98,7 @@ onRefresh(() => {
 
 const hasQuery = computed(() => !!promqlQuery.value)
 const isLineChart = computed(() => props.panel.type === 'line_chart')
+const isStatPanel = computed(() => props.panel.type === 'stat')
 </script>
 
 <template>
@@ -90,6 +130,19 @@ const isLineChart = computed(() => props.panel.type === 'line_chart')
       </div>
       <div v-else-if="isLineChart && chartSeries.length > 0" class="chart-container">
         <LineChart :series="chartSeries" />
+      </div>
+      <div v-else-if="isStatPanel && chartSeries.length > 0" class="chart-container">
+        <StatPanel
+          :value="statValue"
+          :previous-value="statPreviousValue"
+          :data="statSparklineData"
+          :label="panel.title"
+          :unit="statConfig.unit"
+          :decimals="statConfig.decimals"
+          :thresholds="statConfig.thresholds"
+          :show-trend="statConfig.showTrend"
+          :show-sparkline="statConfig.showSparkline"
+        />
       </div>
       <div v-else-if="chartSeries.length === 0" class="panel-state panel-no-data">
         <BarChart3 :size="24" />
