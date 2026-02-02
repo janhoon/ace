@@ -57,6 +57,13 @@ func main() {
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.HandleFunc("GET /api/auth/me", auth.RequireAuth(jwtManager, authHandler.Me))
 
+	// Google SSO routes
+	googleSSOHandler := handlers.NewGoogleSSOHandler(pool, jwtManager)
+	mux.HandleFunc("GET /api/auth/google/login", googleSSOHandler.Login)
+	mux.HandleFunc("GET /api/auth/google/callback", googleSSOHandler.Callback)
+	mux.HandleFunc("POST /api/orgs/{id}/sso/google", auth.RequireAuth(jwtManager, googleSSOHandler.ConfigureSSO))
+	mux.HandleFunc("GET /api/orgs/{id}/sso/google", auth.RequireAuth(jwtManager, googleSSOHandler.GetSSOConfig))
+
 	// Dashboard routes
 	dashboardHandler := handlers.NewDashboardHandler(pool)
 	mux.HandleFunc("POST /api/dashboards", dashboardHandler.Create)

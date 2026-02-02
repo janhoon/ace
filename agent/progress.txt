@@ -24,3 +24,23 @@ Starting work on authentication, SSO, and visualization features.
   - backend/internal/auth/password_test.go - password tests
   - backend/internal/handlers/auth_test.go - handler tests
 - PR: #14
+
+## Feature 4: Auth - Google SSO - 2026-02-02
+- What was done:
+  - Added golang.org/x/oauth2/google dependency for OAuth2 flow
+  - Created backend/internal/handlers/sso_google.go with complete Google SSO implementation
+  - GET /api/auth/google/login?org={slug} - Initiates OAuth flow, redirects to Google
+  - GET /api/auth/google/callback - Exchanges code for token, gets user info
+  - Auto-creates user if new, links to existing user if email matches
+  - Adds user_auth_methods record (provider=google, provider_user_id)
+  - Auto-adds new users to organization as viewer
+  - POST /api/orgs/{id}/sso/google - Configure SSO (admin only)
+  - GET /api/orgs/{id}/sso/google - Get SSO config (admin only)
+  - State parameter stored in secure HTTP-only cookie
+  - Callback redirects to frontend with access token in URL fragment
+- Files changed:
+  - backend/go.mod (added golang.org/x/oauth2)
+  - backend/internal/handlers/sso_google.go (new)
+  - backend/internal/handlers/sso_google_test.go (new)
+  - backend/cmd/api/main.go (added SSO routes)
+- PR: https://github.com/janhoon/dash/pull/16
