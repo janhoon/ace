@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import type { Dashboard } from '../types/dashboard'
 import { listDashboards, deleteDashboard } from '../api/dashboards'
 import CreateDashboardModal from './CreateDashboardModal.vue'
 import EditDashboardModal from './EditDashboardModal.vue'
+
+const router = useRouter()
 
 const dashboards = ref<Dashboard[]>([])
 const loading = ref(true)
@@ -86,6 +89,10 @@ function formatDate(dateStr: string): string {
   })
 }
 
+function openDashboard(dashboard: Dashboard) {
+  router.push(`/dashboards/${dashboard.id}`)
+}
+
 onMounted(fetchDashboards)
 </script>
 
@@ -114,15 +121,16 @@ onMounted(fetchDashboards)
         v-for="dashboard in dashboards"
         :key="dashboard.id"
         class="dashboard-card"
+        @click="openDashboard(dashboard)"
       >
         <div class="card-header">
           <h3>{{ dashboard.title }}</h3>
-          <div class="card-actions">
+          <div class="card-actions" @click.stop>
             <button class="btn btn-icon" @click="openEditModal(dashboard)" title="Edit">
-              ✏️
+              Edit
             </button>
             <button class="btn btn-icon btn-danger" @click="confirmDelete(dashboard)" title="Delete">
-              🗑️
+              X
             </button>
           </div>
         </div>
@@ -242,10 +250,12 @@ onMounted(fetchDashboards)
   border-radius: 8px;
   padding: 1.5rem;
   transition: box-shadow 0.2s;
+  cursor: pointer;
 }
 
 .dashboard-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #3498db;
 }
 
 .card-header {

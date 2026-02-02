@@ -97,7 +97,7 @@
       "TEST: DELETE /api/panels/:id removes panel",
       "TEST: Frontend renders panels as simple cards on dashboard"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "UI - Time Range Picker Component",
@@ -198,7 +198,14 @@
   {
     "category": "Feature - Auto-Refresh for Panels",
     "description": "Auto-refresh panels at configurable intervals (5s, 15s, 30s, etc.).",
-    "refresh_intervals": ["Off", "5s", "15s", "30s", "1m", "5m"],
+    "refresh_intervals": [
+      "Off",
+      "5s",
+      "15s",
+      "30s",
+      "1m",
+      "5m"
+    ],
     "steps": [
       "Add refresh interval selector to TimeRangePicker component",
       "Store selected interval in dashboard state (reactive)",

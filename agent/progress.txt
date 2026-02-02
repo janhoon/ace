@@ -77,3 +77,55 @@ This file tracks progress on the dash project features.
   - frontend/package.json - added vue-router
 - Blockers/notes for next iteration:
   - None. Ready to proceed with Panel System feature.
+
+## Core - Panel System (Simple Container) - 2026-02-02
+- What was done:
+  - Created Panel model in Go (internal/models/panel.go) with GridPos struct
+  - Implemented full CRUD handlers for panels:
+    - POST /api/dashboards/{id}/panels (create panel with grid_pos)
+    - GET /api/dashboards/{id}/panels (list panels for dashboard)
+    - PUT /api/panels/{id} (update panel title, type, grid_pos, query)
+    - DELETE /api/panels/{id} (delete with 204 response)
+  - Panels table migration already existed from Sprint 1
+  - Created frontend types (types/panel.ts) with GridPos interface
+  - Created API client (api/panels.ts) with fetch-based CRUD functions
+  - Created Panel.vue component:
+    - Simple card with title header and content slot
+    - Edit and delete action buttons
+    - Placeholder for visualization content
+  - Created PanelEditModal.vue:
+    - Form for panel title, type (dropdown), and query (JSON)
+    - JSON validation for query field
+    - Works for both create and edit modes
+  - Created DashboardDetailView.vue:
+    - Displays dashboard with all panels
+    - 12-column CSS grid layout based on grid_pos
+    - Add Panel button with modal
+    - Edit and delete panel actions with confirmation
+    - Back navigation to dashboard list
+  - Updated DashboardList.vue:
+    - Made dashboard cards clickable to navigate to detail view
+    - Added useRouter for navigation
+  - Added /dashboards/:id route to Vue Router
+  - Added comprehensive tests:
+    - Backend: 10 tests for panel handlers (validation, UUID parsing, JSON)
+    - Frontend: 22 new tests for panel API and components
+    - All 49 frontend tests passing
+    - All backend tests passing
+- Files changed:
+  - backend/internal/models/panel.go (new)
+  - backend/internal/handlers/panels.go (new)
+  - backend/internal/handlers/panels_test.go (new)
+  - backend/cmd/api/main.go - added panel routes
+  - frontend/src/types/panel.ts (new)
+  - frontend/src/api/panels.ts (new)
+  - frontend/src/api/panels.spec.ts (new)
+  - frontend/src/components/Panel.vue (new)
+  - frontend/src/components/Panel.spec.ts (new)
+  - frontend/src/components/PanelEditModal.vue (new)
+  - frontend/src/components/PanelEditModal.spec.ts (new)
+  - frontend/src/views/DashboardDetailView.vue (new)
+  - frontend/src/router/index.ts - added dashboard detail route
+  - frontend/src/components/DashboardList.vue - made cards clickable
+- Blockers/notes for next iteration:
+  - None. Ready to proceed with Time Range Picker Component.
