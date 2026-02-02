@@ -22,39 +22,32 @@ const { timeRange, onRefresh } = useTimeRange()
 
 // Setup Prometheus query
 const promqlQuery = computed(() => props.panel.query?.promql || '')
-const { data, loading, error, refetch } = useProm(promqlQuery)
 
-// Auto-refresh on time range change
-watch([timeRange, onRefresh], () => {
-  if (hasQuery.value) {
-    refetch()
-  }
+// Create refs for useProm
+const queryRef = ref(promqlQuery.value)
+const startRef = computed(() => Math.floor(timeRange.value.start / 1000))
+const endRef = computed(() => Math.floor(timeRange.value.end / 1000))
+
+// Watch for query changes
+watch(promqlQuery, (newQuery) => {
+  queryRef.value = newQuery
+}, { immediate: true })
+
+const { chartData: promChartData, loading, error, fetch: refetch } = useProm({
+  query: queryRef,
+  start: startRef,
+  end: endRef,
+  autoFetch: true,
 })
 
-// Transform Prometheus data to chart series
-const chartData = computed(() => {
-  if (!data.value?.data?.result) {
-    return { series: [] }
-  }
+// Use chart data from useProm
+const chartData = promChartData
 
-  const series: ChartSeries[] = data.value.data.result.map((result: any) => ({
-    name: result.metric.__name__ || JSON.stringify(result.metric),
-    data: (result.values || []).map(([timestamp, value]: [number, string]) => ({
-      timestamp: timestamp * 1000,
-      value: parseFloat(value),
-    })),
-  }))
-
-  return { series }
-})
-
+// Transform to chart series format
 const chartSeries = computed(() => {
   return chartData.value.series.map((s) => ({
-    ...s,
-    data: s.data.map((d) => ({
-      timestamp: d.timestamp,
-      value: d.value,
-    })),
+    name: s.name,
+    data: s.data,
   }))
 })
 
@@ -98,12 +91,12 @@ const pieConfig = computed(() => {
   }
 })
 
-// Trigger initial fetch
-watch(
-  () => props.panel,
-  () => refetch(),
-  { immediate: true }
-)
+// Auto-refresh on time range change
+watch([timeRange, onRefresh], () => {
+  if (hasQuery.value) {
+    refetch()
+  }
+})
 
 // Transform data to StatPanel format
 const statData = computed<DataPoint[]>(() => {
