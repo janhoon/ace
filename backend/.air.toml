@@ -3,7 +3,7 @@ tmp_dir = "tmp"
 
 [build]
 cmd = "go build -o ./tmp/api ./cmd/api"
-bin = "./tmp/api"
+entrypoint = "./tmp/api"
 include_ext = ["go"]
 exclude_dir = ["tmp", "vendor", "testdata"]
 delay = 1000
