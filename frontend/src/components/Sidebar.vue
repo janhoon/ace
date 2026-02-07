@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass, LogOut } from 'lucide-vue-next'
+import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass, LogOut, Database } from 'lucide-vue-next'
 import OrganizationDropdown from './OrganizationDropdown.vue'
 import CreateOrganizationModal from './CreateOrganizationModal.vue'
 import { useOrganization } from '../composables/useOrganization'
@@ -24,6 +24,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboards', path: '/dashboards' },
   { icon: Compass, label: 'Explore', path: '/explore' },
+  { icon: Database, label: 'Data Sources', path: '/datasources' },
 ]
 
 // Settings path is dynamic based on current organization

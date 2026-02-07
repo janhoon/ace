@@ -125,6 +125,22 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			ON CONFLICT (slug) DO NOTHING`,
 		// Update existing dashboards to belong to the default organization
 		`UPDATE dashboards SET organization_id = '00000000-0000-0000-0000-000000000001' WHERE organization_id IS NULL`,
+		// Unified datasources table for all source types
+		`CREATE TABLE IF NOT EXISTS datasources (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+			name VARCHAR(255) NOT NULL,
+			type VARCHAR(50) NOT NULL CHECK (type IN ('prometheus', 'loki', 'victorialogs', 'victoriametrics')),
+			url VARCHAR(500) NOT NULL,
+			is_default BOOLEAN DEFAULT false,
+			auth_type VARCHAR(50) DEFAULT 'none',
+			auth_config JSONB,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_datasources_org_id ON datasources(organization_id)`,
+		// Add datasource_id to panels (nullable, for non-default datasource)
+		`ALTER TABLE panels ADD COLUMN IF NOT EXISTS datasource_id UUID REFERENCES datasources(id) ON DELETE SET NULL`,
 	}
 
 	for _, migration := range migrations {

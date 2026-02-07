@@ -4,6 +4,7 @@ import DashboardsView from '../views/DashboardsView.vue'
 import DashboardDetailView from '../views/DashboardDetailView.vue'
 import Explore from '../views/Explore.vue'
 import OrganizationSettings from '../views/OrganizationSettings.vue'
+import DataSourceSettings from '../views/DataSourceSettings.vue'
 import LoginView from '../views/LoginView.vue'
 
 const router = createRouter({
@@ -38,6 +39,11 @@ const router = createRouter({
       path: '/settings/org/:id',
       name: 'org-settings',
       component: OrganizationSettings
+    },
+    {
+      path: '/datasources',
+      name: 'datasources',
+      component: DataSourceSettings
     }
   ]
 })

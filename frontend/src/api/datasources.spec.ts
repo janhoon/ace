@@ -1,0 +1,179 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  listDataSources,
+  getDataSource,
+  createDataSource,
+  updateDataSource,
+  deleteDataSource,
+  queryDataSource,
+} from './datasources'
+
+const mockFetch = vi.fn()
+vi.stubGlobal('fetch', mockFetch)
+
+beforeEach(() => {
+  mockFetch.mockReset()
+  localStorage.clear()
+})
+
+describe('datasources API', () => {
+  describe('listDataSources', () => {
+    it('fetches datasources for an org', async () => {
+      const mockData = [
+        { id: '1', name: 'Prometheus', type: 'prometheus', url: 'http://localhost:9090' },
+      ]
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockData),
+      })
+
+      const result = await listDataSources('org-1')
+      expect(result).toEqual(mockData)
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/orgs/org-1/datasources'),
+        expect.any(Object),
+      )
+    })
+
+    it('throws on 403', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+      })
+
+      await expect(listDataSources('org-1')).rejects.toThrow('Not a member')
+    })
+  })
+
+  describe('getDataSource', () => {
+    it('fetches a single datasource', async () => {
+      const mockData = { id: '1', name: 'Prometheus', type: 'prometheus' }
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockData),
+      })
+
+      const result = await getDataSource('1')
+      expect(result).toEqual(mockData)
+    })
+  })
+
+  describe('createDataSource', () => {
+    it('creates a datasource', async () => {
+      const mockData = { id: '1', name: 'Loki', type: 'loki', url: 'http://localhost:3100' }
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockData),
+      })
+
+      const result = await createDataSource('org-1', {
+        name: 'Loki',
+        type: 'loki',
+        url: 'http://localhost:3100',
+      })
+      expect(result).toEqual(mockData)
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/orgs/org-1/datasources'),
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+
+    it('throws on 403', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({}),
+      })
+
+      await expect(
+        createDataSource('org-1', { name: 'test', type: 'loki', url: 'http://localhost' }),
+      ).rejects.toThrow('Only admins')
+    })
+  })
+
+  describe('updateDataSource', () => {
+    it('updates a datasource', async () => {
+      const mockData = { id: '1', name: 'Updated', type: 'prometheus' }
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockData),
+      })
+
+      const result = await updateDataSource('1', { name: 'Updated' })
+      expect(result).toEqual(mockData)
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/1'),
+        expect.objectContaining({ method: 'PUT' }),
+      )
+    })
+  })
+
+  describe('deleteDataSource', () => {
+    it('deletes a datasource', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true })
+
+      await deleteDataSource('1')
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/1'),
+        expect.objectContaining({ method: 'DELETE' }),
+      )
+    })
+  })
+
+  describe('queryDataSource', () => {
+    it('queries a datasource', async () => {
+      const mockResult = { status: 'success', resultType: 'metrics', data: { result: [] } }
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResult),
+      })
+
+      const result = await queryDataSource('1', {
+        query: 'up',
+        start: 1000,
+        end: 2000,
+      })
+      expect(result).toEqual(mockResult)
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/1/query'),
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+
+    it('throws on error response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Query failed' }),
+      })
+
+      await expect(
+        queryDataSource('1', { query: 'up', start: 1000, end: 2000 }),
+      ).rejects.toThrow('Query failed')
+    })
+  })
+
+  describe('auth headers', () => {
+    it('includes auth token when available', async () => {
+      localStorage.setItem('access_token', 'test-token')
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]),
+      })
+
+      await listDataSources('org-1')
+      const headers = mockFetch.mock.calls[0][1].headers
+      expect(headers.Authorization).toBe('Bearer test-token')
+    })
+
+    it('works without auth token', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]),
+      })
+
+      await listDataSources('org-1')
+      const headers = mockFetch.mock.calls[0][1].headers
+      expect(headers.Authorization).toBeUndefined()
+    })
+  })
+})

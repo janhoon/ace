@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { X, Plus, Trash2 } from 'lucide-vue-next'
 import type { Panel } from '../types/panel'
+import type { DataSource } from '../types/datasource'
 import { createPanel, updatePanel } from '../api/panels'
+import { useDatasource } from '../composables/useDatasource'
+import { useOrganization } from '../composables/useOrganization'
 import QueryBuilder from './QueryBuilder.vue'
 
 interface Threshold {
@@ -20,14 +23,30 @@ const emit = defineEmits<{
   saved: []
 }>()
 
+const { currentOrg } = useOrganization()
+const { datasources, fetchDatasources } = useDatasource()
+
 const isEditing = computed(() => !!props.panel)
 
 const title = ref(props.panel?.title || '')
 const panelType = ref(props.panel?.type || 'line_chart')
-// Extract promql from query config, or use empty string
-const promqlQuery = ref(
-  typeof props.panel?.query?.promql === 'string' ? props.panel.query.promql : ''
+const selectedDatasourceId = ref(
+  typeof props.panel?.query?.datasource_id === 'string' ? props.panel.query.datasource_id : ''
 )
+// Extract promql/expr from query config, or use empty string
+const promqlQuery = ref(
+  typeof props.panel?.query?.promql === 'string'
+    ? props.panel.query.promql
+    : typeof props.panel?.query?.expr === 'string'
+      ? props.panel.query.expr
+      : ''
+)
+
+onMounted(() => {
+  if (currentOrg.value) {
+    fetchDatasources(currentOrg.value.id)
+  }
+})
 
 // Gauge-specific options
 const gaugeMin = ref(
@@ -116,7 +135,10 @@ async function handleSubmit() {
   // Build query config
   const query: Record<string, unknown> = {}
 
-  if (promqlQuery.value.trim()) {
+  if (selectedDatasourceId.value) {
+    query.datasource_id = selectedDatasourceId.value
+    query.expr = promqlQuery.value.trim()
+  } else if (promqlQuery.value.trim()) {
     query.promql = promqlQuery.value.trim()
   }
 
@@ -209,8 +231,19 @@ async function handleSubmit() {
               <option value="gauge">Gauge</option>
               <option value="stat">Stat</option>
               <option value="table">Table</option>
+              <option value="logs">Logs</option>
             </select>
           </div>
+        </div>
+
+        <div v-if="datasources.length > 0" class="form-group">
+          <label for="datasource">Data Source</label>
+          <select id="datasource" v-model="selectedDatasourceId" :disabled="loading">
+            <option value="">Default (Prometheus)</option>
+            <option v-for="ds in datasources" :key="ds.id" :value="ds.id">
+              {{ ds.name }} ({{ ds.type }})
+            </option>
+          </select>
         </div>
 
         <div class="form-group query-builder-group">

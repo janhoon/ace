@@ -119,12 +119,21 @@ func main() {
 	mux.HandleFunc("PUT /api/panels/{id}", panelHandler.Update)
 	mux.HandleFunc("DELETE /api/panels/{id}", panelHandler.Delete)
 
-	// Prometheus data source routes
+	// Prometheus data source routes (legacy, backwards compatible)
 	prometheusHandler := handlers.NewPrometheusHandler(prometheusURL)
 	mux.HandleFunc("GET /api/datasources/prometheus/query", prometheusHandler.Query)
 	mux.HandleFunc("GET /api/datasources/prometheus/metrics", prometheusHandler.Metrics)
 	mux.HandleFunc("GET /api/datasources/prometheus/labels", prometheusHandler.Labels)
 	mux.HandleFunc("GET /api/datasources/prometheus/label/{name}/values", prometheusHandler.LabelValues)
+
+	// Multi-source datasource routes
+	dsHandler := handlers.NewDataSourceHandler(pool)
+	mux.HandleFunc("POST /api/orgs/{orgId}/datasources", auth.RequireAuth(jwtManager, dsHandler.Create))
+	mux.HandleFunc("GET /api/orgs/{orgId}/datasources", auth.RequireAuth(jwtManager, dsHandler.List))
+	mux.HandleFunc("GET /api/datasources/{id}", auth.RequireAuth(jwtManager, dsHandler.Get))
+	mux.HandleFunc("PUT /api/datasources/{id}", auth.RequireAuth(jwtManager, dsHandler.Update))
+	mux.HandleFunc("DELETE /api/datasources/{id}", auth.RequireAuth(jwtManager, dsHandler.Delete))
+	mux.HandleFunc("POST /api/datasources/{id}/query", auth.RequireAuth(jwtManager, dsHandler.Query))
 
 	// Apply CORS middleware
 	handler := corsMiddleware(mux)

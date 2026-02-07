@@ -2,14 +2,17 @@
 import { computed, ref, watch } from 'vue'
 import { Pencil, Trash2, AlertCircle, BarChart3 } from 'lucide-vue-next'
 import type { Panel } from '../types/panel'
+import type { LogEntry } from '../types/datasource'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useProm } from '../composables/useProm'
+import { queryDataSource } from '../api/datasources'
 import LineChart, { type ChartSeries } from './LineChart.vue'
 import BarChart from './BarChart.vue'
 import GaugeChart, { type Threshold } from './GaugeChart.vue'
 import PieChart, { type PieDataItem } from './PieChart.vue'
 import StatPanel, { type DataPoint } from './StatPanel.vue'
 import TablePanel from './TablePanel.vue'
+import LogViewer from './LogViewer.vue'
 
 const props = defineProps<{
   panel: Panel
@@ -22,8 +25,12 @@ defineEmits<{
 
 const { timeRange, onRefresh } = useTimeRange()
 
-// Setup Prometheus query
-const promqlQuery = computed(() => props.panel.query?.promql || '')
+// Check if panel uses a datasource-based query
+const datasourceId = computed(() => props.panel.query?.datasource_id as string | undefined)
+const queryExpr = computed(() => (props.panel.query?.promql || props.panel.query?.expr || '') as string)
+
+// Setup Prometheus query (legacy, when no datasource_id)
+const promqlQuery = computed(() => !datasourceId.value ? queryExpr.value : '')
 
 // Create refs for useProm
 const queryRef = ref(promqlQuery.value)
@@ -35,15 +42,89 @@ watch(promqlQuery, (newQuery) => {
   queryRef.value = newQuery
 }, { immediate: true })
 
-const { chartData: promChartData, loading, error, fetch: refetch } = useProm({
+const { chartData: promChartData, loading: promLoading, error: promError, fetch: promRefetch } = useProm({
   query: queryRef,
   start: startRef,
   end: endRef,
   autoFetch: true,
 })
 
-// Use chart data from useProm
-const chartData = promChartData
+// Datasource-based query state
+const dsLoading = ref(false)
+const dsError = ref<string | null>(null)
+const dsLogs = ref<LogEntry[]>([])
+const dsChartData = ref<{ series: { name: string; data: { timestamp: number; value: number }[] }[] }>({ series: [] })
+
+async function fetchDatasourceData() {
+  if (!datasourceId.value || !queryExpr.value) return
+
+  dsLoading.value = true
+  dsError.value = null
+
+  try {
+    const result = await queryDataSource(datasourceId.value, {
+      query: queryExpr.value,
+      start: startRef.value,
+      end: endRef.value,
+      step: 15,
+      limit: 1000,
+    })
+
+    if (result.status === 'error') {
+      dsError.value = result.error || 'Query failed'
+      return
+    }
+
+    if (result.resultType === 'logs' && result.data?.logs) {
+      dsLogs.value = result.data.logs
+      dsChartData.value = { series: [] }
+    } else if (result.data?.result) {
+      dsLogs.value = []
+      dsChartData.value = {
+        series: result.data.result.map((r) => {
+          const labelParts: string[] = []
+          for (const [key, value] of Object.entries(r.metric)) {
+            if (key !== '__name__') labelParts.push(`${key}="${value}"`)
+          }
+          const metricName = r.metric['__name__'] || 'value'
+          const name = labelParts.length > 0 ? `${metricName}{${labelParts.join(',')}}` : metricName
+          return {
+            name,
+            data: r.values.map(([ts, val]) => ({
+              timestamp: typeof ts === 'number' ? ts : parseFloat(String(ts)),
+              value: parseFloat(String(val)),
+            })),
+          }
+        }),
+      }
+    }
+  } catch (e) {
+    dsError.value = e instanceof Error ? e.message : 'Query failed'
+  } finally {
+    dsLoading.value = false
+  }
+}
+
+// Fetch datasource data when params change
+watch([datasourceId, queryExpr, startRef, endRef], () => {
+  if (datasourceId.value && queryExpr.value) {
+    fetchDatasourceData()
+  }
+}, { immediate: true })
+
+// Unified computed values
+const loading = computed(() => datasourceId.value ? dsLoading.value : promLoading.value)
+const error = computed(() => datasourceId.value ? dsError.value : promError.value)
+const chartData = computed(() => datasourceId.value ? dsChartData.value : promChartData.value)
+const logEntries = computed(() => dsLogs.value)
+
+function refetch() {
+  if (datasourceId.value) {
+    fetchDatasourceData()
+  } else {
+    promRefetch()
+  }
+}
 
 // Transform to chart series format
 const chartSeries = computed(() => {
@@ -138,13 +219,14 @@ const statConfig = computed(() => {
   }
 })
 
-const hasQuery = computed(() => !!promqlQuery.value)
+const hasQuery = computed(() => !!queryExpr.value)
 const isLineChart = computed(() => props.panel.type === 'line_chart')
 const isBarChart = computed(() => props.panel.type === 'bar_chart')
 const isGaugeChart = computed(() => props.panel.type === 'gauge')
 const isPieChart = computed(() => props.panel.type === 'pie')
 const isStatPanel = computed(() => props.panel.type === 'stat')
 const isTablePanel = computed(() => props.panel.type === 'table')
+const isLogPanel = computed(() => props.panel.type === 'logs')
 </script>
 
 <template>
@@ -214,7 +296,10 @@ const isTablePanel = computed(() => props.panel.type === 'table')
       <div v-else-if="isTablePanel && chartSeries.length > 0" class="chart-container">
         <TablePanel :series="chartSeries" />
       </div>
-      <div v-else-if="chartSeries.length === 0" class="panel-state panel-no-data">
+      <div v-else-if="isLogPanel && logEntries.length > 0" class="chart-container">
+        <LogViewer :logs="logEntries" />
+      </div>
+      <div v-else-if="chartSeries.length === 0 && logEntries.length === 0" class="panel-state panel-no-data">
         <AlertCircle :size="48" class="icon-warning" />
         <p class="text-muted">No data available</p>
       </div>
