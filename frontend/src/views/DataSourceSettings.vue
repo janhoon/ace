@@ -6,6 +6,10 @@ import { useDatasource } from '../composables/useDatasource'
 import { queryDataSource } from '../api/datasources'
 import type { DataSource, DataSourceType, CreateDataSourceRequest } from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
+import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
+import lokiLogo from '../assets/datasources/loki-logo.svg'
+import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
+import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
 
 const { currentOrg } = useOrganization()
 const {
@@ -33,6 +37,13 @@ const healthStatus = ref<Record<string, 'unknown' | 'checking' | 'healthy' | 'un
 const healthErrors = ref<Record<string, string>>({})
 
 const isEditing = computed(() => !!editingDs.value)
+
+const dataSourceTypeLogos: Record<DataSourceType, string> = {
+  prometheus: prometheusLogo,
+  loki: lokiLogo,
+  victoriametrics: victoriaMetricsLogo,
+  victorialogs: victoriaLogsLogo,
+}
 
 function openCreateModal() {
   editingDs.value = null
@@ -178,6 +189,10 @@ function getTypeColor(type_: DataSourceType): string {
   }
 }
 
+function getTypeLogo(type_: DataSourceType): string {
+  return dataSourceTypeLogos[type_]
+}
+
 onMounted(() => {
   if (currentOrg.value) {
     fetchDatasources(currentOrg.value.id)
@@ -244,6 +259,7 @@ watch(
         <div class="card-header">
           <div class="card-title-row">
             <span class="type-badge" :style="{ background: getTypeColor(ds.type) + '20', color: getTypeColor(ds.type), borderColor: getTypeColor(ds.type) + '40' }">
+              <img :src="getTypeLogo(ds.type)" :alt="`${dataSourceTypeLabels[ds.type]} logo`" class="type-logo" />
               {{ dataSourceTypeLabels[ds.type] }}
             </span>
             <span v-if="ds.is_default" class="default-badge">
@@ -502,11 +518,19 @@ watch(
 .type-badge {
   display: inline-flex;
   align-items: center;
+  gap: 0.35rem;
   padding: 0.25rem 0.625rem;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
   border: 1px solid;
+}
+
+.type-logo {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .default-badge {

@@ -25,7 +25,7 @@ A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
 ### Prerequisites
 
 - Node.js 18+
-- Go 1.21+
+- Go 1.25+
 - Docker and Docker Compose
 
 ### Setup
@@ -57,6 +57,32 @@ A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
    The frontend will be available at http://localhost:5173
 
    You can also still run backend/frontend commands directly from their folders.
+
+### Seed First Admin
+
+Create the first admin user and organization:
+
+```bash
+make seed-admin
+# defaults: EMAIL=admin@admin.com PASSWORD=Admin1234 ORG=default
+
+# or override values
+make seed-admin EMAIL=admin@example.com PASSWORD='AdminPass123' ORG='My Company' NAME='First Admin'
+```
+
+This also seeds four default datasources for the new organization:
+Prometheus (`http://localhost:9090`), VictoriaMetrics (`http://localhost:8428`),
+Loki (`http://localhost:3100`), and Victoria Logs (`http://localhost:9428`).
+
+If the admin user/org already exists, seed only the default datasources:
+
+```bash
+make seed-datasources
+# default ORG=default
+
+# or for another organization slug
+make seed-datasources ORG=my-company
+```
 
 ### Running Tests
 

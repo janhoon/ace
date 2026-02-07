@@ -1,8 +1,27 @@
-.PHONY: help backend frontend
+.PHONY: help backend seed-admin seed-datasources frontend
+
+EMAIL ?= admin@admin.com
+PASSWORD ?= Admin1234
+ORG ?= default
+
+SEED_NAME :=
+SEED_SLUG :=
+
+ifneq ($(filter command line,$(origin NAME)),)
+SEED_NAME := $(NAME)
+endif
+
+ifneq ($(filter command line,$(origin SLUG)),)
+SEED_SLUG := $(SLUG)
+endif
 
 help:
 	@printf "Available targets:\n"
 	@printf "  make backend   Start Go backend (hot reload with air if installed)\n"
+	@printf "  make seed-admin [EMAIL=...] [PASSWORD=...] [ORG=...] [NAME=...] [SLUG=...]\n"
+	@printf "                 Defaults: EMAIL=admin@admin.com PASSWORD=Admin1234 ORG=default\n"
+	@printf "  make seed-datasources [ORG=...]\n"
+	@printf "                 Seeds default connectors into existing ORG (default=default)\n"
 	@printf "  make frontend  Start Vite frontend dev server\n"
 
 backend:
@@ -15,7 +34,7 @@ backend:
 	fi; \
 	if [ -z "$$GO_BIN" ]; then \
 		printf "Go is not installed.\n"; \
-		printf "Install Go 1.25.6+ and retry make backend.\n"; \
+		printf "Install Go 1.25+ and retry make backend.\n"; \
 		exit 1; \
 	fi; \
 	GO_TAG="$$($$GO_BIN env GOVERSION 2>/dev/null)"; \
@@ -30,8 +49,8 @@ backend:
 	GO_MAJOR_NUM="$${GO_MAJOR%%[^0-9]*}"; \
 	GO_MINOR_NUM="$${GO_MINOR%%[^0-9]*}"; \
 	if [ "$$GO_MAJOR_NUM" -lt 1 ] || { [ "$$GO_MAJOR_NUM" -eq 1 ] && [ "$$GO_MINOR_NUM" -lt 25 ]; }; then \
-		printf "Go %s is too old for backend/go.mod (requires 1.25.6+).\n" "$$GO_TAG"; \
-		printf "Install Go 1.25.6+ or put it first on PATH.\n"; \
+		printf "Go %s is too old for backend/go.mod (requires 1.25+).\n" "$$GO_TAG"; \
+		printf "Install Go 1.25+ or put it first on PATH.\n"; \
 		exit 1; \
 	fi; \
 	GO_BIN_DIR="$${GO_BIN%/go}"; \
@@ -44,6 +63,44 @@ backend:
 		printf "Install air for hot reload: go install github.com/air-verse/air@latest\n"; \
 		cd backend && go run ./cmd/api; \
 	fi
+
+seed-admin:
+	@set -e; \
+	GO_BIN=""; \
+	if [ -x "$$HOME/.go-sdk/go1.25.7/bin/go" ]; then \
+		GO_BIN="$$HOME/.go-sdk/go1.25.7/bin/go"; \
+	elif command -v go >/dev/null 2>&1; then \
+		GO_BIN="$$(command -v go)"; \
+	fi; \
+	if [ -z "$$GO_BIN" ]; then \
+		printf "Go is not installed.\n"; \
+		printf "Install Go 1.25+ and retry make seed-admin.\n"; \
+		exit 1; \
+	fi; \
+	if [ -n "$(SEED_NAME)" ] && [ -n "$(SEED_SLUG)" ]; then \
+		cd backend && "$$GO_BIN" run ./cmd/seed-admin -email "$(EMAIL)" -password "$(PASSWORD)" -org "$(ORG)" -name "$(SEED_NAME)" -slug "$(SEED_SLUG)"; \
+	elif [ -n "$(SEED_NAME)" ]; then \
+		cd backend && "$$GO_BIN" run ./cmd/seed-admin -email "$(EMAIL)" -password "$(PASSWORD)" -org "$(ORG)" -name "$(SEED_NAME)"; \
+	elif [ -n "$(SEED_SLUG)" ]; then \
+		cd backend && "$$GO_BIN" run ./cmd/seed-admin -email "$(EMAIL)" -password "$(PASSWORD)" -org "$(ORG)" -slug "$(SEED_SLUG)"; \
+	else \
+		cd backend && "$$GO_BIN" run ./cmd/seed-admin -email "$(EMAIL)" -password "$(PASSWORD)" -org "$(ORG)"; \
+	fi
+
+seed-datasources:
+	@set -e; \
+	GO_BIN=""; \
+	if [ -x "$$HOME/.go-sdk/go1.25.7/bin/go" ]; then \
+		GO_BIN="$$HOME/.go-sdk/go1.25.7/bin/go"; \
+	elif command -v go >/dev/null 2>&1; then \
+		GO_BIN="$$(command -v go)"; \
+	fi; \
+	if [ -z "$$GO_BIN" ]; then \
+		printf "Go is not installed.\n"; \
+		printf "Install Go 1.25+ and retry make seed-datasources.\n"; \
+		exit 1; \
+	fi; \
+	cd backend && "$$GO_BIN" run ./cmd/seed-datasources -org "$(ORG)"
 
 frontend:
 	@cd frontend && npm run dev

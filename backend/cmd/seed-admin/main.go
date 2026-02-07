@@ -26,12 +26,12 @@ func main() {
 	orgSlug := flag.String("slug", "", "Organization slug (optional, derived from org name if not provided)")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: seed [options]\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: seed-admin [options]\n\n")
 		fmt.Fprintf(os.Stderr, "Create an initial admin user and organization.\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nExample:\n")
-		fmt.Fprintf(os.Stderr, "  seed -email admin@example.com -password MyPass123 -org \"My Company\"\n")
+		fmt.Fprintf(os.Stderr, "  go run ./cmd/seed-admin -email admin@example.com -password MyPass123 -org \"My Company\"\n")
 	}
 
 	flag.Parse()
