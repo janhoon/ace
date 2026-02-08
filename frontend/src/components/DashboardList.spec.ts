@@ -6,6 +6,14 @@ import * as dashboardApi from '../api/dashboards'
 import * as folderApi from '../api/folders'
 
 const mockCurrentOrgId = ref<string | null>('org-1')
+const mockCurrentOrg = ref({
+  id: 'org-1',
+  name: 'Acme',
+  slug: 'acme',
+  role: 'admin' as const,
+  created_at: '2026-02-08T00:00:00Z',
+  updated_at: '2026-02-08T00:00:00Z',
+})
 const mockPush = vi.fn()
 
 vi.mock('vue-router', () => ({
@@ -17,6 +25,7 @@ vi.mock('vue-router', () => ({
 vi.mock('../composables/useOrganization', () => ({
   useOrganization: () => ({
     currentOrgId: mockCurrentOrgId,
+    currentOrg: mockCurrentOrg,
   }),
 }))
 
@@ -76,6 +85,14 @@ describe('DashboardList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCurrentOrgId.value = 'org-1'
+    mockCurrentOrg.value = {
+      id: 'org-1',
+      name: 'Acme',
+      slug: 'acme',
+      role: 'admin',
+      created_at: '2026-02-08T00:00:00Z',
+      updated_at: '2026-02-08T00:00:00Z',
+    }
   })
 
   it('displays loading state initially', () => {
@@ -144,6 +161,25 @@ describe('DashboardList', () => {
 
     const cards = wrapper.findAll('.dashboard-card')
     expect(cards.length).toBe(3)
+  })
+
+  it('shows folder permissions action only for admins', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+
+    const adminWrapper = mount(DashboardList)
+    await flushPromises()
+
+    expect(adminWrapper.find('[data-testid="folder-permissions-folder-a"]').exists()).toBe(true)
+
+    mockCurrentOrg.value = {
+      ...mockCurrentOrg.value,
+      role: 'viewer',
+    }
+    const viewerWrapper = mount(DashboardList)
+    await flushPromises()
+
+    expect(viewerWrapper.find('[data-testid="folder-permissions-folder-a"]').exists()).toBe(false)
   })
 
   it('does not fetch dashboards when no organization is selected', async () => {

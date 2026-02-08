@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Pencil, Trash2, LayoutDashboard, AlertCircle, Folder as FolderIcon, Inbox } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, LayoutDashboard, AlertCircle, Folder as FolderIcon, Inbox, Shield } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import type { Folder } from '../types/folder'
 import { listDashboards, deleteDashboard } from '../api/dashboards'
@@ -9,9 +9,10 @@ import { listFolders } from '../api/folders'
 import { useOrganization } from '../composables/useOrganization'
 import CreateDashboardModal from './CreateDashboardModal.vue'
 import EditDashboardModal from './EditDashboardModal.vue'
+import FolderPermissionsModal from './FolderPermissionsModal.vue'
 
 const router = useRouter()
-const { currentOrgId } = useOrganization()
+const { currentOrgId, currentOrg } = useOrganization()
 
 const dashboards = ref<Dashboard[]>([])
 const folders = ref<Folder[]>([])
@@ -22,13 +23,19 @@ const showEditModal = ref(false)
 const editingDashboard = ref<Dashboard | null>(null)
 const showDeleteConfirm = ref(false)
 const deletingDashboard = ref<Dashboard | null>(null)
+const showFolderPermissionsModal = ref(false)
+const selectedFolderForPermissions = ref<Folder | null>(null)
+const folderPermissionsMessage = ref<string | null>(null)
 
 interface DashboardSection {
   id: string | null
   name: string
   dashboards: Dashboard[]
   isUnfiled: boolean
+  folder: Folder | null
 }
+
+const isOrgAdmin = computed(() => currentOrg.value?.role === 'admin')
 
 const groupedDashboardSections = computed<DashboardSection[]>(() => {
   const folderIds = new Set(folders.value.map((folder) => folder.id))
@@ -38,6 +45,7 @@ const groupedDashboardSections = computed<DashboardSection[]>(() => {
     name: folder.name,
     dashboards: dashboards.value.filter((dashboard) => dashboard.folder_id === folder.id),
     isUnfiled: false,
+    folder,
   }))
 
   const unfiledDashboards = dashboards.value.filter((dashboard) => !dashboard.folder_id || !folderIds.has(dashboard.folder_id))
@@ -49,6 +57,7 @@ const groupedDashboardSections = computed<DashboardSection[]>(() => {
       name: 'Unfiled Dashboards',
       dashboards: unfiledDashboards,
       isUnfiled: true,
+      folder: null,
     },
   ]
 })
@@ -148,6 +157,24 @@ function openDashboard(dashboard: Dashboard) {
   router.push(`/dashboards/${dashboard.id}`)
 }
 
+function openFolderPermissions(folder: Folder) {
+  selectedFolderForPermissions.value = folder
+  folderPermissionsMessage.value = null
+  showFolderPermissionsModal.value = true
+}
+
+function closeFolderPermissionsModal() {
+  showFolderPermissionsModal.value = false
+  selectedFolderForPermissions.value = null
+}
+
+function onFolderPermissionsSaved() {
+  if (!selectedFolderForPermissions.value) {
+    return
+  }
+  folderPermissionsMessage.value = `Updated permissions for "${selectedFolderForPermissions.value.name}"`
+}
+
 onMounted(fetchDashboards)
 </script>
 
@@ -188,6 +215,8 @@ onMounted(fetchDashboards)
     </div>
 
     <div v-else class="folder-sections">
+      <p v-if="folderPermissionsMessage" class="success-message">{{ folderPermissionsMessage }}</p>
+
       <section
         v-for="section in groupedDashboardSections"
         :key="section.id ?? 'unfiled'"
@@ -199,7 +228,18 @@ onMounted(fetchDashboards)
             <component :is="section.isUnfiled ? Inbox : FolderIcon" :size="18" />
             <h2>{{ section.name }}</h2>
           </div>
-          <span class="folder-count">{{ section.dashboards.length }}</span>
+          <div class="folder-section-meta">
+            <span class="folder-count">{{ section.dashboards.length }}</span>
+            <button
+              v-if="isOrgAdmin && !section.isUnfiled && section.folder"
+              class="btn btn-secondary btn-sm"
+              :data-testid="`folder-permissions-${section.folder.id}`"
+              @click="openFolderPermissions(section.folder)"
+            >
+              <Shield :size="14" />
+              Permissions
+            </button>
+          </div>
         </div>
         <p v-if="section.isUnfiled" class="folder-description">
           Dashboards without an assigned folder
@@ -250,6 +290,14 @@ onMounted(fetchDashboards)
       :folders="folders"
       @close="closeEditModal"
       @updated="onDashboardUpdated"
+    />
+
+    <FolderPermissionsModal
+      v-if="showFolderPermissionsModal && selectedFolderForPermissions && currentOrgId"
+      :folder="selectedFolderForPermissions"
+      :org-id="currentOrgId"
+      @close="closeFolderPermissionsModal"
+      @saved="onFolderPermissionsSaved"
     />
 
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">
@@ -337,6 +385,11 @@ onMounted(fetchDashboards)
 .btn-secondary:hover {
   background: var(--bg-hover);
   border-color: var(--border-secondary);
+}
+
+.btn-sm {
+  padding: 0.38rem 0.72rem;
+  font-size: 0.75rem;
 }
 
 .btn-danger {
@@ -446,6 +499,12 @@ onMounted(fetchDashboards)
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.25rem;
+}
+
+.folder-section-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .folder-section-title {
@@ -640,6 +699,16 @@ onMounted(fetchDashboards)
   font-size: 0.875rem;
 }
 
+.success-message {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  background: rgba(78, 205, 196, 0.1);
+  color: var(--accent-success);
+  font-size: 0.82rem;
+}
+
 .modal-actions {
   display: flex;
   justify-content: center;
@@ -659,6 +728,11 @@ onMounted(fetchDashboards)
 
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .folder-section-meta {
+    flex-direction: column;
+    align-items: flex-end;
   }
 }
 </style>
