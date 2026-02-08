@@ -92,6 +92,22 @@ services:
       timeout: 5s
       retries: 5
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.119.0
+    container_name: dash-otel-collector
+    user: "0:0"
+    command:
+      - '--config=/etc/otel-collector/config.yml'
+    volumes:
+      - ./otel-collector.yml:/etc/otel-collector/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - otel_collector_data:/var/lib/otelcol
+    depends_on:
+      loki:
+        condition: service_healthy
+      victorialogs:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   valkey_data:
@@ -99,3 +115,4 @@ volumes:
   loki_data:
   victoriametrics_data:
   victorialogs_data:
+  otel_collector_data:

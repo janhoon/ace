@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { LogEntry } from '../types/datasource'
 
 const props = defineProps<{
   logs: LogEntry[]
 }>()
+
+interface DetectedField {
+  key: string
+  value: string
+}
 
 function getLevelClass(level?: string): string {
   switch (level) {
@@ -38,6 +43,134 @@ function formatTimestamp(ts: string): string {
 }
 
 const displayLogs = computed(() => props.logs.slice(0, 1000))
+const expandedRows = ref<Set<number>>(new Set())
+
+function toggleRow(index: number) {
+  const next = new Set(expandedRows.value)
+  if (next.has(index)) {
+    next.delete(index)
+  } else {
+    next.add(index)
+  }
+  expandedRows.value = next
+}
+
+function isExpanded(index: number): boolean {
+  return expandedRows.value.has(index)
+}
+
+function formatFieldValue(value: unknown): string {
+  if (value === null) return 'null'
+  if (value === undefined) return 'undefined'
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
+function flattenObject(value: unknown, prefix = '', depth = 0): DetectedField[] {
+  if (depth > 4) {
+    return [{ key: prefix || 'value', value: formatFieldValue(value) }]
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return [{ key: prefix || 'value', value: '[]' }]
+    }
+
+    const rows: DetectedField[] = []
+    for (let i = 0; i < value.length; i += 1) {
+      const childPrefix = prefix ? `${prefix}[${i}]` : `[${i}]`
+      rows.push(...flattenObject(value[i], childPrefix, depth + 1))
+    }
+    return rows
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+    if (entries.length === 0) {
+      return [{ key: prefix || 'value', value: '{}' }]
+    }
+
+    const rows: DetectedField[] = []
+    for (const [key, child] of entries) {
+      const childPrefix = prefix ? `${prefix}.${key}` : key
+      rows.push(...flattenObject(child, childPrefix, depth + 1))
+    }
+    return rows
+  }
+
+  return [{ key: prefix || 'value', value: formatFieldValue(value) }]
+}
+
+function parseJsonFields(line: string): DetectedField[] {
+  const trimmed = line.trim()
+  const candidates: string[] = [trimmed]
+  const firstBrace = trimmed.indexOf('{')
+  if (firstBrace > 0) {
+    candidates.push(trimmed.slice(firstBrace))
+  }
+
+  for (const candidate of candidates) {
+    if (!candidate.startsWith('{') || !candidate.endsWith('}')) {
+      continue
+    }
+
+    try {
+      const parsed = JSON.parse(candidate)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return flattenObject(parsed)
+      }
+    } catch {}
+  }
+
+  return []
+}
+
+function parseKeyValueFields(line: string): DetectedField[] {
+  const fields: DetectedField[] = []
+  const seenKeys = new Set<string>()
+  const pattern = /([a-zA-Z_][\w.-]*)=("[^"]*"|'[^']*'|[^,\s]+)/g
+
+  for (const match of line.matchAll(pattern)) {
+    const key = match[1]
+    if (!key || seenKeys.has(key)) {
+      continue
+    }
+
+    const rawValue = match[2] || ''
+    const value =
+      (rawValue.startsWith('"') && rawValue.endsWith('"')) ||
+      (rawValue.startsWith("'") && rawValue.endsWith("'"))
+        ? rawValue.slice(1, -1)
+        : rawValue
+
+    fields.push({ key, value })
+    seenKeys.add(key)
+  }
+
+  return fields
+}
+
+function getMessageFields(log: LogEntry): DetectedField[] {
+  const jsonFields = parseJsonFields(log.line)
+  if (jsonFields.length > 0) {
+    return jsonFields
+  }
+
+  return parseKeyValueFields(log.line)
+}
+
+const detectedFieldsByRow = computed(() =>
+  displayLogs.value.map(log => getMessageFields(log)),
+)
+
+watch(displayLogs, () => {
+  expandedRows.value = new Set<number>()
+})
 </script>
 
 <template>
@@ -55,32 +188,52 @@ const displayLogs = computed(() => props.logs.slice(0, 1000))
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="(log, i) in displayLogs"
-            :key="i"
-            :class="getLevelClass(log.level)"
-          >
-            <td class="col-time">
-              <span class="timestamp">{{ formatTimestamp(log.timestamp) }}</span>
-            </td>
-            <td class="col-level">
-              <span v-if="log.level" class="level-badge" :class="getLevelClass(log.level)">
-                {{ log.level }}
-              </span>
-            </td>
-            <td class="col-message">
-              <span class="log-line">{{ log.line }}</span>
-              <div v-if="log.labels && Object.keys(log.labels).length > 0" class="log-labels">
-                <span
-                  v-for="(value, key) in log.labels"
-                  :key="String(key)"
-                  class="label-tag"
-                >
-                  {{ key }}={{ value }}
+          <template v-for="(log, i) in displayLogs" :key="i">
+            <tr
+              :class="['log-row', getLevelClass(log.level), { expanded: isExpanded(i) }]"
+              @click="toggleRow(i)"
+            >
+              <td class="col-time">
+                <span class="timestamp">{{ formatTimestamp(log.timestamp) }}</span>
+              </td>
+              <td class="col-level">
+                <span v-if="log.level" class="level-badge" :class="getLevelClass(log.level)">
+                  {{ log.level }}
                 </span>
-              </div>
-            </td>
-          </tr>
+              </td>
+              <td class="col-message">
+                <div class="message-main">
+                  <span class="expand-indicator">{{ isExpanded(i) ? 'v' : '>' }}</span>
+                  <span class="log-line">{{ log.line }}</span>
+                </div>
+                <div v-if="log.labels && Object.keys(log.labels).length > 0" class="log-labels">
+                  <span
+                    v-for="(value, key) in log.labels"
+                    :key="String(key)"
+                    class="label-tag"
+                  >
+                    {{ key }}={{ value }}
+                  </span>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="isExpanded(i)" class="details-row">
+              <td colspan="3" class="details-cell">
+                <div class="details-title">Detected Fields</div>
+                <div v-if="detectedFieldsByRow[i]?.length" class="field-grid">
+                  <div
+                    v-for="field in detectedFieldsByRow[i]"
+                    :key="field.key"
+                    class="field-row"
+                  >
+                    <span class="field-key">{{ field.key }}</span>
+                    <span class="field-value">{{ field.value }}</span>
+                  </div>
+                </div>
+                <div v-else class="no-fields">No structured fields detected in this message.</div>
+              </td>
+            </tr>
+          </template>
           <tr v-if="logs.length === 0">
             <td colspan="3" class="empty-row">No log entries</td>
           </tr>
@@ -153,6 +306,14 @@ const displayLogs = computed(() => props.logs.slice(0, 1000))
   background: var(--bg-hover);
 }
 
+.log-row {
+  cursor: pointer;
+}
+
+.log-row.expanded td {
+  background: rgba(31, 49, 73, 0.45);
+}
+
 .col-time {
   width: 110px;
   white-space: nowrap;
@@ -164,6 +325,20 @@ const displayLogs = computed(() => props.logs.slice(0, 1000))
 
 .col-message {
   word-break: break-word;
+}
+
+.message-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.expand-indicator {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  margin-top: 0.1rem;
 }
 
 .timestamp {
@@ -227,6 +402,60 @@ tr.level-warning td {
   border-radius: 3px;
   font-size: 0.7rem;
   color: var(--text-secondary);
+}
+
+.details-row td {
+  border-top: 0;
+  background: rgba(12, 21, 33, 0.88);
+}
+
+.details-cell {
+  padding: 0.65rem 0.75rem 0.8rem;
+}
+
+.details-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  margin-bottom: 0.45rem;
+}
+
+.field-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 220px) 1fr;
+  gap: 0.6rem;
+}
+
+.field-key {
+  color: var(--accent-primary);
+  font-size: 0.74rem;
+  word-break: break-word;
+}
+
+.field-value {
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.no-fields {
+  color: var(--text-tertiary);
+  font-size: 0.74rem;
+}
+
+@media (max-width: 680px) {
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
 }
 
 .empty-row {

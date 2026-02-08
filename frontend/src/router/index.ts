@@ -3,6 +3,7 @@ import { useAuth } from '../composables/useAuth'
 import DashboardsView from '../views/DashboardsView.vue'
 import DashboardDetailView from '../views/DashboardDetailView.vue'
 import Explore from '../views/Explore.vue'
+import ExploreLogs from '../views/ExploreLogs.vue'
 import OrganizationSettings from '../views/OrganizationSettings.vue'
 import DataSourceSettings from '../views/DataSourceSettings.vue'
 import LoginView from '../views/LoginView.vue'
@@ -33,7 +34,17 @@ const router = createRouter({
     {
       path: '/explore',
       name: 'explore',
+      redirect: '/explore/metrics'
+    },
+    {
+      path: '/explore/metrics',
+      name: 'explore-metrics',
       component: Explore
+    },
+    {
+      path: '/explore/logs',
+      name: 'explore-logs',
+      component: ExploreLogs
     },
     {
       path: '/settings/org/:id',

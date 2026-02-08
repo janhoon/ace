@@ -1,0 +1,75 @@
+Progress Log
+============
+
+Retention Policy
+- Keep only the 10 most recent change entries in this file.
+- When adding a new entry beyond 10, remove the oldest entry.
+
+Recent Changes
+1) 2026-02-07 - Expandable log rows with detected fields
+   - Updated `frontend/src/components/LogViewer.vue` so each log row is clickable and expands inline.
+   - Added automatic structured field detection from JSON log bodies (including nested fields) and `key=value` log lines.
+   - Added a details panel per expanded row showing all detected fields as key/value pairs.
+   - Added `frontend/src/components/LogViewer.spec.ts` coverage for expand/collapse behavior and field detection.
+   - Validation passed: `npm run type-check`.
+
+2) 2026-02-07 - Log datasource indexed-label autocomplete
+   - Added backend label discovery endpoint `GET /api/datasources/{id}/labels` in `backend/internal/handlers/datasource.go` and registered it in `backend/cmd/api/main.go`.
+   - Implemented Loki indexed-label retrieval via `/loki/api/v1/labels` in `backend/internal/datasource/loki.go`.
+   - Implemented Victoria Logs field-name discovery via `/select/logsql/field_names?query=*` in `backend/internal/datasource/victorialogs.go`.
+   - Wired Explore Logs to fetch and cache datasource labels and pass them to Monaco in `frontend/src/views/ExploreLogs.vue`.
+   - Added dynamic LogQL label suggestions sourced from indexed labels in `frontend/src/logquery/language.ts` and passed through `frontend/src/components/MonacoQueryEditor.vue`.
+   - Added frontend API helper in `frontend/src/api/datasources.ts` and updated tests in `frontend/src/views/ExploreLogs.spec.ts`.
+   - Validation passed: `go test ./internal/datasource ./internal/handlers` and `npm run type-check`; Vitest still fails to start in this environment due `vite-plugin-monaco-editor` using unsupported `fs.rmdirSync(..., { recursive: true })`.
+
+3) 2026-02-07 - Switched Docker log shipping to OpenTelemetry Collector
+   - Replaced Promtail-based shipping with an OpenTelemetry Collector service in `docker-compose.yml`.
+   - Added `otel-collector.yml` to tail Docker JSON logs from `/var/lib/docker/containers` and export to both Loki and Victoria Logs.
+   - Configured dual OTLP HTTP log exporters: Loki (`http://loki:3100/otlp/v1/logs`) and Victoria Logs (`http://victorialogs:9428/insert/opentelemetry/v1/logs`).
+   - Removed obsolete `promtail.yml` and updated setup docs in `README.md`.
+   - Validation passed: `docker compose config`.
+
+4) 2026-02-07 - Monaco editor for LogQL and LogsQL in Explore Logs
+   - Replaced the plain textarea in `frontend/src/views/ExploreLogs.vue` with `MonacoQueryEditor` and wired `Ctrl+Enter` submit through the editor.
+   - Added datasource-aware query language switching so Loki uses `logql` mode and Victoria Logs uses `logsql` mode.
+   - Added lightweight LogQL/LogsQL Monaco language support with syntax highlighting, keyword/function completion, and hover docs in `frontend/src/logquery/language.ts`.
+   - Updated `frontend/src/components/MonacoQueryEditor.vue` to support a dynamic `language` prop and runtime language switching.
+   - Updated `frontend/src/views/ExploreLogs.spec.ts` with Monaco editor mocking and language-switch coverage.
+   - Validation passed: `npm run type-check`. `npm run test -- src/views/Explore.spec.ts src/views/ExploreLogs.spec.ts` failed to start in this environment due `vite-plugin-monaco-editor` using unsupported `fs.rmdirSync(..., { recursive: true })`.
+
+5) 2026-02-07 - Query range controls stacked under selector
+   - Updated `frontend/src/components/TimeRangePicker.vue` with a `stacked` layout mode so refresh controls render below the range selector.
+   - Applied stacked mode in `frontend/src/views/Explore.vue` and `frontend/src/views/ExploreLogs.vue` to keep query range labels aligned with datasource labels.
+   - Kept dashboard behavior unchanged by using stacked layout only where explicitly requested.
+   - Validation passed: `npm run type-check` and `npm run test -- src/views/Explore.spec.ts src/views/ExploreLogs.spec.ts`.
+
+6) 2026-02-07 - Time range moved beside datasource selector
+   - Moved `TimeRangePicker` controls from page headers into the query context row in `frontend/src/views/Explore.vue` and `frontend/src/views/ExploreLogs.vue`.
+   - Placed query range controls to the right of the datasource card selector so datasource, range, and auto-refresh are grouped near query input actions.
+   - Added responsive query context row layout so controls stack cleanly on mobile.
+   - Validation passed: `npm run type-check` and `npm run test -- src/views/Explore.spec.ts src/views/ExploreLogs.spec.ts`.
+
+7) 2026-02-07 - Active source card converted to dropdown selector
+   - Reworked datasource controls in `frontend/src/views/Explore.vue` and `frontend/src/views/ExploreLogs.vue` so the active source card itself is now the selector trigger.
+   - Added custom datasource dropdown menus with logo + type per option, selected check state, and outside-click close behavior.
+   - Kept inline health state on the active card and preserved existing automatic datasource health checks.
+   - Updated `frontend/src/views/Explore.spec.ts` and `frontend/src/views/ExploreLogs.spec.ts` to validate card-triggered dropdown selection UI.
+   - Validation passed: `npm run type-check` and `npm run test -- src/views/Explore.spec.ts src/views/ExploreLogs.spec.ts`.
+
+8) 2026-02-07 - Explore datasource selector prominence with health
+   - Redesigned datasource selector blocks in `frontend/src/views/Explore.vue` and `frontend/src/views/ExploreLogs.vue` to be the main active-source indicator with logo, source name/type, and health status.
+   - Added datasource health checks for the selected source (checking/healthy/unhealthy states) using lightweight smoke queries and surfaced status badges inline with the selector.
+   - Removed the header-level active datasource chips so the selector itself is the canonical indicator.
+   - Updated `frontend/src/views/Explore.spec.ts` and `frontend/src/views/ExploreLogs.spec.ts` assertions for the new prominent selector and health badge behavior.
+   - Validation passed: `npm run type-check` and `npm run test -- src/views/Explore.spec.ts src/views/ExploreLogs.spec.ts`.
+
+9) 2026-02-07 - Logs Explore active datasource logo
+   - Added an active datasource chip in `frontend/src/views/ExploreLogs.vue` that shows the selected logs datasource logo and name next to the Logs badge.
+   - Reused datasource type-to-logo mapping with existing datasource logo assets and responsive chip styling.
+   - Updated `frontend/src/views/ExploreLogs.spec.ts` to assert active datasource logo/name rendering.
+   - Validation passed: `npm run type-check` and `npm run test -- src/views/Explore.spec.ts src/views/ExploreLogs.spec.ts`.
+
+10) 2026-02-07 - Metrics Explore active datasource logo
+   - Added an active datasource chip in `frontend/src/views/Explore.vue` that shows the selected datasource logo and name next to the Metrics badge.
+   - Wired datasource type to logo mapping using existing datasource logo assets for Prometheus, VictoriaMetrics, Loki, and Victoria Logs.
+   - Updated `frontend/src/views/Explore.spec.ts` to assert active datasource logo/name rendering.

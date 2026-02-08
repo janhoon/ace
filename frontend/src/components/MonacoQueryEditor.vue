@@ -1,11 +1,25 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, shallowRef } from 'vue'
+import { ref, watch, onMounted, onUnmounted, shallowRef, computed } from 'vue'
 import * as monaco from 'monaco-editor'
 import { registerPromQLLanguage, definePromQLTheme, PROMQL_LANGUAGE_ID } from '../promql/language'
 import { registerCompletionProvider } from '../promql/completionProvider'
 import { registerHoverProvider } from '../promql/hoverProvider'
+import {
+  registerLogQueryLanguages,
+  LOGQL_LANGUAGE_ID,
+  LOGSQL_LANGUAGE_ID,
+  setLogQLIndexedLabels,
+} from '../logquery/language'
 
-// Initialize Monaco PromQL support (only once)
+type QueryLanguage = 'promql' | 'logql' | 'logsql'
+
+function getMonacoLanguageId(language: QueryLanguage): string {
+  if (language === 'logql') return LOGQL_LANGUAGE_ID
+  if (language === 'logsql') return LOGSQL_LANGUAGE_ID
+  return PROMQL_LANGUAGE_ID
+}
+
+// Initialize Monaco language support (only once)
 let initialized = false
 function initializeMonaco() {
   if (initialized) return
@@ -15,6 +29,7 @@ function initializeMonaco() {
   definePromQLTheme(monaco)
   registerCompletionProvider(monaco)
   registerHoverProvider(monaco)
+  registerLogQueryLanguages(monaco)
 }
 
 const props = withDefaults(defineProps<{
@@ -22,9 +37,13 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   height?: number
   placeholder?: string
+  language?: QueryLanguage
+  indexedLabels?: string[]
 }>(), {
   height: 100,
-  placeholder: 'Enter PromQL query...'
+  placeholder: 'Enter PromQL query...',
+  language: 'promql',
+  indexedLabels: () => [],
 })
 
 const emit = defineEmits<{
@@ -34,14 +53,11 @@ const emit = defineEmits<{
 
 const containerRef = ref<HTMLElement | null>(null)
 const editorInstance = shallowRef<monaco.editor.IStandaloneCodeEditor | null>(null)
-
-// Track if component is mounted
-const isMounted = ref(false)
+const isFocused = ref(false)
+const showPlaceholder = computed(() => !props.modelValue && !isFocused.value)
 
 // Create editor on mount
 onMounted(() => {
-  isMounted.value = true
-
   if (!containerRef.value) return
 
   // Initialize Monaco once
@@ -50,7 +66,7 @@ onMounted(() => {
   // Create editor
   const editor = monaco.editor.create(containerRef.value, {
     value: props.modelValue,
-    language: PROMQL_LANGUAGE_ID,
+    language: getMonacoLanguageId(props.language),
     theme: 'promql-dark',
     minimap: { enabled: false },
     lineNumbers: 'on',
@@ -102,6 +118,14 @@ onMounted(() => {
     }
   })
 
+  editor.onDidFocusEditorText(() => {
+    isFocused.value = true
+  })
+
+  editor.onDidBlurEditorText(() => {
+    isFocused.value = false
+  })
+
   // Handle Ctrl+Enter to submit
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
     emit('submit')
@@ -110,7 +134,6 @@ onMounted(() => {
 
 // Clean up on unmount
 onUnmounted(() => {
-  isMounted.value = false
   if (editorInstance.value) {
     editorInstance.value.dispose()
     editorInstance.value = null
@@ -138,6 +161,17 @@ watch(() => props.height, () => {
   }
 })
 
+watch(() => props.language, (language) => {
+  const model = editorInstance.value?.getModel()
+  if (model) {
+    monaco.editor.setModelLanguage(model, getMonacoLanguageId(language))
+  }
+})
+
+watch(() => props.indexedLabels, (labels) => {
+  setLogQLIndexedLabels(labels)
+}, { immediate: true })
+
 // Focus the editor
 function focus() {
   editorInstance.value?.focus()
@@ -154,7 +188,7 @@ defineExpose({ focus })
       class="editor-container"
       :style="{ height: `${height}px` }"
     ></div>
-    <div v-if="!modelValue && !editorInstance" class="placeholder">
+    <div v-if="showPlaceholder" class="placeholder">
       {{ placeholder }}
     </div>
   </div>

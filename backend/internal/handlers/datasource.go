@@ -398,6 +398,87 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(result)
 }
 
+// Labels returns indexed labels/fields for log datasources
+func (h *DataSourceHandler) Labels(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid datasource id"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	var ds models.DataSource
+	err = h.pool.QueryRow(ctx,
+		`SELECT id, organization_id, name, type, url, is_default, auth_type, auth_config, created_at, updated_at
+		 FROM datasources WHERE id = $1`, id,
+	).Scan(&ds.ID, &ds.OrganizationID, &ds.Name, &ds.Type, &ds.URL, &ds.IsDefault, &ds.AuthType, &ds.AuthConfig, &ds.CreatedAt, &ds.UpdatedAt)
+	if err != nil {
+		http.Error(w, `{"error":"datasource not found"}`, http.StatusNotFound)
+		return
+	}
+
+	_, err = h.checkOrgMembership(ctx, userID, ds.OrganizationID)
+	if err != nil {
+		http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
+		return
+	}
+
+	var labels []string
+	switch ds.Type {
+	case models.DataSourceLoki:
+		client, err := datasource.NewLokiClient(ds.URL)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			return
+		}
+
+		labels, err = client.Labels(ctx)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to fetch labels: " + err.Error()})
+			return
+		}
+
+	case models.DataSourceVictoriaLogs:
+		client, err := datasource.NewVictoriaLogsClient(ds.URL)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			return
+		}
+
+		labels, err = client.Labels(ctx)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to fetch labels: " + err.Error()})
+			return
+		}
+
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "label discovery is only supported for log datasources"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(struct {
+		Status string   `json:"status"`
+		Data   []string `json:"data"`
+	}{
+		Status: "success",
+		Data:   labels,
+	})
+}
+
 // QueryByParams handles GET-based query with query parameters (backwards compatible with existing Prometheus handler)
 func (h *DataSourceHandler) QueryByParams(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

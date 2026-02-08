@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -27,11 +29,67 @@ func NewVictoriaLogsClient(baseURL string) (*VictoriaLogsClient, error) {
 
 // Victoria Logs returns JSONL (JSON Lines) format
 type vlLogEntry struct {
-	Message   string `json:"_msg"`
-	Time      string `json:"_time"`
-	Stream    string `json:"_stream"`
-	StreamID  string `json:"_stream_id"`
+	Message     string                 `json:"_msg"`
+	Time        string                 `json:"_time"`
+	Stream      string                 `json:"_stream"`
+	StreamID    string                 `json:"_stream_id"`
 	ExtraFields map[string]interface{} `json:"-"`
+}
+
+type victoriaLogsFieldNamesResponse struct {
+	Values []struct {
+		Value string `json:"value"`
+	} `json:"values"`
+	Status string `json:"status,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+func (c *VictoriaLogsClient) Labels(ctx context.Context) ([]string, error) {
+	params := url.Values{}
+	params.Set("query", "*")
+
+	reqURL := fmt.Sprintf("%s/select/logsql/field_names?%s", c.baseURL, params.Encode())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create field names request: %w", err)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query Victoria Logs field names: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read field names response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("victoria logs field names request failed with status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var fieldResp victoriaLogsFieldNamesResponse
+	if err := json.Unmarshal(body, &fieldResp); err != nil {
+		return nil, fmt.Errorf("failed to parse field names response: %w", err)
+	}
+
+	if fieldResp.Status == "error" {
+		return nil, fmt.Errorf("victoria logs field names request failed: %s", fieldResp.Error)
+	}
+
+	labels := make([]string, 0, len(fieldResp.Values))
+	for _, value := range fieldResp.Values {
+		trimmed := strings.TrimSpace(value.Value)
+		if trimmed == "" {
+			continue
+		}
+		labels = append(labels, trimmed)
+	}
+
+	sort.Strings(labels)
+
+	return labels, nil
 }
 
 func (c *VictoriaLogsClient) Query(ctx context.Context, query string, start, end time.Time, step time.Duration, limit int) (*QueryResult, error) {

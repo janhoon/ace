@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass, LogOut, Database } from 'lucide-vue-next'
+import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass, LogOut, Database, ChevronDown } from 'lucide-vue-next'
 import OrganizationDropdown from './OrganizationDropdown.vue'
 import CreateOrganizationModal from './CreateOrganizationModal.vue'
 import { useOrganization } from '../composables/useOrganization'
@@ -16,16 +16,36 @@ const isExpanded = ref(typeof window !== 'undefined' ? window.innerWidth > 1100 
 const showCreateOrgModal = ref(false)
 
 interface NavItem {
+  id: string
   icon: typeof LayoutDashboard
+  label: string
+  path: string
+  children?: NavChild[]
+}
+
+interface NavChild {
   label: string
   path: string
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboards', path: '/dashboards' },
-  { icon: Compass, label: 'Explore', path: '/explore' },
-  { icon: Database, label: 'Data Sources', path: '/datasources' },
+  { id: 'dashboards', icon: LayoutDashboard, label: 'Dashboards', path: '/dashboards' },
+  {
+    id: 'explore',
+    icon: Compass,
+    label: 'Explore',
+    path: '/explore/metrics',
+    children: [
+      { label: 'Metrics', path: '/explore/metrics' },
+      { label: 'Logs', path: '/explore/logs' },
+    ],
+  },
+  { id: 'datasources', icon: Database, label: 'Data Sources', path: '/datasources' },
 ]
+
+const openNavGroups = ref<Record<string, boolean>>({
+  explore: route.path.startsWith('/explore'),
+})
 
 // Settings path is dynamic based on current organization
 const settingsPath = computed(() => {
@@ -35,12 +55,40 @@ const settingsPath = computed(() => {
   return null
 })
 
-function isActive(path: string): boolean {
-  return route.path.startsWith(path)
+watch(() => route.path, (path) => {
+  if (path.startsWith('/explore')) {
+    openNavGroups.value.explore = true
+  }
+})
+
+function isRouteMatch(path: string): boolean {
+  return route.path === path || route.path.startsWith(`${path}/`)
+}
+
+function isActive(item: NavItem): boolean {
+  if (item.children) {
+    return item.children.some(child => isRouteMatch(child.path))
+  }
+  return isRouteMatch(item.path)
+}
+
+function isNavGroupOpen(id: string): boolean {
+  return !!openNavGroups.value[id]
+}
+
+function toggleNavGroup(id: string) {
+  openNavGroups.value[id] = !openNavGroups.value[id]
 }
 
 function navigate(path: string) {
   router.push(path)
+}
+
+function handleNavItemClick(item: NavItem) {
+  if (item.children) {
+    openNavGroups.value[item.id] = true
+  }
+  navigate(item.path)
 }
 
 function toggleSidebar() {
@@ -80,25 +128,51 @@ defineExpose({ isExpanded })
 
     <nav class="sidebar-nav">
       <div class="nav-main">
-        <button
+        <div
           v-for="item in navItems"
-          :key="item.path"
-          class="nav-item"
-          :class="{ active: isActive(item.path) }"
-          @click="navigate(item.path)"
-          :title="isExpanded ? undefined : item.label"
+          :key="item.id"
+          class="nav-item-group"
         >
-          <component :is="item.icon" :size="20" />
-          <span v-if="isExpanded" class="nav-label">{{ item.label }}</span>
-          <span v-else class="nav-tooltip">{{ item.label }}</span>
-        </button>
+          <button
+            class="nav-item"
+            :class="{ active: isActive(item) }"
+            @click="handleNavItemClick(item)"
+            :title="isExpanded ? undefined : item.label"
+          >
+            <component :is="item.icon" :size="20" />
+            <span v-if="isExpanded" class="nav-label">{{ item.label }}</span>
+            <span v-else class="nav-tooltip">{{ item.label }}</span>
+            <span
+              v-if="isExpanded && item.children"
+              class="nav-chevron-toggle"
+              @click.stop="toggleNavGroup(item.id)"
+            >
+              <ChevronDown :size="14" class="nav-chevron" :class="{ open: isNavGroupOpen(item.id) }" />
+            </span>
+          </button>
+
+          <div
+            v-if="isExpanded && item.children && isNavGroupOpen(item.id)"
+            class="nav-children"
+          >
+            <button
+              v-for="child in item.children"
+              :key="child.path"
+              class="nav-sub-item"
+              :class="{ active: isRouteMatch(child.path) }"
+              @click="navigate(child.path)"
+            >
+              <span class="nav-sub-label">{{ child.label }}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="nav-bottom">
         <button
           v-if="settingsPath"
           class="nav-item"
-          :class="{ active: isActive('/settings') }"
+          :class="{ active: isRouteMatch('/settings') }"
           @click="navigate(settingsPath)"
           :title="isExpanded ? undefined : 'Settings'"
         >
@@ -249,6 +323,12 @@ defineExpose({ isExpanded })
   gap: 0.25rem;
 }
 
+.nav-item-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .nav-item {
   position: relative;
   height: 42px;
@@ -263,6 +343,67 @@ defineExpose({ isExpanded })
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.nav-chevron-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-tertiary);
+  border-radius: 4px;
+}
+
+.nav-chevron-toggle:hover {
+  background: rgba(31, 49, 73, 0.84);
+  color: var(--text-primary);
+}
+
+.nav-chevron {
+  transition: transform 0.2s ease;
+}
+
+.nav-chevron.open {
+  transform: rotate(180deg);
+}
+
+.nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0 0.6rem 0.35rem 1.8rem;
+}
+
+.nav-sub-item {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 0.7rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-sub-item:hover {
+  background: rgba(31, 49, 73, 0.64);
+  border-color: rgba(125, 211, 252, 0.2);
+  color: var(--text-primary);
+}
+
+.nav-sub-item.active {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.28);
+  color: #bde9ff;
+}
+
+.nav-sub-label {
+  font-size: 0.76rem;
+  letter-spacing: 0.01em;
 }
 
 .sidebar:not(.expanded) .nav-item {

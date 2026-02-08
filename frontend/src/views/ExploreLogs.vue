@@ -1,25 +1,24 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Play, AlertCircle, History, X, Loader2, HeartPulse, CircleAlert, ChevronDown, ChevronUp, Check } from 'lucide-vue-next'
-import QueryBuilder from '../components/QueryBuilder.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
-import LineChart from '../components/LineChart.vue'
+import LogViewer from '../components/LogViewer.vue'
+import MonacoQueryEditor from '../components/MonacoQueryEditor.vue'
 import { useTimeRange } from '../composables/useTimeRange'
-import { transformToChartData, type PrometheusQueryResult } from '../composables/useProm'
 import { useOrganization } from '../composables/useOrganization'
 import { useDatasource } from '../composables/useDatasource'
-import { queryDataSource } from '../api/datasources'
+import { queryDataSource, fetchDataSourceLabels } from '../api/datasources'
 import type { DataSourceType } from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
+import type { LogEntry } from '../types/datasource'
 import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
 import lokiLogo from '../assets/datasources/loki-logo.svg'
 import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
 import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
-import type { ChartSeries } from '../components/LineChart.vue'
 
 const { timeRange, onRefresh } = useTimeRange()
 const { currentOrg } = useOrganization()
-const { metricsDatasources, fetchDatasources } = useDatasource()
+const { logsDatasources, fetchDatasources } = useDatasource()
 
 const dataSourceTypeLogos: Record<DataSourceType, string> = {
   prometheus: prometheusLogo,
@@ -30,16 +29,14 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'
 
-// Query state
 const selectedDatasourceId = ref('')
 const query = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
-const result = ref<PrometheusQueryResult | null>(null)
-const chartSeries = ref<ChartSeries[]>([])
+const logs = ref<LogEntry[]>([])
+const hasSuccessfulQuery = ref(false)
 
-// Query history (session storage)
-const HISTORY_KEY = 'explore_query_history'
+const HISTORY_KEY = 'explore_logs_query_history'
 const MAX_HISTORY = 10
 const queryHistory = ref<string[]>([])
 const showHistory = ref(false)
@@ -47,8 +44,9 @@ const showDatasourceMenu = ref(false)
 const datasourceMenuRef = ref<HTMLElement | null>(null)
 const datasourceHealth = ref<Record<string, DatasourceHealthStatus>>({})
 const datasourceHealthErrors = ref<Record<string, string>>({})
+const indexedLabels = ref<string[]>([])
+const labelsCache = ref<Map<string, string[]>>(new Map())
 
-// Load history from session storage
 onMounted(() => {
   const stored = sessionStorage.getItem(HISTORY_KEY)
   if (stored) {
@@ -74,7 +72,7 @@ watch(
 )
 
 watch(
-  metricsDatasources,
+  logsDatasources,
   (sources) => {
     if (sources.length === 0) {
       selectedDatasourceId.value = ''
@@ -91,7 +89,7 @@ watch(
 )
 
 watch(
-  metricsDatasources,
+  logsDatasources,
   (sources) => {
     const sourceIds = new Set(sources.map(ds => ds.id))
     datasourceHealth.value = Object.fromEntries(
@@ -100,27 +98,28 @@ watch(
     datasourceHealthErrors.value = Object.fromEntries(
       Object.entries(datasourceHealthErrors.value).filter(([id]) => sourceIds.has(id)),
     )
+
+    const filteredCache = new Map<string, string[]>()
+    for (const [id, labels] of labelsCache.value.entries()) {
+      if (sourceIds.has(id)) {
+        filteredCache.set(id, labels)
+      }
+    }
+    labelsCache.value = filteredCache
   },
 )
 
-// Save query to history
 function addToHistory(q: string) {
   if (!q.trim()) return
 
-  // Remove duplicate if exists
   const filtered = queryHistory.value.filter(h => h !== q)
-
-  // Add to beginning
   queryHistory.value = [q, ...filtered].slice(0, MAX_HISTORY)
-
-  // Save to session storage
   sessionStorage.setItem(HISTORY_KEY, JSON.stringify(queryHistory.value))
 }
 
-// Run the query
 async function runQuery() {
   if (!selectedDatasourceId.value) {
-    error.value = 'Select a metrics datasource'
+    error.value = 'Select a logs datasource'
     return
   }
 
@@ -131,47 +130,34 @@ async function runQuery() {
 
   loading.value = true
   error.value = null
-  result.value = null
-  chartSeries.value = []
+  logs.value = []
+  hasSuccessfulQuery.value = false
 
   try {
-    // Convert time range from milliseconds to seconds
     const start = Math.floor(timeRange.value.start / 1000)
     const end = Math.floor(timeRange.value.end / 1000)
-
-    // Calculate step based on time range (aim for ~200 data points)
-    const duration = end - start
-    const step = Math.max(15, Math.floor(duration / 200))
 
     const response = await queryDataSource(selectedDatasourceId.value, {
       query: query.value,
       start,
       end,
-      step,
+      step: 15,
+      limit: 1000,
     })
 
     if (response.status === 'error') {
       error.value = response.error || 'Query failed'
-    } else if (response.resultType !== 'metrics') {
-      error.value = 'Selected datasource did not return metric results'
-    } else {
-      const metricsResponse: PrometheusQueryResult = {
-        status: response.status,
-        data: response.data,
-        error: response.error,
-      }
-
-      result.value = metricsResponse
-
-      const chartData = transformToChartData(metricsResponse)
-      chartSeries.value = chartData.series.map(s => ({
-        name: s.name,
-        data: s.data
-      }))
-
-      // Add to history on successful query
-      addToHistory(query.value)
+      return
     }
+
+    if (response.resultType !== 'logs') {
+      error.value = 'Selected datasource did not return log results'
+      return
+    }
+
+    logs.value = response.data?.logs || []
+    hasSuccessfulQuery.value = true
+    addToHistory(query.value)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to execute query'
   } finally {
@@ -179,33 +165,41 @@ async function runQuery() {
   }
 }
 
-// Handle keyboard shortcut
-function handleKeydown(e: KeyboardEvent) {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-    e.preventDefault()
-    runQuery()
-  }
-}
-
-// Select query from history
 function selectHistoryQuery(q: string) {
   query.value = q
   showHistory.value = false
 }
 
-// Clear history
 function clearHistory() {
   queryHistory.value = []
   sessionStorage.removeItem(HISTORY_KEY)
 }
 
-// Subscribe to refresh events
+async function loadIndexedLabels(datasourceId: string) {
+  if (labelsCache.value.has(datasourceId)) {
+    indexedLabels.value = labelsCache.value.get(datasourceId) || []
+    return
+  }
+
+  try {
+    const labels = await fetchDataSourceLabels(datasourceId)
+    labelsCache.value.set(datasourceId, labels)
+    if (selectedDatasourceId.value === datasourceId) {
+      indexedLabels.value = labels
+    }
+  } catch {
+    if (selectedDatasourceId.value === datasourceId) {
+      indexedLabels.value = []
+    }
+  }
+}
+
 let unsubscribeRefresh: (() => void) | null = null
 
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
   unsubscribeRefresh = onRefresh(() => {
-    if (query.value.trim() && selectedDatasourceId.value && result.value?.status === 'success') {
+    if (query.value.trim() && selectedDatasourceId.value && hasSuccessfulQuery.value) {
       runQuery()
     }
   })
@@ -218,13 +212,24 @@ onUnmounted(() => {
   }
 })
 
-// Computed properties
-const hasResults = computed(() => result.value?.status === 'success' && chartSeries.value.length > 0)
-const seriesCount = computed(() => chartSeries.value.length)
-const hasMetricsDatasources = computed(() => metricsDatasources.value.length > 0)
+const hasLogsDatasources = computed(() => logsDatasources.value.length > 0)
+const hasResults = computed(() => hasSuccessfulQuery.value && logs.value.length > 0)
 const activeDatasource = computed(
-  () => metricsDatasources.value.find(ds => ds.id === selectedDatasourceId.value) || null,
+  () => logsDatasources.value.find(ds => ds.id === selectedDatasourceId.value) || null,
 )
+const queryLanguage = computed<'logql' | 'logsql'>(() => {
+  if (activeDatasource.value?.type === 'victorialogs') {
+    return 'logsql'
+  }
+  return 'logql'
+})
+const queryLabel = computed(() => (queryLanguage.value === 'logsql' ? 'LogsQL Query' : 'LogQL Query'))
+const queryPlaceholder = computed(() => {
+  if (queryLanguage.value === 'logsql') {
+    return '*'
+  }
+  return '{job=~".+"} |= "error"'
+})
 const activeDatasourceHealth = computed<DatasourceHealthStatus>(() => {
   if (!activeDatasource.value) {
     return 'unknown'
@@ -251,7 +256,7 @@ function getTypeLogo(type_: DataSourceType): string {
 }
 
 function toggleDatasourceMenu() {
-  if (loading.value || !hasMetricsDatasources.value) {
+  if (loading.value || !hasLogsDatasources.value) {
     return
   }
 
@@ -325,14 +330,23 @@ watch(
 watch(selectedDatasourceId, () => {
   showDatasourceMenu.value = false
 })
+
+watch(() => selectedDatasourceId.value, (datasourceId) => {
+  if (!datasourceId) {
+    indexedLabels.value = []
+    return
+  }
+
+  void loadIndexedLabels(datasourceId)
+}, { immediate: true })
 </script>
 
 <template>
-  <div class="explore-page" @keydown="handleKeydown">
+  <div class="explore-page">
     <header class="explore-header">
       <div class="header-title">
         <h1>Explore</h1>
-        <span class="mode-badge">Metrics</span>
+        <span class="mode-badge">Logs</span>
       </div>
     </header>
 
@@ -345,9 +359,9 @@ watch(selectedDatasourceId, () => {
               <button
                 type="button"
                 class="active-datasource-panel datasource-trigger"
-                :disabled="loading || !hasMetricsDatasources"
+                :disabled="loading || !hasLogsDatasources"
                 @click="toggleDatasourceMenu"
-                :title="activeDatasource ? `Active datasource: ${activeDatasource.name}` : 'No metrics datasource configured'"
+                :title="activeDatasource ? `Active datasource: ${activeDatasource.name}` : 'No logs datasource configured'"
               >
                 <template v-if="activeDatasource">
                   <img
@@ -372,7 +386,7 @@ watch(selectedDatasourceId, () => {
                   </span>
                 </template>
 
-                <span v-else class="active-datasource-empty">No metrics datasource configured</span>
+                <span v-else class="active-datasource-empty">No logs datasource configured</span>
 
                 <component
                   :is="showDatasourceMenu ? ChevronUp : ChevronDown"
@@ -381,9 +395,9 @@ watch(selectedDatasourceId, () => {
                 />
               </button>
 
-              <div v-if="showDatasourceMenu && hasMetricsDatasources" class="datasource-dropdown">
+              <div v-if="showDatasourceMenu && hasLogsDatasources" class="datasource-dropdown">
                 <button
-                  v-for="ds in metricsDatasources"
+                  v-for="ds in logsDatasources"
                   :key="ds.id"
                   type="button"
                   class="datasource-option"
@@ -412,9 +426,18 @@ watch(selectedDatasourceId, () => {
         </div>
 
         <div class="query-builder-wrapper">
-          <QueryBuilder v-model="query" :disabled="loading || !hasMetricsDatasources" />
+          <label class="query-label">{{ queryLabel }}</label>
+          <MonacoQueryEditor
+            v-model="query"
+            class="query-input"
+            :language="queryLanguage"
+            :indexed-labels="indexedLabels"
+            :disabled="loading || !hasLogsDatasources"
+            :height="130"
+            :placeholder="queryPlaceholder"
+            @submit="runQuery"
+          />
 
-          <!-- History button -->
           <div v-if="queryHistory.length > 0" class="history-container">
             <button
               class="history-btn"
@@ -426,7 +449,6 @@ watch(selectedDatasourceId, () => {
               <span>History</span>
             </button>
 
-            <!-- Query history dropdown -->
             <div v-if="showHistory" class="history-dropdown">
               <div class="history-header">
                 <span>Recent Queries</span>
@@ -449,7 +471,7 @@ watch(selectedDatasourceId, () => {
         <div class="query-actions">
           <button
             class="btn btn-run"
-            :disabled="loading || !query.trim() || !selectedDatasourceId || !hasMetricsDatasources"
+            :disabled="loading || !query.trim() || !selectedDatasourceId || !hasLogsDatasources"
             @click="runQuery"
           >
             <Play :size="16" />
@@ -458,14 +480,12 @@ watch(selectedDatasourceId, () => {
           <span class="hint">Ctrl+Enter to run</span>
         </div>
 
-        <!-- Error display -->
         <div v-if="error" class="query-error">
           <AlertCircle :size="16" />
           <span>{{ error }}</span>
         </div>
       </div>
 
-      <!-- Results section -->
       <div class="results-section">
         <div v-if="loading" class="loading-state">
           <div class="loading-spinner"></div>
@@ -474,25 +494,25 @@ watch(selectedDatasourceId, () => {
 
         <div v-else-if="hasResults" class="results-container">
           <div class="results-header">
-            <span class="result-count">{{ seriesCount }} {{ seriesCount === 1 ? 'series' : 'series' }}</span>
+            <span class="result-count">{{ logs.length }} {{ logs.length === 1 ? 'entry' : 'entries' }}</span>
           </div>
-          <div class="chart-container">
-            <LineChart :series="chartSeries" :height="400" />
+          <div class="log-viewer-container">
+            <LogViewer :logs="logs" />
           </div>
         </div>
 
-        <div v-else-if="result?.status === 'success' && chartSeries.length === 0" class="empty-state">
-          <p>No data returned for the selected time range.</p>
+        <div v-else-if="hasSuccessfulQuery && logs.length === 0" class="empty-state">
+          <p>No logs returned for the selected time range.</p>
         </div>
 
-        <div v-else-if="!hasMetricsDatasources" class="empty-state">
-          <p>No metrics datasource configured.</p>
-          <p class="hint-text">Add a Prometheus or VictoriaMetrics datasource in Data Sources.</p>
+        <div v-else-if="!hasLogsDatasources" class="empty-state">
+          <p>No logs datasource configured.</p>
+          <p class="hint-text">Add a Loki or Victoria Logs datasource in Data Sources.</p>
         </div>
 
         <div v-else class="empty-state">
-          <p>Write a PromQL query and click "Run Query" to visualize your metrics.</p>
-          <p class="hint-text">Examples: <code>up</code>, <code>rate(http_requests_total[5m])</code>, <code>node_cpu_seconds_total</code></p>
+          <p>Write a log query and click "Run Query" to inspect logs.</p>
+          <p class="hint-text">Examples: <code>{job=~".+"}</code>, <code>{app="api"} |= "error"</code>, <code>*</code></p>
         </div>
       </div>
     </div>
@@ -539,9 +559,9 @@ watch(selectedDatasourceId, () => {
 .mode-badge {
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
-  border: 1px solid rgba(52, 211, 153, 0.38);
-  background: rgba(52, 211, 153, 0.14);
-  color: #b7f3dd;
+  border: 1px solid rgba(56, 189, 248, 0.38);
+  background: rgba(56, 189, 248, 0.14);
+  color: #bde9ff;
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -789,7 +809,19 @@ watch(selectedDatasourceId, () => {
 .query-builder-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.7rem;
+}
+
+.query-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.query-input {
+  width: 100%;
 }
 
 .history-container {
@@ -977,6 +1009,7 @@ watch(selectedDatasourceId, () => {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
 }
 
 .results-header {
@@ -993,10 +1026,10 @@ watch(selectedDatasourceId, () => {
   color: var(--text-secondary);
 }
 
-.chart-container {
+.log-viewer-container {
   flex: 1;
+  min-height: 0;
   padding: 1rem;
-  min-height: 400px;
 }
 
 .empty-state {

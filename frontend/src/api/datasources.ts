@@ -104,3 +104,27 @@ export async function queryDataSource(
   }
   return response.json()
 }
+
+interface LabelsResponse {
+  status: 'success' | 'error'
+  data?: string[]
+  error?: string
+}
+
+export async function fetchDataSourceLabels(id: string): Promise<string[]> {
+  const response = await fetch(`${API_BASE}/api/datasources/${id}/labels`, {
+    headers: getAuthHeaders(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to fetch labels')
+  }
+
+  const body = await response.json() as LabelsResponse
+  if (body.status === 'error') {
+    throw new Error(body.error || 'Failed to fetch labels')
+  }
+
+  return body.data || []
+}

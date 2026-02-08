@@ -149,3 +149,8 @@ If any of these files are added later, treat them as higher-priority instruction
 - After backend edits, run targeted `go test` (or `go test ./...` when practical).
 - Avoid introducing new dependencies unless clearly necessary.
 - Keep commits scoped to one feature/fix area.
+
+## 9) Progress log policy
+- Maintain the root file `progress.txt` with recent implementation changes.
+- Keep only the 10 most recent change entries at all times.
+- When adding a new entry beyond 10, remove the oldest entry.

@@ -3,6 +3,12 @@ import { ref, computed, onUnmounted } from 'vue'
 import { Clock, ChevronDown, ChevronUp, RefreshCw } from 'lucide-vue-next'
 import { useTimeRange } from '../composables/useTimeRange'
 
+const props = withDefaults(defineProps<{
+  stacked?: boolean
+}>(), {
+  stacked: false,
+})
+
 const {
   displayText,
   selectedPreset,
@@ -58,7 +64,7 @@ function applyCustomRange() {
   const fromDate = new Date(customFrom.value)
   const toDate = new Date(customTo.value)
 
-  if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
     customRangeError.value = 'Please enter valid dates'
     return
   }
@@ -125,45 +131,49 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="time-range-picker">
-    <div class="picker-controls">
-      <button
-        class="time-display"
-        @click.stop="toggleDropdown"
-        :class="{ active: isOpen }"
-      >
-        <Clock :size="16" class="clock-icon" />
-        <span class="display-text">{{ currentDisplayText }}</span>
-        <component :is="isOpen ? ChevronUp : ChevronDown" :size="14" class="dropdown-arrow" />
-      </button>
-
-      <button
-        class="refresh-btn"
-        :class="{ refreshing: isRefreshing }"
-        @click="handleRefresh"
-        :title="'Last refresh: ' + formatLastRefresh()"
-      >
-        <RefreshCw :size="16" />
-      </button>
-
-      <span v-if="refreshIntervalValue !== 'off'" class="refresh-status">
-        {{ isRefreshing ? 'Refreshing...' : formatLastRefresh() }}
-      </span>
-
-      <div class="refresh-interval-selector">
-        <select
-          :value="refreshIntervalValue"
-          @change="selectRefreshInterval(($event.target as HTMLSelectElement).value)"
-          title="Auto-refresh interval"
+  <div class="time-range-picker" :class="{ stacked: props.stacked }">
+    <div class="picker-controls" :class="{ stacked: props.stacked }">
+      <div class="time-select-row">
+        <button
+          class="time-display"
+          @click.stop="toggleDropdown"
+          :class="{ active: isOpen }"
         >
-          <option
-            v-for="interval in refreshIntervals"
-            :key="interval.value"
-            :value="interval.value"
+          <Clock :size="16" class="clock-icon" />
+          <span class="display-text">{{ currentDisplayText }}</span>
+          <component :is="isOpen ? ChevronUp : ChevronDown" :size="14" class="dropdown-arrow" />
+        </button>
+      </div>
+
+      <div class="refresh-controls-row">
+        <button
+          class="refresh-btn"
+          :class="{ refreshing: isRefreshing }"
+          @click="handleRefresh"
+          :title="'Last refresh: ' + formatLastRefresh()"
+        >
+          <RefreshCw :size="16" />
+        </button>
+
+        <div class="refresh-interval-selector">
+          <select
+            :value="refreshIntervalValue"
+            @change="selectRefreshInterval(($event.target as HTMLSelectElement).value)"
+            title="Auto-refresh interval"
           >
-            {{ interval.label }}
-          </option>
-        </select>
+            <option
+              v-for="interval in refreshIntervals"
+              :key="interval.value"
+              :value="interval.value"
+            >
+              {{ interval.label }}
+            </option>
+          </select>
+        </div>
+
+        <span v-if="refreshIntervalValue !== 'off'" class="refresh-status">
+          {{ isRefreshing ? 'Refreshing...' : formatLastRefresh() }}
+        </span>
       </div>
     </div>
 
@@ -229,10 +239,42 @@ onUnmounted(() => {
   display: inline-block;
 }
 
+.time-range-picker.stacked {
+  display: block;
+  width: 100%;
+}
+
 .picker-controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.picker-controls.stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.time-select-row,
+.refresh-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.time-range-picker.stacked .time-select-row {
+  width: 100%;
+}
+
+.time-range-picker.stacked .time-display {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.time-range-picker.stacked .refresh-controls-row {
+  width: 100%;
+  flex-wrap: wrap;
 }
 
 .time-display {
@@ -310,6 +352,10 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--text-tertiary);
   padding: 0 0.5rem;
+}
+
+.time-range-picker.stacked .refresh-status {
+  padding: 0;
 }
 
 .refresh-interval-selector select {

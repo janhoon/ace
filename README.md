@@ -34,6 +34,7 @@ A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
    ```bash
    docker-compose up -d
    ```
+   This starts the OpenTelemetry Collector, which tails Docker container logs and ships them to both Loki and Victoria Logs.
 
 2. Start the backend API:
    ```bash
@@ -118,6 +119,7 @@ dash/
 │   │   └── db/         # Database connection and migrations
 │   └── pkg/            # Public packages
 ├── agent/              # Ralph agent for automated development
-├── docker-compose.yml  # PostgreSQL + Prometheus services
+├── docker-compose.yml  # Local infra services (DB, metrics, logs)
+├── otel-collector.yml  # Docker log shipping to Loki + Victoria Logs
 └── README.md
 ```

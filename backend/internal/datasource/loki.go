@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -35,6 +36,57 @@ type lokiQueryResponse struct {
 		} `json:"result"`
 	} `json:"data"`
 	Error string `json:"error,omitempty"`
+}
+
+type lokiLabelsResponse struct {
+	Status string   `json:"status"`
+	Data   []string `json:"data"`
+	Error  string   `json:"error,omitempty"`
+}
+
+func (c *LokiClient) Labels(ctx context.Context) ([]string, error) {
+	reqURL := fmt.Sprintf("%s/loki/api/v1/labels", c.baseURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create labels request: %w", err)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query Loki labels: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read labels response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("loki labels request failed with status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var labelsResp lokiLabelsResponse
+	if err := json.Unmarshal(body, &labelsResp); err != nil {
+		return nil, fmt.Errorf("failed to parse labels response: %w", err)
+	}
+
+	if labelsResp.Status != "success" {
+		return nil, fmt.Errorf("loki labels request failed: %s", labelsResp.Error)
+	}
+
+	labels := make([]string, 0, len(labelsResp.Data))
+	for _, label := range labelsResp.Data {
+		trimmed := strings.TrimSpace(label)
+		if trimmed == "" {
+			continue
+		}
+		labels = append(labels, trimmed)
+	}
+
+	sort.Strings(labels)
+
+	return labels, nil
 }
 
 func (c *LokiClient) Query(ctx context.Context, query string, start, end time.Time, step time.Duration, limit int) (*QueryResult, error) {
