@@ -39,6 +39,12 @@ export interface DataSourceQueryRequest {
   limit?: number
 }
 
+export interface DataSourceLogStreamRequest {
+  query: string
+  start?: number
+  limit?: number
+}
+
 export interface MetricResult {
   metric: Record<string, string>
   values: [number, string][]

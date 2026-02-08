@@ -2,9 +2,12 @@
 import { computed, ref, watch } from 'vue'
 import type { LogEntry } from '../types/datasource'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   logs: LogEntry[]
-}>()
+  highlightedLogKeys?: string[]
+}>(), {
+  highlightedLogKeys: () => [],
+})
 
 interface DetectedField {
   key: string
@@ -43,7 +46,20 @@ function formatTimestamp(ts: string): string {
 }
 
 const displayLogs = computed(() => props.logs.slice(0, 1000))
+const highlightedLogKeySet = computed(() => new Set(props.highlightedLogKeys))
 const expandedRows = ref<Set<number>>(new Set())
+
+function getLogKey(log: LogEntry): string {
+  const labels = Object.entries(log.labels || {})
+    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+    .map(([key, value]) => `${key}=${value}`)
+    .join(',')
+  return `${log.timestamp}|${labels}|${log.line}`
+}
+
+function isHighlighted(log: LogEntry): boolean {
+  return highlightedLogKeySet.value.has(getLogKey(log))
+}
 
 function toggleRow(index: number) {
   const next = new Set(expandedRows.value)
@@ -190,7 +206,7 @@ watch(displayLogs, () => {
         <tbody>
           <template v-for="(log, i) in displayLogs" :key="i">
             <tr
-              :class="['log-row', getLevelClass(log.level), { expanded: isExpanded(i) }]"
+              :class="['log-row', getLevelClass(log.level), { expanded: isExpanded(i), highlighted: isHighlighted(log) }]"
               @click="toggleRow(i)"
             >
               <td class="col-time">
@@ -314,6 +330,20 @@ watch(displayLogs, () => {
   background: rgba(31, 49, 73, 0.45);
 }
 
+.log-row.highlighted td {
+  animation: row-highlight-fade 2.4s ease-out;
+  background: rgba(56, 189, 248, 0.14);
+}
+
+@keyframes row-highlight-fade {
+  0% {
+    background: rgba(56, 189, 248, 0.28);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
 .col-time {
   width: 110px;
   white-space: nowrap;
@@ -376,6 +406,11 @@ watch(displayLogs, () => {
 
 tr.level-error td {
   border-left: 2px solid #ff6b6b;
+  background: rgba(255, 107, 107, 0.07);
+}
+
+tr.level-error:hover td {
+  background: rgba(255, 107, 107, 0.1);
 }
 
 tr.level-warning td {

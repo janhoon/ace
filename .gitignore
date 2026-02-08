@@ -50,3 +50,6 @@ prometheus_data/
 # Ralph agent working files (local only, not part of the project)
 agent/prd.json
 agent/progress.txt
+
+# Local progress tracker
+/progress.txt

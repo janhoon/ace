@@ -5,6 +5,7 @@ import ExploreLogs from './ExploreLogs.vue'
 const mockFetchDatasources = vi.hoisted(() => vi.fn())
 const mockQueryDataSource = vi.hoisted(() => vi.fn())
 const mockFetchDataSourceLabels = vi.hoisted(() => vi.fn())
+const mockStreamDataSourceLogs = vi.hoisted(() => vi.fn())
 
 vi.mock('../components/TimeRangePicker.vue', () => ({
   default: {
@@ -16,7 +17,7 @@ vi.mock('../components/TimeRangePicker.vue', () => ({
 vi.mock('../components/LogViewer.vue', () => ({
   default: {
     name: 'LogViewer',
-    props: ['logs'],
+    props: ['logs', 'highlightedLogKeys'],
     template: '<div class="mock-log-viewer">{{ logs.length }} logs</div>'
   }
 }))
@@ -25,6 +26,23 @@ vi.mock('../components/MonacoQueryEditor.vue', () => ({
   default: {
     name: 'MonacoQueryEditor',
     props: ['modelValue', 'disabled', 'height', 'placeholder', 'language', 'indexedLabels'],
+    emits: ['update:modelValue', 'submit'],
+    template: `
+      <textarea
+        class="query-input"
+        :value="modelValue"
+        :disabled="disabled"
+        :placeholder="placeholder"
+        @input="$emit('update:modelValue', $event.target.value)"
+      ></textarea>
+    `,
+  },
+}))
+
+vi.mock('../components/LogQLQueryBuilder.vue', () => ({
+  default: {
+    name: 'LogQLQueryBuilder',
+    props: ['modelValue', 'disabled', 'indexedLabels', 'datasourceId', 'editorHeight', 'placeholder', 'queryLanguage'],
     emits: ['update:modelValue', 'submit'],
     template: `
       <textarea
@@ -93,6 +111,7 @@ vi.mock('../composables/useDatasource', async () => {
 vi.mock('../api/datasources', () => ({
   queryDataSource: mockQueryDataSource,
   fetchDataSourceLabels: mockFetchDataSourceLabels,
+  streamDataSourceLogs: mockStreamDataSourceLogs,
 }))
 
 describe('ExploreLogs', () => {
@@ -101,6 +120,7 @@ describe('ExploreLogs', () => {
     sessionStorage.clear()
     mockFetchDatasources.mockResolvedValue(undefined)
     mockFetchDataSourceLabels.mockResolvedValue(['service_name', 'container_id'])
+    mockStreamDataSourceLogs.mockResolvedValue(undefined)
     mockQueryDataSource.mockResolvedValue({
       status: 'success',
       resultType: 'logs',
@@ -166,6 +186,45 @@ describe('ExploreLogs', () => {
     expect(wrapper.find('.mock-log-viewer').text()).toContain('1 logs')
   })
 
+  it('passes logs to viewer in newest-first order', async () => {
+    mockQueryDataSource.mockResolvedValue({
+      status: 'success',
+      resultType: 'logs',
+      data: {
+        resultType: 'streams',
+        logs: [
+          {
+            timestamp: '2026-01-01T00:00:00Z',
+            line: 'older',
+            level: 'info',
+            labels: {},
+          },
+          {
+            timestamp: '2026-01-01T00:00:02Z',
+            line: 'newest',
+            level: 'info',
+            labels: {},
+          },
+          {
+            timestamp: '2026-01-01T00:00:01Z',
+            line: 'middle',
+            level: 'info',
+            labels: {},
+          },
+        ],
+      },
+    })
+
+    const wrapper = mount(ExploreLogs)
+    await wrapper.find('.query-input').setValue('{job=~".+"}')
+
+    await wrapper.find('.btn-run').trigger('click')
+    await flushPromises()
+
+    const viewerLogs = wrapper.findComponent({ name: 'LogViewer' }).props('logs') as Array<{ timestamp: string, line: string }>
+    expect(viewerLogs.map(log => log.line)).toEqual(['newest', 'middle', 'older'])
+  })
+
   it('shows an error message when query response fails', async () => {
     mockQueryDataSource.mockResolvedValue({
       status: 'error',
@@ -214,23 +273,22 @@ describe('ExploreLogs', () => {
     const wrapper = mount(ExploreLogs)
     await flushPromises()
 
-    const queryEditor = wrapper.findComponent({ name: 'MonacoQueryEditor' })
-    expect(queryEditor.props('language')).toBe('logql')
+    expect(wrapper.findComponent({ name: 'LogQLQueryBuilder' }).props('queryLanguage')).toBe('logql')
 
     await wrapper.find('.datasource-trigger').trigger('click')
     const options = wrapper.findAll('.datasource-option')
     await options[1].trigger('click')
     await flushPromises()
 
-    expect(wrapper.findComponent({ name: 'MonacoQueryEditor' }).props('language')).toBe('logsql')
+    expect(wrapper.findComponent({ name: 'LogQLQueryBuilder' }).props('queryLanguage')).toBe('logsql')
   })
 
-  it('passes indexed labels to the query editor for autocomplete', async () => {
+  it('passes indexed labels to the LogQL builder', async () => {
     const wrapper = mount(ExploreLogs)
     await flushPromises()
 
-    const queryEditor = wrapper.findComponent({ name: 'MonacoQueryEditor' })
+    const queryBuilder = wrapper.findComponent({ name: 'LogQLQueryBuilder' })
     expect(mockFetchDataSourceLabels).toHaveBeenCalledWith('ds-1')
-    expect(queryEditor.props('indexedLabels')).toEqual(['service_name', 'container_id'])
+    expect(queryBuilder.props('indexedLabels')).toEqual(['service_name', 'container_id'])
   })
 })

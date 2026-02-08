@@ -134,7 +134,9 @@ func main() {
 	mux.HandleFunc("PUT /api/datasources/{id}", auth.RequireAuth(jwtManager, dsHandler.Update))
 	mux.HandleFunc("DELETE /api/datasources/{id}", auth.RequireAuth(jwtManager, dsHandler.Delete))
 	mux.HandleFunc("GET /api/datasources/{id}/labels", auth.RequireAuth(jwtManager, dsHandler.Labels))
+	mux.HandleFunc("GET /api/datasources/{id}/labels/{name}/values", auth.RequireAuth(jwtManager, dsHandler.LabelValues))
 	mux.HandleFunc("POST /api/datasources/{id}/query", auth.RequireAuth(jwtManager, dsHandler.Query))
+	mux.HandleFunc("POST /api/datasources/{id}/stream", auth.RequireAuth(jwtManager, dsHandler.Stream))
 
 	// Apply CORS middleware
 	handler := corsMiddleware(mux)

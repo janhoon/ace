@@ -16,6 +16,17 @@ receivers:
         timestamp:
           parse_from: attributes.time
           layout: '%Y-%m-%dT%H:%M:%S.%fZ'
+      - type: copy
+        if: attributes["attrs"]["com.docker.compose.service"] != nil
+        from: attributes["attrs"]["com.docker.compose.service"]
+        to: attributes.service_name
+      - type: copy
+        if: attributes.service_name != nil
+        from: attributes.service_name
+        to: resource["service.name"]
+      - type: remove
+        if: attributes["attrs"] != nil
+        field: attributes.attrs
       - type: move
         from: attributes.log
         to: body
@@ -27,7 +38,10 @@ receivers:
         value: docker
 
 processors:
-  batch: {}
+  batch:
+    send_batch_size: 512
+    send_batch_max_size: 512
+    timeout: 1s
 
 exporters:
   otlphttp/loki:

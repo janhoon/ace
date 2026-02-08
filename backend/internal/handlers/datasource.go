@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -343,6 +344,9 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 
 	// Parse query from body
 	body, err := io.ReadAll(r.Body)
@@ -396,6 +400,175 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(result)
+}
+
+// Stream opens a live log stream against a datasource
+func (h *DataSourceHandler) Stream(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid datasource id"}`, http.StatusBadRequest)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to read request body"})
+		return
+	}
+
+	var streamReq datasource.StreamRequest
+	if err := json.Unmarshal(body, &streamReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "invalid request body"})
+		return
+	}
+
+	streamQuery := strings.TrimSpace(streamReq.Query)
+	if streamQuery == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "query is required"})
+		return
+	}
+
+	dbCtx, dbCancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer dbCancel()
+
+	var ds models.DataSource
+	err = h.pool.QueryRow(dbCtx,
+		`SELECT id, organization_id, name, type, url, is_default, auth_type, auth_config, created_at, updated_at
+		 FROM datasources WHERE id = $1`, id,
+	).Scan(&ds.ID, &ds.OrganizationID, &ds.Name, &ds.Type, &ds.URL, &ds.IsDefault, &ds.AuthType, &ds.AuthConfig, &ds.CreatedAt, &ds.UpdatedAt)
+	if err != nil {
+		http.Error(w, `{"error":"datasource not found"}`, http.StatusNotFound)
+		return
+	}
+
+	_, err = h.checkOrgMembership(dbCtx, userID, ds.OrganizationID)
+	if err != nil {
+		http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
+		return
+	}
+
+	if !ds.Type.IsLogs() {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "live streaming is only supported for log datasources"})
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "streaming is not supported"})
+		return
+	}
+
+	if rc := http.NewResponseController(w); rc != nil {
+		_ = rc.SetWriteDeadline(time.Time{})
+	}
+
+	start := time.Now().Add(-5 * time.Second)
+	if streamReq.Start > 0 {
+		start = time.Unix(streamReq.Start, 0)
+	}
+
+	limit := streamReq.Limit
+	if limit <= 0 {
+		limit = 200
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	if err := writeSSEEvent(w, flusher, "status", map[string]string{"status": "connected"}); err != nil {
+		return
+	}
+
+	streamCtx, streamCancel := context.WithCancel(r.Context())
+	defer streamCancel()
+
+	logCh := make(chan datasource.LogEntry, 256)
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer close(logCh)
+
+		onLog := func(entry datasource.LogEntry) error {
+			select {
+			case <-streamCtx.Done():
+				return streamCtx.Err()
+			case logCh <- entry:
+				return nil
+			}
+		}
+
+		var streamErr error
+		switch ds.Type {
+		case models.DataSourceLoki:
+			client, err := datasource.NewLokiClient(ds.URL)
+			if err != nil {
+				streamErr = fmt.Errorf("failed to create datasource client: %w", err)
+				break
+			}
+			streamErr = client.Stream(streamCtx, streamQuery, start, limit, onLog)
+		case models.DataSourceVictoriaLogs:
+			client, err := datasource.NewVictoriaLogsClient(ds.URL)
+			if err != nil {
+				streamErr = fmt.Errorf("failed to create datasource client: %w", err)
+				break
+			}
+			streamErr = client.Stream(streamCtx, streamQuery, start, limit, onLog)
+		default:
+			streamErr = fmt.Errorf("live streaming is only supported for log datasources")
+		}
+
+		if streamErr != nil && streamCtx.Err() == nil {
+			select {
+			case errCh <- streamErr:
+			default:
+			}
+		}
+	}()
+
+	heartbeatTicker := time.NewTicker(10 * time.Second)
+	defer heartbeatTicker.Stop()
+
+	for {
+		select {
+		case <-streamCtx.Done():
+			return
+		case streamErr := <-errCh:
+			_ = writeSSEEvent(w, flusher, "error", map[string]string{"error": streamErr.Error()})
+			return
+		case entry, ok := <-logCh:
+			if !ok {
+				return
+			}
+			if err := writeSSEEvent(w, flusher, "log", entry); err != nil {
+				return
+			}
+		case <-heartbeatTicker.C:
+			if err := writeSSEEvent(w, flusher, "heartbeat", map[string]string{"status": "ok"}); err != nil {
+				return
+			}
+		}
+	}
 }
 
 // Labels returns indexed labels/fields for log datasources
@@ -479,9 +652,97 @@ func (h *DataSourceHandler) Labels(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// LabelValues returns indexed values for a specific log datasource field
+func (h *DataSourceHandler) LabelValues(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid datasource id"}`, http.StatusBadRequest)
+		return
+	}
+
+	labelName := strings.TrimSpace(r.PathValue("name"))
+	if labelName == "" {
+		http.Error(w, `{"error":"label name is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	var ds models.DataSource
+	err = h.pool.QueryRow(ctx,
+		`SELECT id, organization_id, name, type, url, is_default, auth_type, auth_config, created_at, updated_at
+		 FROM datasources WHERE id = $1`, id,
+	).Scan(&ds.ID, &ds.OrganizationID, &ds.Name, &ds.Type, &ds.URL, &ds.IsDefault, &ds.AuthType, &ds.AuthConfig, &ds.CreatedAt, &ds.UpdatedAt)
+	if err != nil {
+		http.Error(w, `{"error":"datasource not found"}`, http.StatusNotFound)
+		return
+	}
+
+	_, err = h.checkOrgMembership(ctx, userID, ds.OrganizationID)
+	if err != nil {
+		http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
+		return
+	}
+
+	var values []string
+	switch ds.Type {
+	case models.DataSourceLoki:
+		client, err := datasource.NewLokiClient(ds.URL)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			return
+		}
+
+		values, err = client.LabelValues(ctx, labelName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to fetch label values: " + err.Error()})
+			return
+		}
+	case models.DataSourceVictoriaLogs:
+		client, err := datasource.NewVictoriaLogsClient(ds.URL)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			return
+		}
+
+		values, err = client.LabelValues(ctx, labelName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to fetch label values: " + err.Error()})
+			return
+		}
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "label value discovery is only supported for log datasources"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(struct {
+		Status string   `json:"status"`
+		Data   []string `json:"data"`
+	}{
+		Status: "success",
+		Data:   values,
+	})
+}
+
 // QueryByParams handles GET-based query with query parameters (backwards compatible with existing Prometheus handler)
 func (h *DataSourceHandler) QueryByParams(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 
 	dsIDStr := r.URL.Query().Get("datasource_id")
 	if dsIDStr == "" {
@@ -562,4 +823,18 @@ func (h *DataSourceHandler) QueryByParams(w http.ResponseWriter, r *http.Request
 	}
 
 	json.NewEncoder(w).Encode(result)
+}
+
+func writeSSEEvent(w http.ResponseWriter, flusher http.Flusher, event string, payload interface{}) error {
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to encode sse payload: %w", err)
+	}
+
+	if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, encoded); err != nil {
+		return err
+	}
+
+	flusher.Flush()
+	return nil
 }

@@ -1,56 +1,71 @@
 @agent/prd.json @agent/progress.txt
 
-You are working on the "dash" project - a Grafana-like monitoring dashboard.
+You are working on the "dash" project (Grafana-like monitoring dashboard).
 
-**Tech Stack:**
-- Frontend: Vue.js 3 (Composition API + TypeScript)
-- Backend: Go API
-- Database: PostgreSQL (metadata)
-- Data Sources: Prometheus, Loki, Victoria Logs, VictoriaMetrics
+## Execution Mode: One Task Per Session
 
-## Continuous Development Mode
+This run is a single isolated OpenCode session/thread.
+Do exactly one task, then exit.
+Do not continue to a second task in the same run.
 
-**Work through multiple features without stopping!** Commit directly to master for each feature (no PRs needed).
+## Task Selection (Automatic)
 
-## Instructions (Per Feature)
+Select the next task from `agent/prd.json` using this order:
+1. Only tasks with `passes: false`
+2. Only tasks whose `depends_on` items are all complete
+3. Prefer the task that unblocks the most incomplete tasks
+4. Prefer security/access-control/core-path work over polish work
+5. If tied, pick the first task in file order
 
-1. **Find next feature:** Pick the highest priority incomplete feature from prd.json
+If no incomplete tasks remain:
+- Output `<promise>COMPLETE</promise>`
+- Exit immediately
 
-2. **Run tests:**
+## Work Contract For This Run
+
+1. Print selected task:
+   - `Selected Task: <id> - <name>`
+
+2. Implement only that selected task (small scoped change).
+
+3. Run tests relevant to touched areas:
    - Frontend: `cd frontend && npm run type-check && npm run test`
    - Backend: `cd backend && go test ./...`
 
-3. **Implement the feature** (just this one feature, nothing else)
+4. Frontend browser validation (required when any frontend file is changed):
+   - Use the `dev-browser` skill to test the implemented UI flow in a real browser.
+   - Validate the main happy path for the changed screens and at least one failure/permission state when applicable.
+   - Confirm there are no obvious runtime errors in the browser while exercising the flow.
+   - Include a short `Browser validation:` line in the progress entry with pass/fail and what was checked.
 
-4. **Update PRD:** Set `passes: true` for completed feature
+5. If the selected task is complete and tests pass:
+   - Set only that task's `passes` to `true` in `agent/prd.json`
+   - Append a new entry to `agent/progress.txt`:
 
-5. **Update progress.txt:**
 ```
-## Feature N: [Name] - [timestamp]
+## Task <id>: <name> - <timestamp>
 - What was done:
 - Files changed:
-- Tests: [passing/failing]
+- Tests: passing/failing
+- Browser validation: passing/failing (frontend changes only)
 ```
 
-6. **Commit and push:**
+6. Commit and push only this task:
 ```bash
 git add -A
-git commit -m "feat: [description]"
+git commit -m "feat: <task id> <short description>"
 git push origin master
 ```
 
-7. **Continue:** Move to next feature - DO NOT STOP!
+7. Output completion marker and stop:
+   - `✅ Task complete: <id> - <name>`
+   - `<promise>TASK_COMPLETE</promise>`
+   - Exit immediately
 
-## Only Stop When:
+## If Blocked
 
-- All features have `passes: true` → output `<promise>COMPLETE</promise>`
-- Iteration limit reached (let Ralph script handle this)
-
-## Summary Format (after each feature):
-
-```
-✅ Feature N complete: [Name]
-   Committed to master
-   
-🔄 Moving to next feature...
-```
+- Do not change `passes`
+- Output:
+  - `❌ Task blocked: <id> - <reason>`
+  - `<promise>BLOCKED</promise>`
+- Exit immediately

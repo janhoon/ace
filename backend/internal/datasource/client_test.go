@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/janhoon/dash/backend/internal/models"
@@ -81,6 +82,9 @@ func TestDetectLogLevel(t *testing.T) {
 	}{
 		{map[string]string{"level": "ERROR"}, "some message", "error"},
 		{map[string]string{"severity": "Warning"}, "some message", "warning"},
+		{map[string]string{"severity": "Unspecified"}, "level=info msg=\"query\"", "info"},
+		{map[string]string{"severity": "Unspecified"}, "> level=info ts=2026-02-08T14:30:26Z msg=\"query\"", "info"},
+		{map[string]string{"severity_text": "ERROR2"}, "some message", "error"},
 		{map[string]string{}, "Error: something failed", "error"},
 		{map[string]string{}, "WARN: low disk space", "warning"},
 		{map[string]string{}, "INFO starting service", "info"},
@@ -93,5 +97,56 @@ func TestDetectLogLevel(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("detectLogLevel(%v, %q) = %q, want %q", tt.labels, tt.line, got, tt.want)
 		}
+	}
+}
+
+func TestToWebSocketURL(t *testing.T) {
+	params := url.Values{}
+	params.Set("query", `{job="api"}`)
+
+	wsURL, err := toWebSocketURL("http://localhost:3100", "/loki/api/v1/tail", params)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	parsedURL, err := url.Parse(wsURL)
+	if err != nil {
+		t.Fatalf("failed to parse URL: %v", err)
+	}
+
+	if parsedURL.Scheme != "ws" {
+		t.Fatalf("expected ws scheme, got %s", parsedURL.Scheme)
+	}
+	if parsedURL.Path != "/loki/api/v1/tail" {
+		t.Fatalf("expected /loki/api/v1/tail path, got %s", parsedURL.Path)
+	}
+	if parsedURL.Query().Get("query") != `{job="api"}` {
+		t.Fatalf("expected encoded query to round-trip, got %s", parsedURL.Query().Get("query"))
+	}
+}
+
+func TestParseVictoriaLogsLine(t *testing.T) {
+	entry, ok := parseVictoriaLogsLine(`{"_msg":"boom","_time":"2026-02-08T12:00:00Z","service":"api","level":"error"}`)
+	if !ok {
+		t.Fatal("expected line to parse")
+	}
+
+	if entry.Line != "boom" {
+		t.Fatalf("expected line to be boom, got %q", entry.Line)
+	}
+	if entry.Timestamp != "2026-02-08T12:00:00Z" {
+		t.Fatalf("expected timestamp to match, got %q", entry.Timestamp)
+	}
+	if entry.Labels["service"] != "api" {
+		t.Fatalf("expected service label api, got %q", entry.Labels["service"])
+	}
+	if entry.Level != "error" {
+		t.Fatalf("expected level error, got %q", entry.Level)
+	}
+}
+
+func TestParseVictoriaLogsLineInvalid(t *testing.T) {
+	if _, ok := parseVictoriaLogsLine(`not-json`); ok {
+		t.Fatal("expected invalid line to fail parsing")
 	}
 }

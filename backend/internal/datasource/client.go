@@ -17,12 +17,19 @@ type QueryRequest struct {
 	Limit int    `json:"limit"` // Max results for log queries
 }
 
+// StreamRequest represents a live stream request body
+type StreamRequest struct {
+	Query string `json:"query"`
+	Start int64  `json:"start,omitempty"` // Unix timestamp in seconds for resume cursor
+	Limit int    `json:"limit,omitempty"` // Max entries per tail batch
+}
+
 // QueryResult is the unified query result format
 type QueryResult struct {
-	Status     string      `json:"status"`
-	Data       *QueryData  `json:"data,omitempty"`
-	Error      string      `json:"error,omitempty"`
-	ResultType string      `json:"resultType"` // "metrics" or "logs"
+	Status     string     `json:"status"`
+	Data       *QueryData `json:"data,omitempty"`
+	Error      string     `json:"error,omitempty"`
+	ResultType string     `json:"resultType"` // "metrics" or "logs"
 }
 
 // QueryData contains the result
@@ -45,6 +52,8 @@ type LogEntry struct {
 	Labels    map[string]string `json:"labels,omitempty"`
 	Level     string            `json:"level,omitempty"`
 }
+
+type LogStreamCallback func(LogEntry) error
 
 // Client is the interface that all datasource clients implement
 type Client interface {

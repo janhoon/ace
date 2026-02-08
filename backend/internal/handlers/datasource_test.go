@@ -101,6 +101,36 @@ func TestDataSourceHandler_Query_InvalidUUID(t *testing.T) {
 	}
 }
 
+func TestDataSourceHandler_Stream_InvalidUUID(t *testing.T) {
+	handler := &DataSourceHandler{pool: nil}
+
+	body := bytes.NewBufferString(`{"query":"{job=~\".+\"}"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/datasources/invalid-uuid/stream", body)
+	req.SetPathValue("id", "invalid-uuid")
+	rr := httptest.NewRecorder()
+
+	handler.Stream(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+}
+
+func TestDataSourceHandler_LabelValues_InvalidUUID(t *testing.T) {
+	handler := &DataSourceHandler{pool: nil}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/datasources/invalid-uuid/labels/job/values", nil)
+	req.SetPathValue("id", "invalid-uuid")
+	req.SetPathValue("name", "job")
+	rr := httptest.NewRecorder()
+
+	handler.LabelValues(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+}
+
 func TestDataSourceHandler_List_InvalidOrgID(t *testing.T) {
 	handler := &DataSourceHandler{pool: nil}
 

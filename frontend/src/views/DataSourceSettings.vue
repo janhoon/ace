@@ -258,10 +258,16 @@ watch(
       >
         <div class="card-header">
           <div class="card-title-row">
-            <span class="type-badge" :style="{ background: getTypeColor(ds.type) + '20', color: getTypeColor(ds.type), borderColor: getTypeColor(ds.type) + '40' }">
-              <img :src="getTypeLogo(ds.type)" :alt="`${dataSourceTypeLabels[ds.type]} logo`" class="type-logo" />
-              {{ dataSourceTypeLabels[ds.type] }}
-            </span>
+            <div
+              class="type-panel"
+              :style="{ borderColor: getTypeColor(ds.type) + '4d', background: getTypeColor(ds.type) + '14' }"
+            >
+              <img :src="getTypeLogo(ds.type)" :alt="`${dataSourceTypeLabels[ds.type]} logo`" class="type-panel-logo" />
+              <div class="type-panel-meta">
+                <span class="type-panel-label">Source Type</span>
+                <strong class="type-panel-name">{{ dataSourceTypeLabels[ds.type] }}</strong>
+              </div>
+            </div>
             <span v-if="ds.is_default" class="default-badge">
               <Check :size="12" />
               Default
@@ -505,32 +511,55 @@ watch(
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   padding: 1rem 1rem 0;
+  gap: 0.75rem;
 }
 
 .card-title-row {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  min-width: 0;
 }
 
-.type-badge {
-  display: inline-flex;
+.type-panel {
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  gap: 0.65rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 11px;
   border: 1px solid;
+  min-width: 0;
 }
 
-.type-logo {
-  width: 14px;
-  height: 14px;
+.type-panel-logo {
+  width: 26px;
+  height: 26px;
   object-fit: contain;
   flex-shrink: 0;
+}
+
+.type-panel-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.type-panel-label {
+  font-size: 0.64rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.type-panel-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .default-badge {

@@ -81,4 +81,22 @@ describe('LogViewer', () => {
     expect(wrapper.text()).toContain('retry')
     expect(wrapper.text()).toContain('3')
   })
+
+  it('applies highlighted class for newly streamed logs', () => {
+    const log = {
+      timestamp: '2026-01-01T12:00:00Z',
+      line: 'new live log line',
+      labels: { service: 'api' },
+      level: 'info',
+    }
+
+    const wrapper = mount(LogViewer, {
+      props: {
+        logs: [log],
+        highlightedLogKeys: ['2026-01-01T12:00:00Z|service=api|new live log line'],
+      },
+    })
+
+    expect(wrapper.find('.log-row').classes()).toContain('highlighted')
+  })
 })

@@ -1,5 +1,12 @@
+x-json-file-logging: &json_file_logging
+  logging:
+    driver: json-file
+    options:
+      labels: com.docker.compose.service,com.docker.compose.project
+
 services:
   postgres:
+    <<: *json_file_logging
     image: postgres:16-alpine
     container_name: dash-postgres
     environment:
@@ -17,6 +24,7 @@ services:
       retries: 5
 
   valkey:
+    <<: *json_file_logging
     image: valkey/valkey:7
     container_name: dash-valkey
     ports:
@@ -30,6 +38,7 @@ services:
       retries: 5
 
   prometheus:
+    <<: *json_file_logging
     image: prom/prometheus:v2.48.0
     container_name: dash-prometheus
     ports:
@@ -43,6 +52,7 @@ services:
       - '--web.enable-lifecycle'
 
   loki:
+    <<: *json_file_logging
     image: grafana/loki:3.0.0
     container_name: dash-loki
     ports:
@@ -58,6 +68,7 @@ services:
       retries: 5
 
   victoriametrics:
+    <<: *json_file_logging
     image: victoriametrics/victoria-metrics:v1.101.0
     container_name: dash-victoriametrics
     ports:
@@ -77,6 +88,7 @@ services:
       retries: 5
 
   victorialogs:
+    <<: *json_file_logging
     image: victoriametrics/victoria-logs:v1.3.1-victorialogs
     container_name: dash-victorialogs
     ports:
@@ -93,6 +105,7 @@ services:
       retries: 5
 
   otel-collector:
+    <<: *json_file_logging
     image: otel/opentelemetry-collector-contrib:0.119.0
     container_name: dash-otel-collector
     user: "0:0"

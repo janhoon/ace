@@ -4,6 +4,8 @@ import type {
   UpdateDataSourceRequest,
   DataSourceQueryRequest,
   DataSourceQueryResult,
+  DataSourceLogStreamRequest,
+  LogEntry,
 } from '../types/datasource'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
@@ -95,6 +97,7 @@ export async function queryDataSource(
 ): Promise<DataSourceQueryResult> {
   const response = await fetch(`${API_BASE}/api/datasources/${id}/query`, {
     method: 'POST',
+    cache: 'no-store',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
   })
@@ -103,6 +106,168 @@ export async function queryDataSource(
     throw new Error(err.error || 'Query failed')
   }
   return response.json()
+}
+
+interface ParsedSSEEvent {
+  event: string
+  data: string
+}
+
+interface StatusEventPayload {
+  status?: string
+  message?: string
+}
+
+interface ErrorEventPayload {
+  error?: string
+  message?: string
+}
+
+export interface DataSourceLogStreamHandlers {
+  onLog: (log: LogEntry) => void
+  onStatus?: (status: string, message?: string) => void
+  onHeartbeat?: () => void
+  onError?: (message: string) => void
+}
+
+function parseSSEEvent(rawEvent: string): ParsedSSEEvent | null {
+  const lines = rawEvent.split('\n')
+  let event = 'message'
+  const dataLines: string[] = []
+
+  for (const line of lines) {
+    if (!line || line.startsWith(':')) {
+      continue
+    }
+
+    if (line.startsWith('event:')) {
+      event = line.slice('event:'.length).trim()
+      continue
+    }
+
+    if (line.startsWith('data:')) {
+      dataLines.push(line.slice('data:'.length).trimStart())
+    }
+  }
+
+  if (dataLines.length === 0) {
+    return null
+  }
+
+  return {
+    event,
+    data: dataLines.join('\n'),
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return (typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError') ||
+    (error instanceof Error && error.name === 'AbortError')
+}
+
+function handleSSEEventPayload(
+  parsed: ParsedSSEEvent,
+  handlers: DataSourceLogStreamHandlers,
+) {
+  let payload: unknown
+  try {
+    payload = JSON.parse(parsed.data)
+  } catch {
+    handlers.onError?.('Received malformed stream payload')
+    return
+  }
+
+  if (parsed.event === 'log') {
+    handlers.onLog(payload as LogEntry)
+    return
+  }
+
+  if (parsed.event === 'heartbeat') {
+    handlers.onHeartbeat?.()
+    return
+  }
+
+  if (parsed.event === 'status') {
+    const statusPayload = payload as StatusEventPayload
+    handlers.onStatus?.(statusPayload.status || 'unknown', statusPayload.message)
+    return
+  }
+
+  if (parsed.event === 'error') {
+    const errorPayload = payload as ErrorEventPayload
+    handlers.onError?.(errorPayload.error || errorPayload.message || 'Live stream failed')
+  }
+}
+
+export async function streamDataSourceLogs(
+  id: string,
+  data: DataSourceLogStreamRequest,
+  handlers: DataSourceLogStreamHandlers,
+  signal?: AbortSignal,
+): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/datasources/${id}/stream`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+    signal,
+  })
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    let message = 'Failed to start live stream'
+    if (body) {
+      try {
+        const parsed = JSON.parse(body) as ErrorEventPayload
+        message = parsed.error || parsed.message || message
+      } catch {
+        message = body
+      }
+    }
+    throw new Error(message)
+  }
+
+  if (!response.body) {
+    throw new Error('Streaming is not supported by this browser')
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        break
+      }
+
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
+
+      let separatorIndex = buffer.indexOf('\n\n')
+      while (separatorIndex !== -1) {
+        const rawEvent = buffer.slice(0, separatorIndex)
+        buffer = buffer.slice(separatorIndex + 2)
+
+        const parsedEvent = parseSSEEvent(rawEvent)
+        if (parsedEvent) {
+          handleSSEEventPayload(parsedEvent, handlers)
+        }
+
+        separatorIndex = buffer.indexOf('\n\n')
+      }
+    }
+  } catch (error) {
+    if (isAbortError(error)) {
+      return
+    }
+    throw error
+  } finally {
+    reader.releaseLock()
+  }
+
+  if (!signal?.aborted) {
+    throw new Error('Live stream disconnected')
+  }
 }
 
 interface LabelsResponse {
@@ -124,6 +289,24 @@ export async function fetchDataSourceLabels(id: string): Promise<string[]> {
   const body = await response.json() as LabelsResponse
   if (body.status === 'error') {
     throw new Error(body.error || 'Failed to fetch labels')
+  }
+
+  return body.data || []
+}
+
+export async function fetchDataSourceLabelValues(id: string, labelName: string): Promise<string[]> {
+  const response = await fetch(`${API_BASE}/api/datasources/${id}/labels/${encodeURIComponent(labelName)}/values`, {
+    headers: getAuthHeaders(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to fetch label values')
+  }
+
+  const body = await response.json() as LabelsResponse
+  if (body.status === 'error') {
+    throw new Error(body.error || 'Failed to fetch label values')
   }
 
   return body.data || []

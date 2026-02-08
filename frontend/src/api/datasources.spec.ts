@@ -6,6 +6,8 @@ import {
   updateDataSource,
   deleteDataSource,
   queryDataSource,
+  fetchDataSourceLabels,
+  fetchDataSourceLabelValues,
 } from './datasources'
 
 const mockFetch = vi.fn()
@@ -149,6 +151,36 @@ describe('datasources API', () => {
       await expect(
         queryDataSource('1', { query: 'up', start: 1000, end: 2000 }),
       ).rejects.toThrow('Query failed')
+    })
+  })
+
+  describe('label metadata', () => {
+    it('fetches indexed labels', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: ['job', 'service'] }),
+      })
+
+      const labels = await fetchDataSourceLabels('ds-1')
+      expect(labels).toEqual(['job', 'service'])
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/ds-1/labels'),
+        expect.any(Object),
+      )
+    })
+
+    it('fetches indexed label values for a label', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: ['api', 'worker'] }),
+      })
+
+      const values = await fetchDataSourceLabelValues('ds-1', 'job')
+      expect(values).toEqual(['api', 'worker'])
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/ds-1/labels/job/values'),
+        expect.any(Object),
+      )
     })
   })
 
