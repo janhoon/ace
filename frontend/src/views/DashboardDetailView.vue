@@ -34,6 +34,14 @@ const dashboardId = route.params.id as string
 const canManageDashboardPermissions = computed(() => currentOrg.value?.role !== 'viewer')
 const permissionsOrgId = computed(() => currentOrgId.value || dashboard.value?.organization_id || null)
 
+function dashboardLoadErrorMessage(cause: unknown): string {
+  if (cause instanceof Error && cause.message === 'Not a member of this organization') {
+    return 'You do not have permission to view this dashboard'
+  }
+
+  return 'Dashboard not found'
+}
+
 // Grid layout configuration
 const colNum = 12
 const rowHeight = 100
@@ -69,8 +77,10 @@ let saveLayoutTimeout: number | null = null
 async function fetchDashboard() {
   try {
     dashboard.value = await getDashboard(dashboardId)
-  } catch {
-    error.value = 'Dashboard not found'
+  } catch (e) {
+    dashboard.value = null
+    panels.value = []
+    error.value = dashboardLoadErrorMessage(e)
     return
   }
 }
@@ -151,8 +161,16 @@ function closeDashboardPermissionsModal() {
   showDashboardPermissionsModal.value = false
 }
 
-function onDashboardPermissionsSaved() {
-  dashboardPermissionsMessage.value = `Updated permissions for "${dashboard.value?.title || 'dashboard'}"`
+async function onDashboardPermissionsSaved() {
+  const dashboardTitle = dashboard.value?.title || 'dashboard'
+
+  closeDashboardPermissionsModal()
+  dashboardPermissionsMessage.value = null
+  await loadData()
+
+  if (!error.value) {
+    dashboardPermissionsMessage.value = `Updated permissions for "${dashboardTitle}"`
+  }
 }
 
 // Handle layout changes (drag/resize)

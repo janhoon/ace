@@ -168,11 +168,16 @@ function closeFolderPermissionsModal() {
   selectedFolderForPermissions.value = null
 }
 
-function onFolderPermissionsSaved() {
+async function onFolderPermissionsSaved() {
   if (!selectedFolderForPermissions.value) {
     return
   }
-  folderPermissionsMessage.value = `Updated permissions for "${selectedFolderForPermissions.value.name}"`
+
+  const folderName = selectedFolderForPermissions.value.name
+
+  closeFolderPermissionsModal()
+  folderPermissionsMessage.value = `Updated permissions for "${folderName}"`
+  await fetchDashboards()
 }
 
 onMounted(fetchDashboards)

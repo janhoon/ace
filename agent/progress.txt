@@ -382,3 +382,19 @@
   - agent/progress.txt
 - Tests: passing (`cd backend && go test ./...`)
 - Browser validation: n/a (no frontend changes)
+
+## Task RBAC-FE-UI-FILTER-001: Apply permission-aware filtering and forbidden UX - 2026-02-08T22:03:55Z
+- What was done:
+  - Added explicit forbidden-state messaging for dashboard deep links that return 403 so denied access is shown as `You do not have permission to view this dashboard` instead of a generic not-found state
+  - Updated dashboard-permissions save flow to reload the current dashboard data and clear stale panel data when access changes, including cases where access is revoked mid-session
+  - Updated folder-permissions save flow in the dashboard list to refresh folder/dashboard sections immediately after ACL updates so unauthorized items are removed from visible lists
+  - Added frontend tests for denied dashboard deep links and post-permission-save refresh behavior in both dashboard detail and dashboard list views
+- Files changed:
+  - frontend/src/views/DashboardDetailView.vue
+  - frontend/src/views/DashboardDetailView.spec.ts
+  - frontend/src/components/DashboardList.vue
+  - frontend/src/components/DashboardList.spec.ts
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/components/DashboardList.spec.ts src/views/DashboardDetailView.spec.ts`)
+- Browser validation: passing (happy path: verified `/dashboards` renders grouped sections including folder + `Unfiled Dashboards`; failure/permission path: deep-linked to `/dashboards/85b40e99-6ae4-4b21-8cf1-afa2ee805c5c` and confirmed forbidden message + back action; no runtime page errors observed)

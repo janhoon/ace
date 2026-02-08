@@ -192,4 +192,34 @@ describe('DashboardList', () => {
     expect(vi.mocked(folderApi.listFolders)).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('No dashboards yet')
   })
+
+  it('refreshes dashboard sections after folder permission updates', async () => {
+    vi.mocked(dashboardApi.listDashboards)
+      .mockResolvedValueOnce(mockDashboards)
+      .mockResolvedValueOnce([])
+    vi.mocked(folderApi.listFolders)
+      .mockResolvedValueOnce(mockFolders)
+      .mockResolvedValueOnce([])
+
+    const wrapper = mount(DashboardList, {
+      global: {
+        stubs: {
+          FolderPermissionsModal: {
+            name: 'FolderPermissionsModal',
+            emits: ['saved', 'close'],
+            template: '<button data-testid="emit-folder-saved" @click="$emit(\'saved\')"></button>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="folder-permissions-folder-a"]').trigger('click')
+    await wrapper.get('[data-testid="emit-folder-saved"]').trigger('click')
+    await flushPromises()
+
+    expect(vi.mocked(dashboardApi.listDashboards).mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(vi.mocked(folderApi.listFolders).mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(wrapper.text()).toContain('No dashboards yet')
+  })
 })

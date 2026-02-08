@@ -234,6 +234,34 @@ describe('DashboardDetailView', () => {
     expect(wrapper.find('[data-testid="dashboard-permissions-modal"]').exists()).toBe(true)
   })
 
+  it('shows forbidden state for denied dashboard deep link', async () => {
+    const { getDashboard } = await import('../api/dashboards')
+    vi.mocked(getDashboard).mockRejectedValueOnce(new Error('Not a member of this organization'))
+
+    const wrapper = mount(DashboardDetailView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('You do not have permission to view this dashboard')
+  })
+
+  it('reloads dashboard data after permissions save and clears stale access', async () => {
+    const { getDashboard } = await import('../api/dashboards')
+
+    const wrapper = mount(DashboardDetailView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="dashboard-permissions-button"]').trigger('click')
+    expect(wrapper.find('[data-testid="dashboard-permissions-modal"]').exists()).toBe(true)
+
+    vi.mocked(getDashboard).mockRejectedValueOnce(new Error('Not a member of this organization'))
+    wrapper.getComponent({ name: 'DashboardPermissionsModal' }).vm.$emit('saved')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="dashboard-permissions-modal"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('You do not have permission to view this dashboard')
+    expect(wrapper.findAllComponents({ name: 'Panel' })).toHaveLength(0)
+  })
+
   it('should open panel modal when Add Panel is clicked', async () => {
     const wrapper = mount(DashboardDetailView)
     await flushPromises()
