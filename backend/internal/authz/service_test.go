@@ -111,6 +111,52 @@ func TestResolvePermission_GroupGrant(t *testing.T) {
 	}
 }
 
+func TestResolvePermission_GroupGrantRevokedByMembershipRemoval(t *testing.T) {
+	if testPool == nil {
+		t.Skip("database not available")
+	}
+
+	ctx := context.Background()
+	prefix := "authz-test-group-revoke-" + uuid.NewString()
+	defer cleanupTestData(t, ctx, prefix)
+
+	orgID := createTestOrganization(t, ctx, prefix)
+	userID := createTestUser(t, ctx, prefix+"-viewer@example.com")
+	addMembership(t, ctx, orgID, userID, models.RoleViewer)
+	folderID := createTestFolder(t, ctx, orgID, "Revoke Folder")
+
+	groupID := createTestGroup(t, ctx, orgID, "Revoke Team")
+	addGroupMembership(t, ctx, orgID, groupID, userID)
+	grantPermission(t, ctx, orgID, ResourceTypeFolder, folderID, "group", groupID, PermissionEdit)
+
+	service := NewService(testPool)
+
+	beforeRevoke, err := service.ResolvePermission(ctx, userID, orgID, ResourceTypeFolder, folderID)
+	if err != nil {
+		t.Fatalf("expected no error resolving permission before revoke: %v", err)
+	}
+	if beforeRevoke != PermissionEdit {
+		t.Fatalf("expected permission %q before revoke, got %q", PermissionEdit, beforeRevoke)
+	}
+
+	if _, err := testPool.Exec(ctx,
+		`DELETE FROM user_group_memberships WHERE organization_id = $1 AND group_id = $2 AND user_id = $3`,
+		orgID,
+		groupID,
+		userID,
+	); err != nil {
+		t.Fatalf("failed to remove group membership: %v", err)
+	}
+
+	afterRevoke, err := service.ResolvePermission(ctx, userID, orgID, ResourceTypeFolder, folderID)
+	if err != nil {
+		t.Fatalf("expected no error resolving permission after revoke: %v", err)
+	}
+	if afterRevoke != PermissionNone {
+		t.Fatalf("expected permission %q after revoke, got %q", PermissionNone, afterRevoke)
+	}
+}
+
 func TestResolvePermission_OrgRoleFallbackWithoutACL(t *testing.T) {
 	if testPool == nil {
 		t.Skip("database not available")

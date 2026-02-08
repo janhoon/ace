@@ -296,3 +296,16 @@
   - agent/progress.txt
 - Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/components/EditDashboardModal.spec.ts src/components/DashboardList.spec.ts`, `cd backend && go test ./...`)
 - Browser validation: passing (happy path: on `/dashboards`, moved `Folder Move Demo` from unfiled to `Operations` using the new folder picker, then moved it back to `Unfiled (Root)`; failure state: with an invalid `current_org_id`, dashboards view showed `Not a member of this organization`; no runtime page errors observed)
+
+## Task RBAC-BE-TEST-001: Add RBAC permission matrix tests - 2026-02-08T20:55:28Z
+- What was done:
+  - Extended authz service coverage with a group-permission revoke scenario that verifies access is removed after group membership deletion
+  - Added handler integration coverage that ensures folder and dashboard get/update endpoints return 403 when a member is excluded by ACL entries
+  - Kept fixtures organization-isolated by creating dedicated users, memberships, and ACL resources per test case
+- Files changed:
+  - backend/internal/authz/service_test.go
+  - backend/internal/handlers/permissions_test.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)

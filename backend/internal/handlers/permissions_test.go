@@ -290,3 +290,105 @@ func TestPermissionHandler_RejectsNonAdminAndCrossOrgPrincipal(t *testing.T) {
 		t.Fatalf("expected baseline viewer view ACL to remain unchanged, got %+v", permissions[0])
 	}
 }
+
+func TestFolderAndDashboardHandlers_ReturnForbiddenWhenACLExcludesUser(t *testing.T) {
+	orgHandler, authHandler, cleanup := setupOrgTestWithRedis(t)
+	defer cleanup()
+
+	permissionHandler := NewPermissionHandler(testPool)
+	folderHandler := NewFolderHandler(testPool)
+	dashboardHandler := NewDashboardHandler(testPool)
+
+	adminResp := createTestUser(t, authHandler, "testforbidden-admin@example.com")
+	allowedResp := createTestUser(t, authHandler, "testforbidden-allowed@example.com")
+	deniedResp := createTestUser(t, authHandler, "testforbidden-denied@example.com")
+
+	allowedUserID := mustGetUserIDByEmail(t, "testforbidden-allowed@example.com")
+
+	org := createTestOrganization(t, orgHandler, adminResp.AccessToken, "forbidden-resource-access")
+
+	inviteUserToOrganization(
+		t,
+		orgHandler,
+		adminResp.AccessToken,
+		org.ID,
+		"testforbidden-allowed@example.com",
+		models.RoleViewer,
+		allowedResp.AccessToken,
+	)
+
+	inviteUserToOrganization(
+		t,
+		orgHandler,
+		adminResp.AccessToken,
+		org.ID,
+		"testforbidden-denied@example.com",
+		models.RoleViewer,
+		deniedResp.AccessToken,
+	)
+
+	folder := createTestFolderForPermissions(t, folderHandler, adminResp.AccessToken, org.ID, "Restricted Folder")
+	dashboard := createTestDashboardForPermissions(t, dashboardHandler, adminResp.AccessToken, org.ID, "Restricted Dashboard")
+
+	replaceFolderBody := `{"entries":[{"principal_type":"user","principal_id":"` + allowedUserID.String() + `","permission":"view"}]}`
+	replaceFolderReq := httptest.NewRequest(http.MethodPut, "/api/folders/"+folder.ID.String()+"/permissions", bytes.NewBufferString(replaceFolderBody))
+	replaceFolderReq.Header.Set("Content-Type", "application/json")
+	replaceFolderReq.Header.Set("Authorization", "Bearer "+adminResp.AccessToken)
+	replaceFolderReq.SetPathValue("id", folder.ID.String())
+	replaceFolderW := httptest.NewRecorder()
+
+	auth.RequireAuth(testJWTManager, permissionHandler.ReplaceFolderPermissions)(replaceFolderW, replaceFolderReq)
+	if replaceFolderW.Code != http.StatusOK {
+		t.Fatalf("expected status 200 setting folder ACL, got %d: %s", replaceFolderW.Code, replaceFolderW.Body.String())
+	}
+
+	replaceDashboardBody := `{"entries":[{"principal_type":"user","principal_id":"` + allowedUserID.String() + `","permission":"view"}]}`
+	replaceDashboardReq := httptest.NewRequest(http.MethodPut, "/api/dashboards/"+dashboard.ID.String()+"/permissions", bytes.NewBufferString(replaceDashboardBody))
+	replaceDashboardReq.Header.Set("Content-Type", "application/json")
+	replaceDashboardReq.Header.Set("Authorization", "Bearer "+adminResp.AccessToken)
+	replaceDashboardReq.SetPathValue("id", dashboard.ID.String())
+	replaceDashboardW := httptest.NewRecorder()
+
+	auth.RequireAuth(testJWTManager, permissionHandler.ReplaceDashboardPermissions)(replaceDashboardW, replaceDashboardReq)
+	if replaceDashboardW.Code != http.StatusOK {
+		t.Fatalf("expected status 200 setting dashboard ACL, got %d: %s", replaceDashboardW.Code, replaceDashboardW.Body.String())
+	}
+
+	folderGetReq := httptest.NewRequest(http.MethodGet, "/api/folders/"+folder.ID.String(), nil)
+	folderGetReq.Header.Set("Authorization", "Bearer "+deniedResp.AccessToken)
+	folderGetReq.SetPathValue("id", folder.ID.String())
+	folderGetW := httptest.NewRecorder()
+	auth.RequireAuth(testJWTManager, folderHandler.Get)(folderGetW, folderGetReq)
+	if folderGetW.Code != http.StatusForbidden {
+		t.Fatalf("expected status 403 for denied folder get, got %d: %s", folderGetW.Code, folderGetW.Body.String())
+	}
+
+	folderUpdateReq := httptest.NewRequest(http.MethodPut, "/api/folders/"+folder.ID.String(), bytes.NewBufferString(`{"name":"Denied Rename"}`))
+	folderUpdateReq.Header.Set("Content-Type", "application/json")
+	folderUpdateReq.Header.Set("Authorization", "Bearer "+deniedResp.AccessToken)
+	folderUpdateReq.SetPathValue("id", folder.ID.String())
+	folderUpdateW := httptest.NewRecorder()
+	auth.RequireAuth(testJWTManager, folderHandler.Update)(folderUpdateW, folderUpdateReq)
+	if folderUpdateW.Code != http.StatusForbidden {
+		t.Fatalf("expected status 403 for denied folder update, got %d: %s", folderUpdateW.Code, folderUpdateW.Body.String())
+	}
+
+	dashboardGetReq := httptest.NewRequest(http.MethodGet, "/api/dashboards/"+dashboard.ID.String(), nil)
+	dashboardGetReq.Header.Set("Authorization", "Bearer "+deniedResp.AccessToken)
+	dashboardGetReq.SetPathValue("id", dashboard.ID.String())
+	dashboardGetW := httptest.NewRecorder()
+	auth.RequireAuth(testJWTManager, dashboardHandler.Get)(dashboardGetW, dashboardGetReq)
+	if dashboardGetW.Code != http.StatusForbidden {
+		t.Fatalf("expected status 403 for denied dashboard get, got %d: %s", dashboardGetW.Code, dashboardGetW.Body.String())
+	}
+
+	dashboardUpdateReq := httptest.NewRequest(http.MethodPut, "/api/dashboards/"+dashboard.ID.String(), bytes.NewBufferString(`{"title":"Denied Rename"}`))
+	dashboardUpdateReq.Header.Set("Content-Type", "application/json")
+	dashboardUpdateReq.Header.Set("Authorization", "Bearer "+deniedResp.AccessToken)
+	dashboardUpdateReq.SetPathValue("id", dashboard.ID.String())
+	dashboardUpdateW := httptest.NewRecorder()
+	auth.RequireAuth(testJWTManager, dashboardHandler.Update)(dashboardUpdateW, dashboardUpdateReq)
+	if dashboardUpdateW.Code != http.StatusForbidden {
+		t.Fatalf("expected status 403 for denied dashboard update, got %d: %s", dashboardUpdateW.Code, dashboardUpdateW.Body.String())
+	}
+}

@@ -493,7 +493,7 @@
       "test_commands": [
         "cd backend && go test ./..."
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "RBAC-FE-API-001",
