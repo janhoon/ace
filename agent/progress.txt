@@ -184,3 +184,19 @@
   - agent/progress.txt
 - Tests: passing (`cd backend && go test ./...`)
 - Browser validation: n/a (no frontend changes)
+
+## Task RBAC-BE-GROUPS-002: Add group membership endpoints - 2026-02-08T17:34:37Z
+- What was done:
+  - Added group membership endpoints to list members, add members, and remove members for organization groups
+  - Enforced admin-only mutation permissions for add/remove while keeping list access to organization members
+  - Added validation to reject cross-organization user assignment and return conflict on duplicate memberships
+  - Added handler tests covering membership lifecycle, admin-only enforcement, cross-org rejection, and duplicate prevention
+- Files changed:
+  - backend/internal/models/group.go
+  - backend/internal/handlers/groups.go
+  - backend/internal/handlers/groups_test.go
+  - backend/cmd/api/main.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)

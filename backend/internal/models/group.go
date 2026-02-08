@@ -25,3 +25,18 @@ type UpdateUserGroupRequest struct {
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
 }
+
+type UserGroupMembership struct {
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	GroupID        uuid.UUID `json:"group_id"`
+	UserID         uuid.UUID `json:"user_id"`
+	Email          string    `json:"email"`
+	Name           *string   `json:"name,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type AddUserGroupMemberRequest struct {
+	UserID uuid.UUID `json:"user_id"`
+}

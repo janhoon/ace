@@ -354,7 +354,7 @@
       "test_commands": [
         "cd backend && go test ./internal/handlers -run GroupMembership"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "RBAC-BE-PERM-001",

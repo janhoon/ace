@@ -366,6 +366,299 @@ func (h *GroupHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "group deleted"})
 }
 
+func (h *GroupHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	orgID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid organization id"}`, http.StatusBadRequest)
+		return
+	}
+
+	groupID, err := uuid.Parse(r.PathValue("groupId"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid group id"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	_, err = h.checkOrgMembership(ctx, userID, orgID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
+			return
+		}
+		http.Error(w, `{"error":"failed to check membership"}`, http.StatusInternalServerError)
+		return
+	}
+
+	groupExists, err := h.groupExistsInOrganization(ctx, orgID, groupID)
+	if err != nil {
+		http.Error(w, `{"error":"failed to get group"}`, http.StatusInternalServerError)
+		return
+	}
+	if !groupExists {
+		http.Error(w, `{"error":"group not found"}`, http.StatusNotFound)
+		return
+	}
+
+	rows, err := h.pool.Query(ctx,
+		`SELECT gm.id, gm.organization_id, gm.group_id, gm.user_id, u.email, u.name, gm.created_at, gm.updated_at
+		 FROM user_group_memberships gm
+		 JOIN users u ON u.id = gm.user_id
+		 WHERE gm.organization_id = $1 AND gm.group_id = $2
+		 ORDER BY gm.created_at ASC`,
+		orgID, groupID,
+	)
+	if err != nil {
+		http.Error(w, `{"error":"failed to list group members"}`, http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	memberships := []models.UserGroupMembership{}
+	for rows.Next() {
+		var membership models.UserGroupMembership
+		if err := rows.Scan(
+			&membership.ID,
+			&membership.OrganizationID,
+			&membership.GroupID,
+			&membership.UserID,
+			&membership.Email,
+			&membership.Name,
+			&membership.CreatedAt,
+			&membership.UpdatedAt,
+		); err != nil {
+			http.Error(w, `{"error":"failed to scan group member"}`, http.StatusInternalServerError)
+			return
+		}
+		memberships = append(memberships, membership)
+	}
+
+	if err := rows.Err(); err != nil {
+		http.Error(w, `{"error":"failed to iterate group members"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(memberships)
+}
+
+func (h *GroupHandler) AddMember(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	orgID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid organization id"}`, http.StatusBadRequest)
+		return
+	}
+
+	groupID, err := uuid.Parse(r.PathValue("groupId"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid group id"}`, http.StatusBadRequest)
+		return
+	}
+
+	var req models.AddUserGroupMemberRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.UserID == uuid.Nil {
+		http.Error(w, `{"error":"user_id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	role, err := h.checkOrgMembership(ctx, userID, orgID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
+			return
+		}
+		http.Error(w, `{"error":"failed to check membership"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if role != string(models.RoleAdmin) {
+		http.Error(w, `{"error":"admin access required"}`, http.StatusForbidden)
+		return
+	}
+
+	groupExists, err := h.groupExistsInOrganization(ctx, orgID, groupID)
+	if err != nil {
+		http.Error(w, `{"error":"failed to get group"}`, http.StatusInternalServerError)
+		return
+	}
+	if !groupExists {
+		http.Error(w, `{"error":"group not found"}`, http.StatusNotFound)
+		return
+	}
+
+	userInOrg, err := h.userIsInOrganization(ctx, orgID, req.UserID)
+	if err != nil {
+		http.Error(w, `{"error":"failed to validate group member"}`, http.StatusInternalServerError)
+		return
+	}
+	if !userInOrg {
+		http.Error(w, `{"error":"user is not a member of this organization"}`, http.StatusBadRequest)
+		return
+	}
+
+	var membership models.UserGroupMembership
+	err = h.pool.QueryRow(ctx,
+		`WITH inserted AS (
+			INSERT INTO user_group_memberships (organization_id, group_id, user_id)
+			VALUES ($1, $2, $3)
+			RETURNING id, organization_id, group_id, user_id, created_at, updated_at
+		)
+		SELECT i.id, i.organization_id, i.group_id, i.user_id, u.email, u.name, i.created_at, i.updated_at
+		FROM inserted i
+		JOIN users u ON u.id = i.user_id`,
+		orgID, groupID, req.UserID,
+	).Scan(
+		&membership.ID,
+		&membership.OrganizationID,
+		&membership.GroupID,
+		&membership.UserID,
+		&membership.Email,
+		&membership.Name,
+		&membership.CreatedAt,
+		&membership.UpdatedAt,
+	)
+	if err != nil {
+		if isUniqueViolation(err) {
+			http.Error(w, `{"error":"user is already a member of this group"}`, http.StatusConflict)
+			return
+		}
+		http.Error(w, `{"error":"failed to add group member"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(membership)
+}
+
+func (h *GroupHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	orgID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid organization id"}`, http.StatusBadRequest)
+		return
+	}
+
+	groupID, err := uuid.Parse(r.PathValue("groupId"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid group id"}`, http.StatusBadRequest)
+		return
+	}
+
+	memberUserID, err := uuid.Parse(r.PathValue("userId"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid user id"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	role, err := h.checkOrgMembership(ctx, userID, orgID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
+			return
+		}
+		http.Error(w, `{"error":"failed to check membership"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if role != string(models.RoleAdmin) {
+		http.Error(w, `{"error":"admin access required"}`, http.StatusForbidden)
+		return
+	}
+
+	groupExists, err := h.groupExistsInOrganization(ctx, orgID, groupID)
+	if err != nil {
+		http.Error(w, `{"error":"failed to get group"}`, http.StatusInternalServerError)
+		return
+	}
+	if !groupExists {
+		http.Error(w, `{"error":"group not found"}`, http.StatusNotFound)
+		return
+	}
+
+	result, err := h.pool.Exec(ctx,
+		`DELETE FROM user_group_memberships
+		 WHERE organization_id = $1 AND group_id = $2 AND user_id = $3`,
+		orgID, groupID, memberUserID,
+	)
+	if err != nil {
+		http.Error(w, `{"error":"failed to remove group member"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if result.RowsAffected() == 0 {
+		http.Error(w, `{"error":"group member not found"}`, http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "group member removed"})
+}
+
+func (h *GroupHandler) groupExistsInOrganization(ctx context.Context, orgID, groupID uuid.UUID) (bool, error) {
+	var exists bool
+	err := h.pool.QueryRow(ctx,
+		`SELECT EXISTS (
+			SELECT 1
+			FROM user_groups
+			WHERE id = $1 AND organization_id = $2
+		)`,
+		groupID, orgID,
+	).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func (h *GroupHandler) userIsInOrganization(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
+	var exists bool
+	err := h.pool.QueryRow(ctx,
+		`SELECT EXISTS (
+			SELECT 1
+			FROM organization_memberships
+			WHERE organization_id = $1 AND user_id = $2
+		)`,
+		orgID, userID,
+	).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
