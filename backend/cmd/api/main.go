@@ -104,6 +104,13 @@ func main() {
 	mux.HandleFunc("PUT /api/orgs/{id}/members/{userId}/role", auth.RequireAuth(jwtManager, orgHandler.UpdateMemberRole))
 	mux.HandleFunc("DELETE /api/orgs/{id}/members/{userId}", auth.RequireAuth(jwtManager, orgHandler.RemoveMember))
 
+	// User group routes
+	groupHandler := handlers.NewGroupHandler(pool)
+	mux.HandleFunc("POST /api/orgs/{id}/groups", auth.RequireAuth(jwtManager, groupHandler.Create))
+	mux.HandleFunc("GET /api/orgs/{id}/groups", auth.RequireAuth(jwtManager, groupHandler.List))
+	mux.HandleFunc("PUT /api/orgs/{id}/groups/{groupId}", auth.RequireAuth(jwtManager, groupHandler.Update))
+	mux.HandleFunc("DELETE /api/orgs/{id}/groups/{groupId}", auth.RequireAuth(jwtManager, groupHandler.Delete))
+
 	// Dashboard routes (org-scoped for list/create, dashboard ID for get/update/delete)
 	dashboardHandler := handlers.NewDashboardHandler(pool)
 	mux.HandleFunc("POST /api/orgs/{orgId}/dashboards", auth.RequireAuth(jwtManager, dashboardHandler.Create))

@@ -167,3 +167,20 @@
   - agent/progress.txt
 - Tests: passing (`cd backend && go test ./...`)
 - Browser validation: n/a (no frontend changes)
+
+## Task RBAC-BE-GROUPS-001: Add backend user group CRUD endpoints - 2026-02-08T17:29:21Z
+- What was done:
+  - Added an organization-scoped `GroupHandler` with create/list/update/delete endpoints for user groups
+  - Enforced access rules so org members can list groups and only org admins can create/update/delete
+  - Added duplicate-name conflict handling and org-scoped update/delete behavior with consistent JSON error payloads
+  - Added integration tests covering CRUD behavior, admin-only write enforcement, and organization scoping
+  - Registered group routes in the API router and marked this task as passing in `agent/prd.json`
+- Files changed:
+  - backend/internal/models/group.go
+  - backend/internal/handlers/groups.go
+  - backend/internal/handlers/groups_test.go
+  - backend/cmd/api/main.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)
