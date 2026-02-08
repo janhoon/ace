@@ -22,6 +22,12 @@ import {
   addGroupMember,
   removeGroupMember,
 } from '../api/groups'
+import {
+  getGoogleSSOConfig,
+  updateGoogleSSOConfig,
+  getMicrosoftSSOConfig,
+  updateMicrosoftSSOConfig,
+} from '../api/sso'
 import { useOrganization } from '../composables/useOrganization'
 
 const route = useRoute()
@@ -77,6 +83,25 @@ const groupMembersError = ref<Record<string, string | null>>({})
 const addMemberUserId = ref<Record<string, string>>({})
 const groupMemberActionLoading = ref<Record<string, boolean>>({})
 
+// SSO settings
+const ssoLoading = ref(false)
+const ssoNotice = ref<string | null>(null)
+
+const googleClientId = ref('')
+const googleClientSecret = ref('')
+const googleEnabled = ref(false)
+const googleConfigured = ref(false)
+const googleSaving = ref(false)
+const googleError = ref<string | null>(null)
+
+const microsoftTenantId = ref('')
+const microsoftClientId = ref('')
+const microsoftClientSecret = ref('')
+const microsoftEnabled = ref(false)
+const microsoftConfigured = ref(false)
+const microsoftSaving = ref(false)
+const microsoftError = ref<string | null>(null)
+
 const isAdmin = computed(() => org.value?.role === 'admin')
 
 onMounted(async () => {
@@ -95,12 +120,73 @@ async function loadData() {
     members.value = membersData
     editName.value = orgData.name
     editSlug.value = orgData.slug
-    await loadGroups()
+    await Promise.all([loadGroups(), loadSSOConfigs()])
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load organization'
   } finally {
     loading.value = false
   }
+}
+
+function resetSSOMessages() {
+  ssoNotice.value = null
+  googleError.value = null
+  microsoftError.value = null
+}
+
+async function loadGoogleConfig() {
+  googleError.value = null
+  googleClientSecret.value = ''
+
+  try {
+    const config = await getGoogleSSOConfig(orgId.value)
+    googleClientId.value = config.client_id
+    googleEnabled.value = config.enabled
+    googleConfigured.value = true
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Failed to load Google SSO settings'
+    if (message === 'Google SSO not configured') {
+      googleClientId.value = ''
+      googleEnabled.value = false
+      googleConfigured.value = false
+      return
+    }
+
+    googleError.value = message
+  }
+}
+
+async function loadMicrosoftConfig() {
+  microsoftError.value = null
+  microsoftClientSecret.value = ''
+
+  try {
+    const config = await getMicrosoftSSOConfig(orgId.value)
+    microsoftTenantId.value = config.tenant_id
+    microsoftClientId.value = config.client_id
+    microsoftEnabled.value = config.enabled
+    microsoftConfigured.value = true
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Failed to load Microsoft SSO settings'
+    if (message === 'Microsoft SSO not configured') {
+      microsoftTenantId.value = ''
+      microsoftClientId.value = ''
+      microsoftEnabled.value = false
+      microsoftConfigured.value = false
+      return
+    }
+
+    microsoftError.value = message
+  }
+}
+
+async function loadSSOConfigs() {
+  ssoLoading.value = true
+  resetSSOMessages()
+
+  await Promise.all([loadGoogleConfig(), loadMicrosoftConfig()])
+
+  ssoLoading.value = false
 }
 
 async function loadGroups() {
@@ -446,6 +532,94 @@ async function handleRemoveGroupMember(groupId: string, membership: UserGroupMem
   }
 }
 
+async function handleSaveGoogleSSO() {
+  if (!isAdmin.value) {
+    return
+  }
+
+  const clientId = googleClientId.value.trim()
+  const clientSecret = googleClientSecret.value.trim()
+
+  if (!clientId) {
+    googleError.value = 'Google client ID is required'
+    return
+  }
+
+  if (!clientSecret) {
+    googleError.value = 'Google client secret is required'
+    return
+  }
+
+  googleSaving.value = true
+  googleError.value = null
+  ssoNotice.value = null
+
+  try {
+    const updated = await updateGoogleSSOConfig(orgId.value, {
+      client_id: clientId,
+      client_secret: clientSecret,
+      enabled: googleEnabled.value,
+    })
+    googleClientId.value = updated.client_id
+    googleEnabled.value = updated.enabled
+    googleConfigured.value = true
+    googleClientSecret.value = ''
+    ssoNotice.value = 'Google SSO settings saved'
+  } catch (e) {
+    googleError.value = e instanceof Error ? e.message : 'Failed to save Google SSO settings'
+  } finally {
+    googleSaving.value = false
+  }
+}
+
+async function handleSaveMicrosoftSSO() {
+  if (!isAdmin.value) {
+    return
+  }
+
+  const tenantId = microsoftTenantId.value.trim()
+  const clientId = microsoftClientId.value.trim()
+  const clientSecret = microsoftClientSecret.value.trim()
+
+  if (!tenantId) {
+    microsoftError.value = 'Microsoft tenant ID is required'
+    return
+  }
+
+  if (!clientId) {
+    microsoftError.value = 'Microsoft client ID is required'
+    return
+  }
+
+  if (!clientSecret) {
+    microsoftError.value = 'Microsoft client secret is required'
+    return
+  }
+
+  microsoftSaving.value = true
+  microsoftError.value = null
+  ssoNotice.value = null
+
+  try {
+    const updated = await updateMicrosoftSSOConfig(orgId.value, {
+      tenant_id: tenantId,
+      client_id: clientId,
+      client_secret: clientSecret,
+      enabled: microsoftEnabled.value,
+    })
+    microsoftTenantId.value = updated.tenant_id
+    microsoftClientId.value = updated.client_id
+    microsoftEnabled.value = updated.enabled
+    microsoftConfigured.value = true
+    microsoftClientSecret.value = ''
+    ssoNotice.value = 'Microsoft SSO settings saved'
+  } catch (e) {
+    microsoftError.value = e instanceof Error ? e.message : 'Failed to save Microsoft SSO settings'
+  } finally {
+    microsoftSaving.value = false
+  }
+}
+
 function goBack() {
   router.back()
 }
@@ -754,6 +928,136 @@ function goBack() {
         </div>
       </section>
 
+      <!-- SSO Section -->
+      <section class="settings-section">
+        <div class="section-header">
+          <h2><Shield :size="20" /> Single Sign-On</h2>
+        </div>
+        <p class="section-description">Manage Google and Microsoft SSO credentials for this organization.</p>
+
+        <div v-if="!isAdmin" class="inline-state">Only organization admins can update SSO settings.</div>
+
+        <div v-if="ssoLoading" class="inline-state">Loading SSO settings...</div>
+        <div v-else class="sso-grid">
+          <article class="sso-card" data-testid="google-sso-card">
+            <div class="sso-card-header">
+              <h3>Google</h3>
+              <span class="sso-status" :class="{ enabled: googleEnabled }">
+                {{ googleEnabled ? 'Enabled' : googleConfigured ? 'Disabled' : 'Not configured' }}
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label>Client ID</label>
+              <input
+                v-model="googleClientId"
+                type="text"
+                data-testid="google-client-id"
+                :disabled="!isAdmin || googleSaving"
+              />
+            </div>
+            <div class="form-group">
+              <label>Client Secret</label>
+              <input
+                v-model="googleClientSecret"
+                type="password"
+                data-testid="google-client-secret"
+                placeholder="Enter to update"
+                :disabled="!isAdmin || googleSaving"
+              />
+            </div>
+            <div class="form-group form-checkbox">
+              <label>
+                <input
+                  v-model="googleEnabled"
+                  type="checkbox"
+                  data-testid="google-enabled"
+                  :disabled="!isAdmin || googleSaving"
+                />
+                Enable Google SSO
+              </label>
+            </div>
+
+            <div v-if="googleError" class="error-message">{{ googleError }}</div>
+
+            <div v-if="isAdmin" class="form-actions sso-actions">
+              <button
+                class="btn btn-primary"
+                data-testid="save-google-sso"
+                :disabled="googleSaving"
+                @click="handleSaveGoogleSSO"
+              >
+                {{ googleSaving ? 'Saving...' : 'Save Google SSO' }}
+              </button>
+            </div>
+          </article>
+
+          <article class="sso-card" data-testid="microsoft-sso-card">
+            <div class="sso-card-header">
+              <h3>Microsoft</h3>
+              <span class="sso-status" :class="{ enabled: microsoftEnabled }">
+                {{ microsoftEnabled ? 'Enabled' : microsoftConfigured ? 'Disabled' : 'Not configured' }}
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label>Tenant ID</label>
+              <input
+                v-model="microsoftTenantId"
+                type="text"
+                data-testid="microsoft-tenant-id"
+                :disabled="!isAdmin || microsoftSaving"
+              />
+            </div>
+            <div class="form-group">
+              <label>Client ID</label>
+              <input
+                v-model="microsoftClientId"
+                type="text"
+                data-testid="microsoft-client-id"
+                :disabled="!isAdmin || microsoftSaving"
+              />
+            </div>
+            <div class="form-group">
+              <label>Client Secret</label>
+              <input
+                v-model="microsoftClientSecret"
+                type="password"
+                data-testid="microsoft-client-secret"
+                placeholder="Enter to update"
+                :disabled="!isAdmin || microsoftSaving"
+              />
+            </div>
+            <div class="form-group form-checkbox">
+              <label>
+                <input
+                  v-model="microsoftEnabled"
+                  type="checkbox"
+                  data-testid="microsoft-enabled"
+                  :disabled="!isAdmin || microsoftSaving"
+                />
+                Enable Microsoft SSO
+              </label>
+            </div>
+
+            <div v-if="microsoftError" class="error-message">{{ microsoftError }}</div>
+
+            <div v-if="isAdmin" class="form-actions sso-actions">
+              <button
+                class="btn btn-primary"
+                data-testid="save-microsoft-sso"
+                :disabled="microsoftSaving"
+                @click="handleSaveMicrosoftSSO"
+              >
+                {{ microsoftSaving ? 'Saving...' : 'Save Microsoft SSO' }}
+              </button>
+            </div>
+          </article>
+        </div>
+
+        <div v-if="ssoNotice" class="success-message">{{ ssoNotice }}</div>
+      </section>
+
       <!-- Danger Zone -->
       <section v-if="isAdmin" class="settings-section danger-zone">
         <div class="section-header">
@@ -886,6 +1190,72 @@ function goBack() {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.section-description {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.sso-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.sso-card {
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: rgba(20, 33, 52, 0.75);
+  padding: 0.9rem;
+}
+
+.sso-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.sso-card-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.sso-status {
+  font-size: 0.75rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+}
+
+.sso-status.enabled {
+  color: var(--accent-success);
+  border-color: rgba(78, 205, 196, 0.45);
+  background: rgba(78, 205, 196, 0.1);
+}
+
+.form-checkbox {
+  margin-bottom: 0;
+}
+
+.form-checkbox label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.form-checkbox input {
+  width: auto;
+  margin: 0;
+}
+
+.sso-actions {
+  margin-top: 0.75rem;
 }
 
 .info-grid {
@@ -1369,6 +1739,10 @@ select:focus {
 
   .form-row {
     flex-direction: column;
+  }
+
+  .sso-grid {
+    grid-template-columns: 1fr;
   }
 
   .danger-item {

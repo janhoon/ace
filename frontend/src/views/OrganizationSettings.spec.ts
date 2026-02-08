@@ -24,6 +24,11 @@ const mockListGroupMembers = vi.hoisted(() => vi.fn())
 const mockAddGroupMember = vi.hoisted(() => vi.fn())
 const mockRemoveGroupMember = vi.hoisted(() => vi.fn())
 
+const mockGetGoogleSSOConfig = vi.hoisted(() => vi.fn())
+const mockUpdateGoogleSSOConfig = vi.hoisted(() => vi.fn())
+const mockGetMicrosoftSSOConfig = vi.hoisted(() => vi.fn())
+const mockUpdateMicrosoftSSOConfig = vi.hoisted(() => vi.fn())
+
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: mockRouteParams }),
   useRouter: () => ({ push: mockPush, back: mockBack }),
@@ -53,6 +58,13 @@ vi.mock('../api/groups', () => ({
   listGroupMembers: mockListGroupMembers,
   addGroupMember: mockAddGroupMember,
   removeGroupMember: mockRemoveGroupMember,
+}))
+
+vi.mock('../api/sso', () => ({
+  getGoogleSSOConfig: mockGetGoogleSSOConfig,
+  updateGoogleSSOConfig: mockUpdateGoogleSSOConfig,
+  getMicrosoftSSOConfig: mockGetMicrosoftSSOConfig,
+  updateMicrosoftSSOConfig: mockUpdateMicrosoftSSOConfig,
 }))
 
 const baseOrg = {
@@ -123,6 +135,33 @@ describe('OrganizationSettings', () => {
     ])
     mockAddGroupMember.mockResolvedValue({})
     mockRemoveGroupMember.mockResolvedValue(undefined)
+
+    mockGetGoogleSSOConfig.mockResolvedValue({
+      client_id: 'google-client-id',
+      enabled: true,
+      created_at: '2026-02-08T00:00:00Z',
+      updated_at: '2026-02-08T00:00:00Z',
+    })
+    mockUpdateGoogleSSOConfig.mockResolvedValue({
+      client_id: 'google-client-id-updated',
+      enabled: false,
+      created_at: '2026-02-08T00:00:00Z',
+      updated_at: '2026-02-08T00:00:00Z',
+    })
+    mockGetMicrosoftSSOConfig.mockResolvedValue({
+      tenant_id: 'tenant-1',
+      client_id: 'microsoft-client-id',
+      enabled: false,
+      created_at: '2026-02-08T00:00:00Z',
+      updated_at: '2026-02-08T00:00:00Z',
+    })
+    mockUpdateMicrosoftSSOConfig.mockResolvedValue({
+      tenant_id: 'tenant-2',
+      client_id: 'microsoft-client-id-updated',
+      enabled: true,
+      created_at: '2026-02-08T00:00:00Z',
+      updated_at: '2026-02-08T00:00:00Z',
+    })
 
     vi.stubGlobal('confirm', vi.fn(() => true))
     vi.stubGlobal('alert', vi.fn(() => undefined))
@@ -216,5 +255,69 @@ describe('OrganizationSettings', () => {
     await flushPromises()
 
     expect(errorWrapper.text()).toContain('Failed to fetch groups')
+  })
+
+  it('loads and saves Google and Microsoft SSO settings for admins', async () => {
+    const wrapper = mount(OrganizationSettings)
+    await flushPromises()
+
+    expect(mockGetGoogleSSOConfig).toHaveBeenCalledWith('org-1')
+    expect(mockGetMicrosoftSSOConfig).toHaveBeenCalledWith('org-1')
+
+    expect((wrapper.get('[data-testid="google-client-id"]').element as HTMLInputElement).value).toBe(
+      'google-client-id',
+    )
+    expect((wrapper.get('[data-testid="microsoft-tenant-id"]').element as HTMLInputElement).value).toBe('tenant-1')
+
+    await wrapper.get('[data-testid="google-client-id"]').setValue('google-client-id-updated')
+    await wrapper.get('[data-testid="google-client-secret"]').setValue('google-secret')
+    await wrapper.get('[data-testid="google-enabled"]').setValue(false)
+    await wrapper.get('[data-testid="save-google-sso"]').trigger('click')
+    await flushPromises()
+
+    expect(mockUpdateGoogleSSOConfig).toHaveBeenCalledWith('org-1', {
+      client_id: 'google-client-id-updated',
+      client_secret: 'google-secret',
+      enabled: false,
+    })
+
+    await wrapper.get('[data-testid="microsoft-tenant-id"]').setValue('tenant-2')
+    await wrapper.get('[data-testid="microsoft-client-id"]').setValue('microsoft-client-id-updated')
+    await wrapper.get('[data-testid="microsoft-client-secret"]').setValue('microsoft-secret')
+    await wrapper.get('[data-testid="microsoft-enabled"]').setValue(true)
+    await wrapper.get('[data-testid="save-microsoft-sso"]').trigger('click')
+    await flushPromises()
+
+    expect(mockUpdateMicrosoftSSOConfig).toHaveBeenCalledWith('org-1', {
+      tenant_id: 'tenant-2',
+      client_id: 'microsoft-client-id-updated',
+      client_secret: 'microsoft-secret',
+      enabled: true,
+    })
+  })
+
+  it('shows read-only SSO controls for non-admin members', async () => {
+    mockGetOrganization.mockResolvedValueOnce({
+      ...baseOrg,
+      role: 'viewer',
+    })
+
+    const wrapper = mount(OrganizationSettings)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Only organization admins can update SSO settings.')
+    expect(wrapper.find('[data-testid="save-google-sso"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="save-microsoft-sso"]').exists()).toBe(false)
+    expect((wrapper.get('[data-testid="google-client-id"]').element as HTMLInputElement).disabled).toBe(true)
+    expect((wrapper.get('[data-testid="microsoft-tenant-id"]').element as HTMLInputElement).disabled).toBe(true)
+  })
+
+  it('shows provider-specific SSO load errors', async () => {
+    mockGetGoogleSSOConfig.mockRejectedValueOnce(new Error('Admin access required'))
+
+    const wrapper = mount(OrganizationSettings)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Admin access required')
   })
 })
