@@ -1,6 +1,6 @@
 {
   "project": "dash",
-  "version": 3,
+  "version": 6,
   "feature_selection": {
     "mode": "auto",
     "rules_in_order": [
@@ -14,759 +14,227 @@
   },
   "features": [
     {
-      "id": "FOLDER-DB-001",
-      "name": "Create folder storage schema",
-      "category": "Dashboard/Folders",
+      "id": "ORG-FE-UI-002",
+      "name": "Center organization creation dialog",
+      "category": "Organization UX",
       "task_size": "small",
-      "description": "Add first-class folder persistence and dashboard-to-folder linkage.",
-      "why_it_matters": "Folders are the foundation for organizing dashboards and later folder-level permissions.",
+      "description": "Move organization creation from sideboard placement to a centered modal experience.",
+      "why_it_matters": "Creating an organization is a primary flow and should appear in a focused, expected dialog position.",
       "depends_on": [],
       "unblocks": [
-        "FOLDER-BE-001",
-        "FOLDER-FE-API-001",
-        "RBAC-BE-PERM-002"
+        "ORG-FE-TEST-001"
       ],
       "requirements": [
-        "Create folders table scoped by organization",
-        "Support optional parent folder for hierarchy",
-        "Add dashboards.folder_id and sort_order columns"
+        "Open organization creation in a centered modal on desktop",
+        "Keep mobile behavior usable (full-screen modal/sheet is acceptable)",
+        "Preserve existing create-organization validation and submit behavior"
       ],
       "steps": [
-        "Update backend migrations for folders table and new dashboard columns",
-        "Add indexes for folder lookup and ordering",
-        "Run migration tests and fix any schema assumptions"
+        "Replace sideboard/sheet mounting point with shared modal container in the org creation flow",
+        "Ensure focus trap, escape close, and submit states still work",
+        "Verify trigger entry points continue opening the create dialog"
       ],
       "acceptance_criteria": [
-        "Migrations run without errors on a clean database",
-        "folders table includes org scope, parent_id, sort_order, and audit fields",
-        "dashboards can store nullable folder_id and sort_order"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/db"
-      ],
-      "passes": true
-    },
-    {
-      "id": "FOLDER-BE-001",
-      "name": "Add folder backend CRUD endpoints",
-      "category": "Dashboard/Folders",
-      "task_size": "small",
-      "description": "Implement folder create/list/get/update/delete APIs with org scoping.",
-      "why_it_matters": "Folder APIs are required before frontend folder management can ship.",
-      "depends_on": [
-        "FOLDER-DB-001"
-      ],
-      "unblocks": [
-        "FOLDER-BE-TEST-001",
-        "FOLDER-FE-API-001",
-        "RBAC-BE-PERM-002"
-      ],
-      "requirements": [
-        "Endpoints for POST/GET/PUT/DELETE folder resources",
-        "Read allowed for org members, write restricted to admin/editor",
-        "Responses include folder metadata and organization_id"
-      ],
-      "steps": [
-        "Add folder models in backend/internal/models",
-        "Create folder handler in backend/internal/handlers",
-        "Register routes in backend/cmd/api/main.go"
-      ],
-      "acceptance_criteria": [
-        "Folder CRUD endpoints respond with expected status codes",
-        "Viewer role cannot create/update/delete folders",
-        "Folder operations are restricted to the active organization"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/handlers"
-      ],
-      "passes": true
-    },
-    {
-      "id": "FOLDER-BE-TEST-001",
-      "name": "Add folder handler tests",
-      "category": "Dashboard/Folders",
-      "task_size": "small",
-      "description": "Cover folder API behavior with focused backend tests.",
-      "why_it_matters": "Folder + RBAC changes need guardrails to prevent regressions.",
-      "depends_on": [
-        "FOLDER-BE-001"
-      ],
-      "unblocks": [
-        "RBAC-BE-PERM-002"
-      ],
-      "requirements": [
-        "Success tests for create/list/get/update/delete",
-        "Forbidden tests for viewer write attempts",
-        "Cross-org isolation tests"
-      ],
-      "steps": [
-        "Add/extend backend/internal/handlers folder tests",
-        "Use seeded org memberships for role scenarios",
-        "Verify JSON payload shape and status codes"
-      ],
-      "acceptance_criteria": [
-        "Folder handler tests pass locally",
-        "Role and org isolation behavior is validated"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/handlers -run Folder"
-      ],
-      "passes": true
-    },
-    {
-      "id": "FOLDER-FE-API-001",
-      "name": "Add frontend folder types and API client",
-      "category": "Dashboard/Folders",
-      "task_size": "small",
-      "description": "Create TypeScript folder models and HTTP helpers for folder endpoints.",
-      "why_it_matters": "Frontend folder UI should use typed API access, matching project patterns.",
-      "depends_on": [
-        "FOLDER-DB-001",
-        "FOLDER-BE-001"
-      ],
-      "unblocks": [
-        "FOLDER-FE-UI-001",
-        "FOLDER-FE-UI-002",
-        "FOLDER-FE-UI-003"
-      ],
-      "requirements": [
-        "Add folder interfaces/enums in frontend/src/types",
-        "Add CRUD functions in frontend/src/api",
-        "Normalize API errors to existing error-handling style"
-      ],
-      "steps": [
-        "Create frontend/src/types/folder.ts",
-        "Create frontend/src/api/folders.ts",
-        "Add unit tests for API request/response behavior"
-      ],
-      "acceptance_criteria": [
-        "Folder API module compiles under strict TS",
-        "API tests validate method, URL, and auth header handling"
-      ],
-      "test_commands": [
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/api"
-      ],
-      "passes": true
-    },
-    {
-      "id": "FOLDER-FE-UI-001",
-      "name": "Render dashboards grouped by folders",
-      "category": "Dashboard/Folders",
-      "task_size": "small",
-      "description": "Show folder sections in dashboard listing and place unassigned dashboards in root.",
-      "why_it_matters": "Users need visible folder structure before managing permissions.",
-      "depends_on": [
-        "FOLDER-FE-API-001"
-      ],
-      "unblocks": [
-        "FOLDER-FE-UI-002",
-        "FOLDER-FE-UI-003",
-        "RBAC-FE-UI-FILTER-001"
-      ],
-      "requirements": [
-        "List folders with their dashboards in Dashboards view",
-        "Show explicit section for dashboards without folder",
-        "Keep responsive behavior on desktop and mobile"
-      ],
-      "steps": [
-        "Fetch folders alongside dashboards in dashboards view/composable",
-        "Render grouped layout in dashboard list component",
-        "Add view-level tests for grouping behavior"
-      ],
-      "acceptance_criteria": [
-        "Dashboards appear under correct folder groups",
-        "Unassigned dashboards appear under a root/unfiled section",
-        "Existing dashboard interactions remain functional"
-      ],
-      "test_commands": [
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/components src/views"
-      ],
-      "passes": true
-    },
-    {
-      "id": "FOLDER-FE-UI-002",
-      "name": "Add folder create/edit/delete controls",
-      "category": "Dashboard/Folders",
-      "task_size": "small",
-      "description": "Provide folder management actions from the dashboard listing UI.",
-      "why_it_matters": "Admins/editors need a direct way to maintain folder structure.",
-      "depends_on": [
-        "FOLDER-FE-UI-001"
-      ],
-      "unblocks": [
-        "RBAC-FE-UI-FOLDER-001"
-      ],
-      "requirements": [
-        "Add folder create modal/form",
-        "Add folder rename and delete actions",
-        "Respect role restrictions from backend responses"
-      ],
-      "steps": [
-        "Create folder modal components or inline forms",
-        "Wire actions to folder API client",
-        "Show concise success and error states"
-      ],
-      "acceptance_criteria": [
-        "Admin/editor can create, rename, and delete folders",
-        "Viewer sees read-only behavior with no destructive controls",
-        "UI refreshes correctly after each operation"
-      ],
-      "test_commands": [
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/components src/views"
-      ],
-      "passes": true
-    },
-    {
-      "id": "FOLDER-FE-UI-003",
-      "name": "Allow moving dashboards between folders",
-      "category": "Dashboard/Folders",
-      "task_size": "small",
-      "description": "Add dashboard placement controls to move dashboards across folders and root.",
-      "why_it_matters": "Foldering is incomplete without quick reassignment of dashboards.",
-      "depends_on": [
-        "FOLDER-FE-UI-001",
-        "FOLDER-BE-001"
-      ],
-      "unblocks": [
-        "RBAC-FE-UI-DASH-001"
-      ],
-      "requirements": [
-        "Expose folder picker when editing dashboard metadata",
-        "Support moving dashboard back to unfiled/root",
-        "Persist and reflect folder change immediately"
-      ],
-      "steps": [
-        "Add folder selector to dashboard edit flow",
-        "Send dashboard update with folder_id via API",
-        "Refresh grouped list after successful move"
-      ],
-      "acceptance_criteria": [
-        "Dashboard can be moved to any visible folder",
-        "Dashboard can be moved back to root/unfiled",
-        "Grouping updates without full page reload"
-      ],
-      "test_commands": [
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/components src/views"
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-DB-001",
-      "name": "Create user groups and resource permission schema",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Add database tables for org user groups and per-resource ACL entries.",
-      "why_it_matters": "Object-level dashboard/folder access requires explicit principals and grants.",
-      "depends_on": [
-        "FOLDER-DB-001"
-      ],
-      "unblocks": [
-        "RBAC-BE-GROUPS-001",
-        "RBAC-BE-PERM-001"
-      ],
-      "requirements": [
-        "Add user_groups table scoped to organization",
-        "Add user_group_memberships table",
-        "Add resource_permissions table for folder/dashboard grants"
-      ],
-      "steps": [
-        "Extend backend migrations with group and permission tables",
-        "Add constraints for principal type and permission level",
-        "Add indexes for org_id, resource lookup, and principal lookup"
-      ],
-      "acceptance_criteria": [
-        "Group and ACL tables exist with valid constraints",
-        "Migrations succeed on clean DB",
-        "Schema supports user and group principals"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/db"
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-BE-GROUPS-001",
-      "name": "Add backend user group CRUD endpoints",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Implement organization-scoped group management APIs.",
-      "why_it_matters": "Groups are needed to grant folder/dashboard access to teams.",
-      "depends_on": [
-        "RBAC-DB-001"
-      ],
-      "unblocks": [
-        "RBAC-BE-GROUPS-002",
-        "RBAC-FE-API-001"
-      ],
-      "requirements": [
-        "POST/GET/PUT/DELETE /api/orgs/{id}/groups",
-        "Admin-only write operations",
-        "Consistent JSON error payloads"
-      ],
-      "steps": [
-        "Add group models and request structs",
-        "Implement group handler CRUD methods",
-        "Register group routes in API router"
-      ],
-      "acceptance_criteria": [
-        "Admins can manage groups",
-        "Non-admin members cannot modify groups",
-        "Group list is org-scoped"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/handlers -run Group"
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-BE-GROUPS-002",
-      "name": "Add group membership endpoints",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Allow admins to add/remove organization members in groups.",
-      "why_it_matters": "Permissions must be assignable to a dynamic set of users.",
-      "depends_on": [
-        "RBAC-BE-GROUPS-001"
-      ],
-      "unblocks": [
-        "RBAC-BE-PERM-001",
-        "RBAC-FE-API-001"
-      ],
-      "requirements": [
-        "List group members",
-        "Add organization member to a group",
-        "Remove member from a group"
-      ],
-      "steps": [
-        "Implement group membership handler methods",
-        "Validate target users belong to organization",
-        "Add route registration and response tests"
-      ],
-      "acceptance_criteria": [
-        "Admin can manage group members",
-        "Duplicate membership is prevented",
-        "Cross-org user assignment is rejected"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/handlers -run GroupMembership"
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-BE-PERM-001",
-      "name": "Implement effective permission evaluation service",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Create a backend service to resolve user access for folder/dashboard resources.",
-      "why_it_matters": "All protected reads and writes need a single, testable authorization rule source.",
-      "depends_on": [
-        "RBAC-DB-001",
-        "RBAC-BE-GROUPS-002"
-      ],
-      "unblocks": [
-        "RBAC-BE-PERM-002",
-        "RBAC-BE-PERM-003",
-        "RBAC-BE-TEST-001"
-      ],
-      "requirements": [
-        "Resolve permissions from direct user grants and group grants",
-        "Include org role fallback (admin/editor/viewer)",
-        "Support actions view, edit, and admin"
-      ],
-      "steps": [
-        "Add authorization service/helper package",
-        "Implement lookup queries for principal grants",
-        "Define deterministic precedence rules"
-      ],
-      "acceptance_criteria": [
-        "Service returns expected permission for direct and group grants",
-        "Org admins retain full access",
-        "Unknown resources/principals fail closed"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/..."
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-BE-PERM-002",
-      "name": "Enforce permissions in folder and dashboard handlers",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Wire effective permission checks into folder/dashboard API operations.",
-      "why_it_matters": "RBAC is only useful when every resource endpoint enforces it consistently.",
-      "depends_on": [
-        "RBAC-BE-PERM-001",
-        "FOLDER-BE-001"
-      ],
-      "unblocks": [
-        "RBAC-BE-PERM-003",
-        "RBAC-FE-UI-FILTER-001"
-      ],
-      "requirements": [
-        "Filter list endpoints to resources user can view",
-        "Require edit/admin for mutations",
-        "Return 403 for unauthorized access attempts"
-      ],
-      "steps": [
-        "Integrate authz service into dashboard and folder handlers",
-        "Apply checks for list/get/create/update/delete",
-        "Update panel operations to respect dashboard permissions"
-      ],
-      "acceptance_criteria": [
-        "Users only see dashboards/folders they can view",
-        "Unauthorized writes are blocked with 403",
-        "Admin/editor workflows still function"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/handlers"
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-BE-PERM-003",
-      "name": "Add folder/dashboard permission management endpoints",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Expose APIs for admins to view and update ACL entries per resource.",
-      "why_it_matters": "Permission changes must be configurable from the org UI.",
-      "depends_on": [
-        "RBAC-BE-PERM-001",
-        "RBAC-BE-PERM-002"
-      ],
-      "unblocks": [
-        "RBAC-FE-API-001",
-        "RBAC-FE-UI-FOLDER-001",
-        "RBAC-FE-UI-DASH-001"
-      ],
-      "requirements": [
-        "Read ACL entries for a folder or dashboard",
-        "Replace ACL entries atomically for a resource",
-        "Validate principal belongs to same organization"
-      ],
-      "steps": [
-        "Implement permission handler methods",
-        "Add routes for folder and dashboard permissions",
-        "Persist ACL updates in resource_permissions table"
-      ],
-      "acceptance_criteria": [
-        "Admins can list and update ACL entries",
-        "Invalid principal/resource combinations are rejected",
-        "Updates affect effective permission resolution"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/handlers -run Permission"
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-BE-TEST-001",
-      "name": "Add RBAC permission matrix tests",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Add backend tests for direct grants, group grants, and org role fallbacks.",
-      "why_it_matters": "Complex ACL behavior needs matrix-style coverage to prevent security regressions.",
-      "depends_on": [
-        "RBAC-BE-PERM-003"
-      ],
-      "unblocks": [
-        "RBAC-FE-UI-FILTER-001"
-      ],
-      "requirements": [
-        "Test viewer/editor/admin paths",
-        "Test group-based access grant and revoke",
-        "Test folder/dashboard unauthorized access returns 403"
-      ],
-      "steps": [
-        "Add/extend authz service tests",
-        "Add handler integration tests for forbidden and allowed flows",
-        "Keep test fixtures organization-isolated"
-      ],
-      "acceptance_criteria": [
-        "RBAC matrix tests pass reliably",
-        "Regression scenarios are covered for key actions"
-      ],
-      "test_commands": [
-        "cd backend && go test ./..."
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-FE-API-001",
-      "name": "Add frontend groups and ACL API modules",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Create frontend types and API clients for groups, memberships, and ACL resources.",
-      "why_it_matters": "Organization settings UI needs typed API access for RBAC management.",
-      "depends_on": [
-        "RBAC-BE-GROUPS-002",
-        "RBAC-BE-PERM-003"
-      ],
-      "unblocks": [
-        "RBAC-FE-UI-ORG-001",
-        "RBAC-FE-UI-FOLDER-001",
-        "RBAC-FE-UI-DASH-001"
-      ],
-      "requirements": [
-        "Define TS types for groups, memberships, and permission entries",
-        "Implement API functions for group and ACL endpoints",
-        "Add API tests for request details and error handling"
-      ],
-      "steps": [
-        "Add type files under frontend/src/types",
-        "Add API modules under frontend/src/api",
-        "Add vitest coverage for new API modules"
-      ],
-      "acceptance_criteria": [
-        "Type-check passes with no unused/any issues",
-        "API tests validate endpoint paths and auth headers"
-      ],
-      "test_commands": [
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/api"
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-FE-UI-ORG-001",
-      "name": "Add user groups management section in organization settings",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Expose group CRUD and membership management in org settings page.",
-      "why_it_matters": "Org admins need an in-product place to define and maintain groups.",
-      "depends_on": [
-        "RBAC-FE-API-001"
-      ],
-      "unblocks": [
-        "RBAC-FE-UI-FOLDER-001",
-        "RBAC-FE-UI-DASH-001"
-      ],
-      "requirements": [
-        "List groups in organization settings",
-        "Create/rename/delete groups",
-        "Add/remove organization members in each group"
-      ],
-      "steps": [
-        "Add groups panel to OrganizationSettings.vue",
-        "Wire form actions to groups API",
-        "Show clear empty/loading/error states"
-      ],
-      "acceptance_criteria": [
-        "Admin can manage groups and memberships from UI",
-        "Viewer/editor cannot access destructive group controls",
-        "UI updates after each group action"
+        "Organization create dialog appears centered on desktop",
+        "Mobile presentation remains fully usable",
+        "Form submission and error handling match previous behavior"
       ],
       "test_commands": [
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/views"
       ],
-      "passes": true
+      "passes": false
     },
     {
-      "id": "RBAC-FE-UI-FOLDER-001",
-      "name": "Add folder permission editor UI",
-      "category": "RBAC",
+      "id": "ORG-FE-TEST-001",
+      "name": "Add organization creation dialog placement tests",
+      "category": "Organization UX",
       "task_size": "small",
-      "description": "Enable admins to configure folder-level ACL entries for users and groups.",
-      "why_it_matters": "Folder access rules must be configurable where folders are managed.",
+      "description": "Add frontend tests confirming the create organization flow renders as a centered modal and still submits.",
+      "why_it_matters": "Dialog placement regressions are easy to reintroduce without explicit coverage.",
       "depends_on": [
-        "RBAC-FE-API-001",
-        "RBAC-FE-UI-ORG-001",
-        "FOLDER-FE-UI-002"
-      ],
-      "unblocks": [
-        "RBAC-FE-UI-FILTER-001"
-      ],
-      "requirements": [
-        "Show current folder ACL entries",
-        "Allow add/remove/update for user and group principals",
-        "Persist ACL updates through permission API"
-      ],
-      "steps": [
-        "Add folder permissions modal or side panel",
-        "Load org users/groups for principal pickers",
-        "Submit full ACL replacement payload"
-      ],
-      "acceptance_criteria": [
-        "Admin can edit folder permissions in UI",
-        "Permission changes persist after reload",
-        "Invalid entries surface actionable error messages"
-      ],
-      "test_commands": [
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/components src/views"
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-FE-UI-DASH-001",
-      "name": "Add dashboard permission editor UI",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Enable admins to configure dashboard-level ACL entries.",
-      "why_it_matters": "Teams often need dashboard exceptions within shared folders.",
-      "depends_on": [
-        "RBAC-FE-API-001",
-        "RBAC-FE-UI-ORG-001",
-        "FOLDER-FE-UI-003"
-      ],
-      "unblocks": [
-        "RBAC-FE-UI-FILTER-001"
-      ],
-      "requirements": [
-        "Show ACL editor from dashboard details/edit flow",
-        "Support user/group principals with view/edit/admin levels",
-        "Persist changes via dashboard permissions endpoint"
-      ],
-      "steps": [
-        "Add dashboard permissions UI control",
-        "Reuse ACL editor patterns from folder permissions",
-        "Update dashboard views after ACL save"
-      ],
-      "acceptance_criteria": [
-        "Admin can manage dashboard ACLs",
-        "ACL state loads and saves correctly",
-        "Permission errors are shown without breaking page state"
-      ],
-      "test_commands": [
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/components src/views"
-      ],
-      "passes": true
-    },
-    {
-      "id": "RBAC-FE-UI-FILTER-001",
-      "name": "Apply permission-aware filtering and forbidden UX",
-      "category": "RBAC",
-      "task_size": "small",
-      "description": "Hide inaccessible folders/dashboards in lists and handle denied deep links gracefully.",
-      "why_it_matters": "UI must match backend enforcement so users only see resources they can access.",
-      "depends_on": [
-        "RBAC-BE-PERM-002",
-        "RBAC-FE-UI-FOLDER-001",
-        "RBAC-FE-UI-DASH-001"
+        "ORG-FE-UI-002"
       ],
       "unblocks": [],
       "requirements": [
-        "List views only render resources returned by permission-filtered APIs",
-        "Dashboard detail route shows clear forbidden state on 403",
-        "No stale unauthorized resources remain after permission change"
+        "Verify create dialog uses modal container instead of sideboard pattern",
+        "Verify create action can still submit successfully",
+        "Verify close/cancel behavior remains functional"
       ],
       "steps": [
-        "Update dashboard/folder loading flows to respect filtered data",
-        "Handle 403 responses with concise forbidden UI",
-        "Add tests for denied navigation behavior"
+        "Add tests in organization settings/org switcher view spec files",
+        "Mock create API success and failure states",
+        "Assert modal visibility and submit payload behavior"
       ],
       "acceptance_criteria": [
-        "Unauthorized dashboards/folders are not shown",
-        "Direct navigation to forbidden resources is handled cleanly",
-        "UI refresh reflects permission revocations"
+        "Tests fail if dialog reverts to sideboard placement",
+        "Happy-path create and close behaviors are covered"
       ],
       "test_commands": [
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/views"
+        "cd frontend && npm run test -- src/views",
+        "cd frontend && npm run type-check"
       ],
-      "passes": true
+      "passes": false
     },
     {
-      "id": "SSO-FE-API-001",
-      "name": "Add frontend organization SSO API module",
+      "id": "SSO-FE-UI-002",
+      "name": "Restructure SSO settings into configure flow",
       "category": "Organization Settings/SSO",
       "task_size": "small",
-      "description": "Create frontend API wrappers for Google and Microsoft org SSO config endpoints.",
-      "why_it_matters": "Organization settings UI needs typed access to existing backend SSO config APIs.",
+      "description": "Replace static provider cards with a single configure entry point and provider list.",
+      "why_it_matters": "SSO setup should match common admin workflows where providers are managed from one configuration flow.",
       "depends_on": [],
       "unblocks": [
-        "SSO-FE-UI-001"
+        "SSO-FE-UI-003"
       ],
       "requirements": [
-        "Get and update Google SSO config",
-        "Get and update Microsoft SSO config",
-        "Consistent error normalization"
+        "Show one primary \"Configure SSO\" entry point in organization settings",
+        "List configured providers with status and edit actions",
+        "Expose an \"Add SSO\" action for adding another provider"
       ],
       "steps": [
-        "Add SSO types in frontend/src/types",
-        "Add API functions in frontend/src/api",
-        "Add API tests for both providers"
+        "Refactor OrganizationSettings SSO section into a provider-management shell",
+        "Render configured-provider rows/cards with enabled state",
+        "Gate mutation controls to org admins"
       ],
       "acceptance_criteria": [
-        "SSO API module passes strict type-checking",
-        "Tests verify endpoint paths and payloads"
+        "SSO section no longer presents only two static configuration screens",
+        "Admins can start configuration from a single flow",
+        "Existing provider update behavior is preserved"
       ],
       "test_commands": [
         "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/api"
+        "cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts"
       ],
-      "passes": true
+      "passes": false
     },
     {
-      "id": "SSO-FE-UI-001",
-      "name": "Add SSO configuration section in organization settings",
+      "id": "SSO-FE-UI-003",
+      "name": "Add provider picker and SSO config modal/page",
       "category": "Organization Settings/SSO",
       "task_size": "small",
-      "description": "Allow org admins to configure Google and Microsoft SSO credentials from UI.",
-      "why_it_matters": "SSO setup should be managed by org admins without editing backend env or DB manually.",
+      "description": "Implement the configure SSO interaction where admin selects a provider and then configures it.",
+      "why_it_matters": "Provider-first setup reduces confusion and supports adding multiple SSO providers over time.",
       "depends_on": [
-        "SSO-FE-API-001"
+        "SSO-FE-UI-002"
       ],
       "unblocks": [
-        "SSO-FE-TEST-001"
+        "SSO-FE-TEST-002"
       ],
       "requirements": [
-        "Add Google config form (client id, client secret, enabled)",
-        "Add Microsoft config form (tenant id, client id, client secret, enabled)",
-        "Restrict edit controls to org admins"
+        "Open a modal/page/expanded panel from Configure SSO",
+        "Prompt for provider selection before showing provider-specific fields",
+        "Support both add-new and edit-existing provider flows"
       ],
       "steps": [
-        "Add SSO section/cards to OrganizationSettings.vue",
-        "Load existing provider configs on page load",
-        "Submit provider-specific updates and show save feedback"
+        "Build provider selection step in the SSO configure flow",
+        "Render provider-specific forms after selection",
+        "Submit payloads through existing SSO API helpers and refresh provider list"
       ],
       "acceptance_criteria": [
-        "Admin can load and save Google and Microsoft SSO settings",
-        "Non-admin users can view but not modify SSO controls",
-        "Errors are shown with concise actionable messages"
+        "Admin can choose provider at configuration time",
+        "Admin can add another provider from the same configure flow",
+        "Save and validation errors are shown clearly"
       ],
       "test_commands": [
         "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/views"
+        "cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts"
       ],
-      "passes": true
+      "passes": false
     },
     {
-      "id": "SSO-FE-TEST-001",
-      "name": "Add SSO settings UI tests",
+      "id": "SSO-FE-TEST-002",
+      "name": "Add tests for provider-driven SSO flow",
       "category": "Organization Settings/SSO",
       "task_size": "small",
-      "description": "Cover SSO configuration forms and role-based editing behavior with frontend tests.",
-      "why_it_matters": "Org security configuration needs stable and verifiable UI behavior.",
+      "description": "Add frontend tests for configure SSO entry point, provider selection, and add-provider flows.",
+      "why_it_matters": "The redesigned SSO UX introduces multi-step state that should be regression-tested.",
       "depends_on": [
-        "SSO-FE-UI-001"
+        "SSO-FE-UI-003"
       ],
       "unblocks": [],
       "requirements": [
-        "Test load/save paths for Google and Microsoft cards",
-        "Test admin-only editing restrictions",
-        "Test API error rendering"
+        "Test configure entry point rendering",
+        "Test selecting provider and opening provider-specific form",
+        "Test adding another provider and handling API failures"
       ],
       "steps": [
-        "Add OrganizationSettings SSO-focused test cases",
-        "Mock SSO API responses for success and failure",
-        "Validate button states and form submission payloads"
+        "Extend OrganizationSettings SSO specs for new flow",
+        "Mock provider load/save endpoints for both success and error cases",
+        "Assert admin/non-admin behavior remains correct"
       ],
       "acceptance_criteria": [
-        "SSO UI tests pass consistently",
-        "Critical admin/non-admin behavior is covered"
+        "Provider selection and add-provider flows are covered",
+        "Tests verify failure states without broken UI state"
       ],
       "test_commands": [
         "cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts",
         "cd frontend && npm run type-check"
       ],
-      "passes": true
+      "passes": false
+    },
+    {
+      "id": "FOLDER-FE-UI-004",
+      "name": "Expose dashboard folder creation entry points",
+      "category": "Dashboard/Folders",
+      "task_size": "small",
+      "description": "Make folder creation clearly available from dashboard screens where users manage folders.",
+      "why_it_matters": "Folder support is incomplete if users cannot easily discover where to create folders.",
+      "depends_on": [],
+      "unblocks": [
+        "FOLDER-FE-TEST-002"
+      ],
+      "requirements": [
+        "Add visible \"New folder\" action in dashboards view for admin/editor",
+        "Provide empty-state CTA when no folders exist",
+        "Keep viewer experience read-only with no create control"
+      ],
+      "steps": [
+        "Add folder create trigger in dashboard toolbar/header",
+        "Wire trigger to folder create modal/form and refresh list on save",
+        "Show role-appropriate visibility for create controls"
+      ],
+      "acceptance_criteria": [
+        "Admin/editor can discover and open folder creation quickly",
+        "Viewer cannot access folder create control",
+        "New folder appears in the grouped dashboard list after creation"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views src/components"
+      ],
+      "passes": false
+    },
+    {
+      "id": "FOLDER-FE-TEST-002",
+      "name": "Add tests for folder creation discoverability",
+      "category": "Dashboard/Folders",
+      "task_size": "small",
+      "description": "Add frontend coverage for visible folder-create entry points and role-based control visibility.",
+      "why_it_matters": "The current issue is a UX discoverability gap that should be protected by tests.",
+      "depends_on": [
+        "FOLDER-FE-UI-004"
+      ],
+      "unblocks": [],
+      "requirements": [
+        "Test admin/editor sees New folder controls",
+        "Test viewer does not see create controls",
+        "Test successful create refreshes dashboard folder grouping"
+      ],
+      "steps": [
+        "Extend dashboards view/component tests for folder create CTA",
+        "Mock folder API create/list responses",
+        "Assert list updates after successful create"
+      ],
+      "acceptance_criteria": [
+        "Folder creation entry point tests pass",
+        "Role-based visibility is covered for create controls"
+      ],
+      "test_commands": [
+        "cd frontend && npm run test -- src/views src/components",
+        "cd frontend && npm run type-check"
+      ],
+      "passes": false
     }
   ]
 }
