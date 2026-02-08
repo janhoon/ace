@@ -312,12 +312,36 @@ describe('OrganizationSettings', () => {
     expect((wrapper.get('[data-testid="microsoft-tenant-id"]').element as HTMLInputElement).disabled).toBe(true)
   })
 
+  it('renders SSO save API errors for both providers', async () => {
+    const wrapper = mount(OrganizationSettings)
+    await flushPromises()
+
+    mockUpdateGoogleSSOConfig.mockRejectedValueOnce(new Error('Failed to save Google config'))
+    await wrapper.get('[data-testid="google-client-id"]').setValue('google-client-id-updated')
+    await wrapper.get('[data-testid="google-client-secret"]').setValue('google-secret')
+    await wrapper.get('[data-testid="save-google-sso"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Failed to save Google config')
+
+    mockUpdateMicrosoftSSOConfig.mockRejectedValueOnce(new Error('Failed to save Microsoft config'))
+    await wrapper.get('[data-testid="microsoft-tenant-id"]').setValue('tenant-2')
+    await wrapper.get('[data-testid="microsoft-client-id"]').setValue('microsoft-client-id-updated')
+    await wrapper.get('[data-testid="microsoft-client-secret"]').setValue('microsoft-secret')
+    await wrapper.get('[data-testid="save-microsoft-sso"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Failed to save Microsoft config')
+  })
+
   it('shows provider-specific SSO load errors', async () => {
     mockGetGoogleSSOConfig.mockRejectedValueOnce(new Error('Admin access required'))
+    mockGetMicrosoftSSOConfig.mockRejectedValueOnce(new Error('Microsoft provider unavailable'))
 
     const wrapper = mount(OrganizationSettings)
     await flushPromises()
 
     expect(wrapper.text()).toContain('Admin access required')
+    expect(wrapper.text()).toContain('Microsoft provider unavailable')
   })
 })

@@ -766,7 +766,7 @@
         "cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts",
         "cd frontend && npm run type-check"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }
