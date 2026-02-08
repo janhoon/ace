@@ -230,3 +230,19 @@
   - agent/progress.txt
 - Tests: passing (`cd backend && go test ./...`)
 - Browser validation: n/a (no frontend changes)
+
+## Task RBAC-BE-PERM-003: Add folder/dashboard permission management endpoints - 2026-02-08T20:18:38Z
+- What was done:
+  - Added a backend `PermissionHandler` with admin-only endpoints to list and replace ACL entries for folders and dashboards
+  - Implemented atomic ACL replacement using a transaction that clears and recreates entries per resource
+  - Added validation to reject principals outside the resource organization for both `user` and `group` principal types
+  - Added integration tests covering folder/dashboard ACL lifecycle, non-admin access denial, cross-org validation, and effective permission changes through authz resolution
+- Files changed:
+  - backend/internal/models/permission.go
+  - backend/internal/handlers/permissions.go
+  - backend/internal/handlers/permissions_test.go
+  - backend/cmd/api/main.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)

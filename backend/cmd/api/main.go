@@ -130,6 +130,13 @@ func main() {
 	mux.HandleFunc("PUT /api/folders/{id}", auth.RequireAuth(jwtManager, folderHandler.Update))
 	mux.HandleFunc("DELETE /api/folders/{id}", auth.RequireAuth(jwtManager, folderHandler.Delete))
 
+	// Resource permission routes
+	permissionHandler := handlers.NewPermissionHandler(pool)
+	mux.HandleFunc("GET /api/folders/{id}/permissions", auth.RequireAuth(jwtManager, permissionHandler.ListFolderPermissions))
+	mux.HandleFunc("PUT /api/folders/{id}/permissions", auth.RequireAuth(jwtManager, permissionHandler.ReplaceFolderPermissions))
+	mux.HandleFunc("GET /api/dashboards/{id}/permissions", auth.RequireAuth(jwtManager, permissionHandler.ListDashboardPermissions))
+	mux.HandleFunc("PUT /api/dashboards/{id}/permissions", auth.RequireAuth(jwtManager, permissionHandler.ReplaceDashboardPermissions))
+
 	// Panel routes
 	panelHandler := handlers.NewPanelHandler(pool)
 	mux.HandleFunc("POST /api/dashboards/{id}/panels", auth.RequireAuth(jwtManager, panelHandler.Create))

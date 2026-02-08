@@ -461,7 +461,7 @@
       "test_commands": [
         "cd backend && go test ./internal/handlers -run Permission"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "RBAC-BE-TEST-001",
