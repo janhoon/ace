@@ -141,6 +141,26 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		`CREATE INDEX IF NOT EXISTS idx_datasources_org_id ON datasources(organization_id)`,
 		// Add datasource_id to panels (nullable, for non-default datasource)
 		`ALTER TABLE panels ADD COLUMN IF NOT EXISTS datasource_id UUID REFERENCES datasources(id) ON DELETE SET NULL`,
+		// Folders for dashboard organization
+		`CREATE TABLE IF NOT EXISTS folders (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+			parent_id UUID REFERENCES folders(id) ON DELETE SET NULL,
+			name VARCHAR(255) NOT NULL,
+			sort_order INTEGER NOT NULL DEFAULT 0,
+			created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW()
+		)`,
+		// Add folder placement fields to dashboards
+		`ALTER TABLE dashboards
+			ADD COLUMN IF NOT EXISTS folder_id UUID REFERENCES folders(id) ON DELETE SET NULL,
+			ADD COLUMN IF NOT EXISTS sort_order INTEGER`,
+		// Indexes for folder and dashboard ordering lookups
+		`CREATE INDEX IF NOT EXISTS idx_folders_org_id ON folders(organization_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_folders_parent_id ON folders(parent_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_folders_org_parent_sort_order ON folders(organization_id, parent_id, sort_order)`,
+		`CREATE INDEX IF NOT EXISTS idx_dashboards_folder_sort_order ON dashboards(organization_id, folder_id, sort_order)`,
 	}
 
 	for _, migration := range migrations {

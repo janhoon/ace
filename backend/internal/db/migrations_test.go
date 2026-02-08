@@ -24,6 +24,8 @@ func TestRunMigrations(t *testing.T) {
 	cleanupSQL := `
 		DROP TABLE IF EXISTS panels CASCADE;
 		DROP TABLE IF EXISTS dashboards CASCADE;
+		DROP TABLE IF EXISTS folders CASCADE;
+		DROP TABLE IF EXISTS datasources CASCADE;
 		DROP TABLE IF EXISTS data_sources CASCADE;
 		DROP TABLE IF EXISTS prometheus_datasources CASCADE;
 		DROP TABLE IF EXISTS sso_configs CASCADE;
@@ -51,6 +53,8 @@ func TestRunMigrations(t *testing.T) {
 		"user_auth_methods",
 		"sso_configs",
 		"prometheus_datasources",
+		"datasources",
+		"folders",
 		"dashboards",
 		"panels",
 	}
@@ -180,6 +184,8 @@ func TestDownMigration(t *testing.T) {
 	cleanupSQL := `
 		DROP TABLE IF EXISTS panels CASCADE;
 		DROP TABLE IF EXISTS dashboards CASCADE;
+		DROP TABLE IF EXISTS folders CASCADE;
+		DROP TABLE IF EXISTS datasources CASCADE;
 		DROP TABLE IF EXISTS data_sources CASCADE;
 		DROP TABLE IF EXISTS prometheus_datasources CASCADE;
 		DROP TABLE IF EXISTS sso_configs CASCADE;
@@ -212,6 +218,10 @@ func TestDownMigration(t *testing.T) {
 		"user_auth_methods",
 		"sso_configs",
 		"prometheus_datasources",
+		"datasources",
+		"folders",
+		"dashboards",
+		"panels",
 	}
 
 	for _, table := range tables {
