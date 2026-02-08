@@ -1,0 +1,140 @@
+# Progress Log
+
+## Completed Features:
+1. ✅ Multi-tenancy Database Schema (PR #13)
+2. ✅ Core Authentication System (PR #14)
+3. ✅ Refresh Token System (PR #15)
+4. ✅ Google SSO (PR #16)
+5. ✅ Microsoft SSO (PR #17)
+6. ✅ Multi-Auth Linking (PR #18)
+7. ✅ Organization Management (PR #19 - pending)
+
+## Feature 7: Organization Management - 2026-02-02
+- What was done:
+  - Created backend organization handler with full CRUD
+  - Endpoints: POST/GET/PUT/DELETE /api/orgs, /api/orgs/{id}
+  - Invitation system: POST /api/orgs/{id}/invitations, POST /api/invitations/{token}/accept
+  - Member management: GET /api/orgs/{id}/members, PUT .../members/{userId}/role, DELETE .../members/{userId}
+  - Invitations stored in Valkey with 7-day TTL
+  - Role-based access control (admin, editor, viewer)
+  - Protection against removing last admin
+  - Created frontend organization composable for state management
+  - Created OrganizationDropdown component in sidebar
+  - Created CreateOrganizationModal component
+  - Created OrganizationSettings page with member management
+  - Added org settings route /settings/org/:id
+- Files changed:
+  - backend/internal/handlers/organization.go - Organization CRUD and member management
+  - backend/internal/handlers/organization_test.go - Comprehensive tests
+  - backend/cmd/api/main.go - Added organization routes
+  - frontend/src/types/organization.ts - TypeScript types
+  - frontend/src/api/organizations.ts - API functions
+  - frontend/src/composables/useOrganization.ts - State management
+  - frontend/src/components/OrganizationDropdown.vue - Org switcher in sidebar
+  - frontend/src/components/CreateOrganizationModal.vue - Create org modal
+  - frontend/src/views/OrganizationSettings.vue - Org settings page
+  - frontend/src/components/Sidebar.vue - Added org dropdown
+  - frontend/src/router/index.ts - Added org settings route
+- PR: [will be added after creation]
+
+## Feature 8: DataSource - Multi-Source Support - 2026-02-07
+- What was done:
+  - Created unified datasources table with migration (supports prometheus, loki, victorialogs, victoriametrics)
+  - Updated DataSource model with type validation, IsMetrics/IsLogs helpers
+  - Created backend CRUD handler for datasources (org-scoped, admin-only create/update/delete)
+  - Created datasource client factory with implementations for all 4 source types
+  - Prometheus client: wraps existing pkg/prometheus with unified QueryResult format
+  - VictoriaMetrics client: HTTP-based PromQL-compatible API queries
+  - Loki client: LogQL queries with nanosecond timestamp parsing, log level detection
+  - Victoria Logs client: LogsQL queries with JSONL response parsing
+  - Unified query endpoint: POST /api/datasources/{id}/query (auth required)
+  - Added datasource_id column to panels table (nullable)
+  - Created frontend DataSource types, API module, and composable
+  - Created DataSourceSettings view with CRUD UI for managing datasources
+  - Created LogViewer component (table view with timestamps, levels, labels)
+  - Updated Panel.vue to support datasource-based queries and log panels
+  - Updated PanelEditModal.vue with datasource dropdown and logs panel type
+  - Updated Sidebar.vue with Data Sources nav item
+  - Updated router with /datasources route
+  - Comprehensive backend tests (handler + client factory + log level detection)
+  - Comprehensive frontend tests (API module + type utilities)
+- Files changed:
+  - backend/internal/models/datasource.go - Unified DataSource model with type validation
+  - backend/internal/db/migrations.go - Added datasources table + panels.datasource_id
+  - backend/internal/handlers/datasource.go - CRUD + query handler
+  - backend/internal/handlers/datasource_test.go - Handler tests
+  - backend/internal/datasource/client.go - Client interface + factory
+  - backend/internal/datasource/prometheus.go - Prometheus client
+  - backend/internal/datasource/victoriametrics.go - VictoriaMetrics client
+  - backend/internal/datasource/loki.go - Loki client
+  - backend/internal/datasource/victorialogs.go - Victoria Logs client
+  - backend/internal/datasource/client_test.go - Client factory + log detection tests
+  - backend/cmd/api/main.go - Registered datasource routes
+  - frontend/src/types/datasource.ts - TypeScript types + utilities
+  - frontend/src/types/datasource.spec.ts - Type utility tests
+  - frontend/src/api/datasources.ts - API functions
+  - frontend/src/api/datasources.spec.ts - API tests
+  - frontend/src/composables/useDatasource.ts - State management
+  - frontend/src/views/DataSourceSettings.vue - CRUD UI
+  - frontend/src/components/LogViewer.vue - Log table component
+  - frontend/src/components/Panel.vue - Datasource + log support
+  - frontend/src/components/PanelEditModal.vue - Datasource dropdown + logs type
+  - frontend/src/components/Sidebar.vue - Data Sources nav item
+  - frontend/src/router/index.ts - /datasources route
+- Tests: passing (backend all pass, frontend new tests pass, pre-existing failures unchanged)
+
+## ALL FEATURES COMPLETE
+
+## Task FOLDER-DB-001: Create folder storage schema - 2026-02-08T15:42:34Z
+- What was done:
+  - Added folder persistence migration with organization scoping, optional parent hierarchy, sort ordering, and audit fields
+  - Added nullable dashboard folder placement columns (`folder_id`, `sort_order`) with foreign key support
+  - Added folder/dashboard indexes for org/folder lookup and sort ordering
+  - Updated migration tests to account for `folders` and `datasources` tables in setup and verification
+- Files changed:
+  - backend/internal/db/migrations.go
+  - backend/internal/db/migrations_test.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)
+
+## Task FOLDER-BE-001: Add folder backend CRUD endpoints - 2026-02-08T15:46:24Z
+- What was done:
+  - Added first-class folder backend model and CRUD HTTP handler with organization scoping
+  - Implemented membership-based read access and viewer write restrictions for create/update/delete
+  - Added parent-folder validation to ensure parent folders exist in the same organization
+  - Registered folder routes for org-scoped list/create and ID-scoped get/update/delete
+- Files changed:
+  - backend/internal/models/folder.go
+  - backend/internal/handlers/folders.go
+  - backend/cmd/api/main.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)
+
+## Task FOLDER-FE-API-001: Add frontend folder types and API client - 2026-02-08T17:01:35Z
+- What was done:
+  - Added typed folder domain models and create/update request payload interfaces in the frontend types layer
+  - Added folder API client functions for list/get/create/update/delete with auth headers and normalized API error handling
+  - Added Vitest coverage for folder API request paths, HTTP methods, payloads, auth headers, and key error responses
+- Files changed:
+  - frontend/src/types/folder.ts
+  - frontend/src/api/folders.ts
+  - frontend/src/api/folders.spec.ts
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside folder API); passing (`cd frontend && npm run test -- src/api/folders.spec.ts`)
+- Browser validation: passing (login/register mode toggle happy path, failed sign-in state renders error message without UI/runtime crash)
+
+## Task FOLDER-FE-API-001: Add frontend folder types and API client - 2026-02-08T17:16:56Z
+- What was done:
+  - Verified the existing folder type definitions and folder API client implementation satisfy task requirements
+  - Confirmed folder API tests cover request URLs, methods, payload handling, auth headers, and error normalization
+  - Marked this task as passing in `agent/prd.json`
+- Files changed:
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures in unrelated suites: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/DashboardList.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/api/folders.spec.ts`)
+- Browser validation: n/a (no frontend source changes in this session)
