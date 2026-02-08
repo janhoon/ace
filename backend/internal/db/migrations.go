@@ -161,6 +161,49 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		`CREATE INDEX IF NOT EXISTS idx_folders_parent_id ON folders(parent_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_folders_org_parent_sort_order ON folders(organization_id, parent_id, sort_order)`,
 		`CREATE INDEX IF NOT EXISTS idx_dashboards_folder_sort_order ON dashboards(organization_id, folder_id, sort_order)`,
+		// RBAC groups for organization-scoped principals
+		`CREATE TABLE IF NOT EXISTS user_groups (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+			name VARCHAR(255) NOT NULL,
+			description TEXT,
+			created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW(),
+			UNIQUE(organization_id, name)
+		)`,
+		// Group membership assignments for users
+		`CREATE TABLE IF NOT EXISTS user_group_memberships (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+			group_id UUID NOT NULL REFERENCES user_groups(id) ON DELETE CASCADE,
+			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW(),
+			UNIQUE(group_id, user_id)
+		)`,
+		// Resource-level ACL entries for users and groups
+		`CREATE TABLE IF NOT EXISTS resource_permissions (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+			resource_type VARCHAR(50) NOT NULL CHECK (resource_type IN ('folder', 'dashboard')),
+			resource_id UUID NOT NULL,
+			principal_type VARCHAR(50) NOT NULL CHECK (principal_type IN ('user', 'group')),
+			principal_id UUID NOT NULL,
+			permission VARCHAR(50) NOT NULL CHECK (permission IN ('view', 'edit', 'admin')),
+			created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW(),
+			UNIQUE(resource_type, resource_id, principal_type, principal_id)
+		)`,
+		// RBAC indexes for org, resource, and principal lookups
+		`CREATE INDEX IF NOT EXISTS idx_user_groups_org_id ON user_groups(organization_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_group_memberships_org_id ON user_group_memberships(organization_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_group_memberships_group_id ON user_group_memberships(group_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_group_memberships_user_id ON user_group_memberships(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_resource_permissions_org_id ON resource_permissions(organization_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_resource_permissions_resource_lookup ON resource_permissions(organization_id, resource_type, resource_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_resource_permissions_principal_lookup ON resource_permissions(organization_id, principal_type, principal_id)`,
 	}
 
 	for _, migration := range migrations {

@@ -153,3 +153,17 @@
   - agent/progress.txt
 - Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files in `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
 - Browser validation: passing (happy path verified folder + unfiled grouping on `/dashboards`; permission/failure state verified 403 renders `Not a member of this organization`; no runtime JS errors observed)
+
+## Task RBAC-DB-001: Create user groups and resource permission schema - 2026-02-08T17:24:54Z
+- What was done:
+  - Added migration schema for `user_groups`, `user_group_memberships`, and `resource_permissions` with org scoping and RBAC-oriented check constraints
+  - Added indexes for group lookup, membership lookup, and ACL resource/principal lookup paths
+  - Extended migration tests to validate new table creation/removal and constraint behavior for user/group principals and permission levels
+  - Marked this task as passing in `agent/prd.json`
+- Files changed:
+  - backend/internal/db/migrations.go
+  - backend/internal/db/migrations_test.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)

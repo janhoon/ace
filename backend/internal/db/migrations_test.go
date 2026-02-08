@@ -24,6 +24,9 @@ func TestRunMigrations(t *testing.T) {
 	cleanupSQL := `
 		DROP TABLE IF EXISTS panels CASCADE;
 		DROP TABLE IF EXISTS dashboards CASCADE;
+		DROP TABLE IF EXISTS resource_permissions CASCADE;
+		DROP TABLE IF EXISTS user_group_memberships CASCADE;
+		DROP TABLE IF EXISTS user_groups CASCADE;
 		DROP TABLE IF EXISTS folders CASCADE;
 		DROP TABLE IF EXISTS datasources CASCADE;
 		DROP TABLE IF EXISTS data_sources CASCADE;
@@ -50,6 +53,9 @@ func TestRunMigrations(t *testing.T) {
 		"organizations",
 		"users",
 		"organization_memberships",
+		"user_groups",
+		"user_group_memberships",
+		"resource_permissions",
 		"user_auth_methods",
 		"sso_configs",
 		"prometheus_datasources",
@@ -100,6 +106,13 @@ func TestRunMigrations(t *testing.T) {
 		t.Fatalf("Could not create test user: %v", err)
 	}
 
+	_, err = pool.Exec(ctx, `
+		INSERT INTO users (email) VALUES ('member@example.com')
+	`)
+	if err != nil {
+		t.Fatalf("Could not create group member user: %v", err)
+	}
+
 	// Test valid roles
 	validRoles := []string{"admin", "editor", "viewer"}
 	for _, role := range validRoles {
@@ -137,6 +150,80 @@ func TestRunMigrations(t *testing.T) {
 	`)
 	if err == nil {
 		t.Error("Expected invalid role to fail constraint check")
+	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO user_groups (organization_id, name)
+		SELECT id, 'Platform Team'
+		FROM organizations
+		WHERE slug = 'test-org'
+	`)
+	if err != nil {
+		t.Fatalf("Could not create user group: %v", err)
+	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO user_group_memberships (organization_id, group_id, user_id)
+		SELECT o.id, g.id, u.id
+		FROM organizations o
+		JOIN user_groups g ON g.organization_id = o.id
+		JOIN users u ON u.email = 'member@example.com'
+		WHERE o.slug = 'test-org' AND g.name = 'Platform Team'
+	`)
+	if err != nil {
+		t.Fatalf("Could not create user group membership: %v", err)
+	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO user_group_memberships (organization_id, group_id, user_id)
+		SELECT o.id, g.id, u.id
+		FROM organizations o
+		JOIN user_groups g ON g.organization_id = o.id
+		JOIN users u ON u.email = 'member@example.com'
+		WHERE o.slug = 'test-org' AND g.name = 'Platform Team'
+	`)
+	if err == nil {
+		t.Error("Expected duplicate user group membership to fail unique constraint")
+	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO resource_permissions (organization_id, resource_type, resource_id, principal_type, principal_id, permission)
+		SELECT o.id, 'folder', gen_random_uuid(), 'user', u.id, 'view'
+		FROM organizations o, users u
+		WHERE o.slug = 'test-org' AND u.email = 'test@example.com'
+	`)
+	if err != nil {
+		t.Errorf("Expected user principal ACL insert to succeed, got error: %v", err)
+	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO resource_permissions (organization_id, resource_type, resource_id, principal_type, principal_id, permission)
+		SELECT o.id, 'dashboard', gen_random_uuid(), 'group', g.id, 'edit'
+		FROM organizations o, user_groups g
+		WHERE o.slug = 'test-org' AND g.name = 'Platform Team' AND g.organization_id = o.id
+	`)
+	if err != nil {
+		t.Errorf("Expected group principal ACL insert to succeed, got error: %v", err)
+	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO resource_permissions (organization_id, resource_type, resource_id, principal_type, principal_id, permission)
+		SELECT o.id, 'folder', gen_random_uuid(), 'invalid_principal', u.id, 'view'
+		FROM organizations o, users u
+		WHERE o.slug = 'test-org' AND u.email = 'test@example.com'
+	`)
+	if err == nil {
+		t.Error("Expected invalid principal_type to fail constraint check")
+	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO resource_permissions (organization_id, resource_type, resource_id, principal_type, principal_id, permission)
+		SELECT o.id, 'dashboard', gen_random_uuid(), 'user', u.id, 'invalid_permission'
+		FROM organizations o, users u
+		WHERE o.slug = 'test-org' AND u.email = 'test@example.com'
+	`)
+	if err == nil {
+		t.Error("Expected invalid permission to fail constraint check")
 	}
 
 	// Test cascade delete - delete organization should delete memberships
@@ -184,6 +271,9 @@ func TestDownMigration(t *testing.T) {
 	cleanupSQL := `
 		DROP TABLE IF EXISTS panels CASCADE;
 		DROP TABLE IF EXISTS dashboards CASCADE;
+		DROP TABLE IF EXISTS resource_permissions CASCADE;
+		DROP TABLE IF EXISTS user_group_memberships CASCADE;
+		DROP TABLE IF EXISTS user_groups CASCADE;
 		DROP TABLE IF EXISTS folders CASCADE;
 		DROP TABLE IF EXISTS datasources CASCADE;
 		DROP TABLE IF EXISTS data_sources CASCADE;
@@ -215,6 +305,9 @@ func TestDownMigration(t *testing.T) {
 		"organizations",
 		"users",
 		"organization_memberships",
+		"user_groups",
+		"user_group_memberships",
+		"resource_permissions",
 		"user_auth_methods",
 		"sso_configs",
 		"prometheus_datasources",

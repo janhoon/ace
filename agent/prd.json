@@ -286,7 +286,7 @@
       "test_commands": [
         "cd backend && go test ./internal/db"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "RBAC-BE-GROUPS-001",
