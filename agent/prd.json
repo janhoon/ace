@@ -390,7 +390,7 @@
       "test_commands": [
         "cd backend && go test ./internal/..."
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "RBAC-BE-PERM-002",

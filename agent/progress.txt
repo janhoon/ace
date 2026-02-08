@@ -200,3 +200,17 @@
   - agent/progress.txt
 - Tests: passing (`cd backend && go test ./...`)
 - Browser validation: n/a (no frontend changes)
+
+## Task RBAC-BE-PERM-001: Implement effective permission evaluation service - 2026-02-08T17:39:37Z
+- What was done:
+  - Added a new backend `authz` service package to resolve folder/dashboard permissions from organization role, direct user grants, and group grants
+  - Implemented deterministic precedence rules: org admin full access, explicit ACL evaluation when ACL entries exist, org-role fallback when no ACL exists, and fail-closed behavior for unknown resources or non-members
+  - Added action-level checks (`view`, `edit`, `admin`) via `Can(...)` and permission rank comparison
+  - Added authz service tests covering direct grants, group grants, org-role fallback, admin full access, and fail-closed paths
+- Files changed:
+  - backend/internal/authz/service.go
+  - backend/internal/authz/service_test.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)
