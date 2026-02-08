@@ -82,9 +82,9 @@ func (h *DashboardHandler) Create(w http.ResponseWriter, r *http.Request) {
 	err = h.pool.QueryRow(ctx,
 		`INSERT INTO dashboards (title, description, organization_id, created_by)
 		 VALUES ($1, $2, $3, $4)
-		 RETURNING id, title, description, created_at, updated_at, organization_id, created_by`,
+		 RETURNING id, title, description, folder_id, sort_order, created_at, updated_at, organization_id, created_by`,
 		req.Title, req.Description, orgID, userID,
-	).Scan(&dashboard.ID, &dashboard.Title, &dashboard.Description,
+	).Scan(&dashboard.ID, &dashboard.Title, &dashboard.Description, &dashboard.FolderID, &dashboard.SortOrder,
 		&dashboard.CreatedAt, &dashboard.UpdatedAt, &dashboard.OrganizationID, &dashboard.CreatedBy)
 
 	if err != nil {
@@ -123,7 +123,7 @@ func (h *DashboardHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.pool.Query(ctx,
-		`SELECT id, title, description, created_at, updated_at, organization_id, created_by
+		`SELECT id, title, description, folder_id, sort_order, created_at, updated_at, organization_id, created_by
 		 FROM dashboards
 		 WHERE organization_id = $1
 		 ORDER BY created_at DESC`, orgID)
@@ -136,7 +136,7 @@ func (h *DashboardHandler) List(w http.ResponseWriter, r *http.Request) {
 	dashboards := []models.Dashboard{}
 	for rows.Next() {
 		var d models.Dashboard
-		if err := rows.Scan(&d.ID, &d.Title, &d.Description, &d.CreatedAt, &d.UpdatedAt, &d.OrganizationID, &d.CreatedBy); err != nil {
+		if err := rows.Scan(&d.ID, &d.Title, &d.Description, &d.FolderID, &d.SortOrder, &d.CreatedAt, &d.UpdatedAt, &d.OrganizationID, &d.CreatedBy); err != nil {
 			http.Error(w, `{"error":"failed to scan dashboard"}`, http.StatusInternalServerError)
 			return
 		}
@@ -182,10 +182,10 @@ func (h *DashboardHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	var dashboard models.Dashboard
 	err = h.pool.QueryRow(ctx,
-		`SELECT id, title, description, created_at, updated_at, organization_id, created_by
+		`SELECT id, title, description, folder_id, sort_order, created_at, updated_at, organization_id, created_by
 		 FROM dashboards
 		 WHERE id = $1`, id,
-	).Scan(&dashboard.ID, &dashboard.Title, &dashboard.Description,
+	).Scan(&dashboard.ID, &dashboard.Title, &dashboard.Description, &dashboard.FolderID, &dashboard.SortOrder,
 		&dashboard.CreatedAt, &dashboard.UpdatedAt, &dashboard.OrganizationID, &dashboard.CreatedBy)
 
 	if err != nil {
@@ -265,6 +265,22 @@ func (h *DashboardHandler) Update(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 			return
 		}
+
+		if req.FolderIDSet && req.FolderID != nil {
+			var folderExists bool
+			err = h.pool.QueryRow(ctx,
+				`SELECT EXISTS(SELECT 1 FROM folders WHERE id = $1 AND organization_id = $2)`,
+				req.FolderID, *orgID,
+			).Scan(&folderExists)
+			if err != nil {
+				http.Error(w, `{"error":"failed to validate folder"}`, http.StatusInternalServerError)
+				return
+			}
+			if !folderExists {
+				http.Error(w, `{"error":"folder not found in organization"}`, http.StatusBadRequest)
+				return
+			}
+		}
 	}
 
 	var dashboard models.Dashboard
@@ -272,11 +288,12 @@ func (h *DashboardHandler) Update(w http.ResponseWriter, r *http.Request) {
 		`UPDATE dashboards
 		 SET title = COALESCE($1, title),
 		     description = COALESCE($2, description),
+		     folder_id = CASE WHEN $3 THEN $4::uuid ELSE folder_id END,
 		     updated_at = NOW()
-		 WHERE id = $3
-		 RETURNING id, title, description, created_at, updated_at, organization_id, created_by`,
-		req.Title, req.Description, id,
-	).Scan(&dashboard.ID, &dashboard.Title, &dashboard.Description,
+		 WHERE id = $5
+		 RETURNING id, title, description, folder_id, sort_order, created_at, updated_at, organization_id, created_by`,
+		req.Title, req.Description, req.FolderIDSet, req.FolderID, id,
+	).Scan(&dashboard.ID, &dashboard.Title, &dashboard.Description, &dashboard.FolderID, &dashboard.SortOrder,
 		&dashboard.CreatedAt, &dashboard.UpdatedAt, &dashboard.OrganizationID, &dashboard.CreatedBy)
 
 	if err != nil {

@@ -252,7 +252,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/components src/views"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "RBAC-DB-001",

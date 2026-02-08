@@ -2,10 +2,12 @@
 import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
+import type { Folder } from '../types/folder'
 import { updateDashboard } from '../api/dashboards'
 
 const props = defineProps<{
   dashboard: Dashboard
+  folders: Folder[]
 }>()
 
 const emit = defineEmits<{
@@ -15,6 +17,7 @@ const emit = defineEmits<{
 
 const title = ref(props.dashboard.title)
 const description = ref(props.dashboard.description || '')
+const folderId = ref(props.dashboard.folder_id || '')
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -30,7 +33,8 @@ async function handleSubmit() {
   try {
     await updateDashboard(props.dashboard.id, {
       title: title.value.trim(),
-      description: description.value.trim() || undefined
+      description: description.value.trim() || undefined,
+      folder_id: folderId.value || null,
     })
     emit('updated')
   } catch (e) {
@@ -73,6 +77,20 @@ async function handleSubmit() {
             rows="3"
             :disabled="loading"
           ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="folder">Folder</label>
+          <select id="folder" v-model="folderId" :disabled="loading">
+            <option value="">Unfiled (Root)</option>
+            <option
+              v-for="folder in props.folders"
+              :key="folder.id"
+              :value="folder.id"
+            >
+              {{ folder.name }}
+            </option>
+          </select>
         </div>
 
         <div v-if="error" class="error-message">{{ error }}</div>
@@ -186,7 +204,8 @@ form {
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
   width: 100%;
   padding: 0.75rem 1rem;
   background: var(--bg-tertiary);
@@ -203,14 +222,16 @@ form {
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-group select:focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: var(--focus-ring);
 }
 
 .form-group input:disabled,
-.form-group textarea:disabled {
+.form-group textarea:disabled,
+.form-group select:disabled {
   background: var(--bg-primary);
   color: var(--text-tertiary);
   cursor: not-allowed;

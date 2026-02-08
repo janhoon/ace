@@ -277,3 +277,22 @@
   - agent/progress.txt
 - Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts`)
 - Browser validation: passing (happy path: admin opened `/settings/org/org-1`, created a group, expanded group members, added a member; permission state: viewer role had no `New Group` or add-member controls; no runtime page errors observed)
+
+## Task FOLDER-FE-UI-003: Allow moving dashboards between folders - 2026-02-08T20:51:38Z
+- What was done:
+  - Added folder selection to dashboard edit flow so users can move dashboards to a folder or back to `Unfiled (Root)`
+  - Wired frontend dashboard update payloads to include `folder_id` and refreshed grouped dashboard sections after save
+  - Extended backend dashboard model/handlers to read/write `folder_id` in list/get/update responses and enforce org-scoped folder validation on moves
+  - Added request parsing support for explicit `folder_id: null` updates so moving dashboards back to root persists correctly
+- Files changed:
+  - frontend/src/components/EditDashboardModal.vue
+  - frontend/src/components/EditDashboardModal.spec.ts
+  - frontend/src/components/DashboardList.vue
+  - frontend/src/types/dashboard.ts
+  - backend/internal/models/dashboard.go
+  - backend/internal/handlers/dashboards.go
+  - backend/internal/handlers/dashboards_test.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/components/EditDashboardModal.spec.ts src/components/DashboardList.spec.ts`, `cd backend && go test ./...`)
+- Browser validation: passing (happy path: on `/dashboards`, moved `Folder Move Demo` from unfiled to `Operations` using the new folder picker, then moved it back to `Unfiled (Root)`; failure state: with an invalid `current_org_id`, dashboards view showed `Not a member of this organization`; no runtime page errors observed)

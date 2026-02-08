@@ -247,6 +247,7 @@ onMounted(fetchDashboards)
     <EditDashboardModal
       v-if="showEditModal && editingDashboard"
       :dashboard="editingDashboard"
+      :folders="folders"
       @close="closeEditModal"
       @updated="onDashboardUpdated"
     />

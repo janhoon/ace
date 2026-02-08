@@ -19,4 +19,5 @@ export interface CreateDashboardRequest {
 export interface UpdateDashboardRequest {
   title?: string
   description?: string
+  folder_id?: string | null
 }

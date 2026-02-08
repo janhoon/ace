@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/janhoon/dash/backend/internal/models"
 )
 
@@ -140,5 +141,40 @@ func TestUpdateDashboardRequest_JSON(t *testing.T) {
 
 	if decoded.Title == nil || *decoded.Title != *req.Title {
 		t.Errorf("expected title %v, got %v", req.Title, decoded.Title)
+	}
+}
+
+func TestUpdateDashboardRequest_FolderIDPresent(t *testing.T) {
+	folderID := uuid.New()
+	body := []byte(`{"folder_id":"` + folderID.String() + `"}`)
+
+	var decoded models.UpdateDashboardRequest
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal request: %v", err)
+	}
+
+	if !decoded.FolderIDSet {
+		t.Fatal("expected FolderIDSet to be true")
+	}
+
+	if decoded.FolderID == nil || *decoded.FolderID != folderID {
+		t.Fatalf("expected folder id %s, got %v", folderID, decoded.FolderID)
+	}
+}
+
+func TestUpdateDashboardRequest_FolderIDNull(t *testing.T) {
+	body := []byte(`{"folder_id":null}`)
+
+	var decoded models.UpdateDashboardRequest
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal request: %v", err)
+	}
+
+	if !decoded.FolderIDSet {
+		t.Fatal("expected FolderIDSet to be true")
+	}
+
+	if decoded.FolderID != nil {
+		t.Fatalf("expected folder id to be nil, got %v", decoded.FolderID)
 	}
 }
