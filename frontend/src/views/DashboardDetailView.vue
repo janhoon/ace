@@ -2,18 +2,21 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
-import { ArrowLeft, Plus, Trash2, LayoutGrid, AlertCircle } from 'lucide-vue-next'
+import { ArrowLeft, Plus, Trash2, LayoutGrid, AlertCircle, Shield } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import type { Panel as PanelType } from '../types/panel'
 import { getDashboard } from '../api/dashboards'
 import { listPanels, deletePanel, updatePanel } from '../api/panels'
 import Panel from '../components/Panel.vue'
 import PanelEditModal from '../components/PanelEditModal.vue'
+import DashboardPermissionsModal from '../components/DashboardPermissionsModal.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import { useTimeRange } from '../composables/useTimeRange'
+import { useOrganization } from '../composables/useOrganization'
 
 const route = useRoute()
 const router = useRouter()
+const { currentOrg, currentOrgId, fetchOrganizations } = useOrganization()
 
 const dashboard = ref<Dashboard | null>(null)
 const panels = ref<PanelType[]>([])
@@ -24,8 +27,12 @@ const showPanelModal = ref(false)
 const editingPanel = ref<PanelType | null>(null)
 const showDeleteConfirm = ref(false)
 const deletingPanel = ref<PanelType | null>(null)
+const showDashboardPermissionsModal = ref(false)
+const dashboardPermissionsMessage = ref<string | null>(null)
 
 const dashboardId = route.params.id as string
+const canManageDashboardPermissions = computed(() => currentOrg.value?.role !== 'viewer')
+const permissionsOrgId = computed(() => currentOrgId.value || dashboard.value?.organization_id || null)
 
 // Grid layout configuration
 const colNum = 12
@@ -135,6 +142,19 @@ function goBack() {
   router.push('/dashboards')
 }
 
+function openDashboardPermissions() {
+  dashboardPermissionsMessage.value = null
+  showDashboardPermissionsModal.value = true
+}
+
+function closeDashboardPermissionsModal() {
+  showDashboardPermissionsModal.value = false
+}
+
+function onDashboardPermissionsSaved() {
+  dashboardPermissionsMessage.value = `Updated permissions for "${dashboard.value?.title || 'dashboard'}"`
+}
+
 // Handle layout changes (drag/resize)
 function onLayoutUpdated(newLayout: LayoutItem[]) {
   // Update local panels state with new positions
@@ -189,7 +209,10 @@ function getPanelById(id: string): PanelType | undefined {
   return panels.value.find(p => p.id === id)
 }
 
-onMounted(() => {
+onMounted(async () => {
+  if (!currentOrg.value) {
+    await fetchOrganizations()
+  }
   loadData()
   // Subscribe to time range changes to refetch panels
   unsubscribeRefresh = onRefresh(() => {
@@ -226,12 +249,23 @@ onUnmounted(() => {
       </div>
       <div class="header-right">
         <TimeRangePicker />
+        <button
+          v-if="canManageDashboardPermissions && dashboard && permissionsOrgId"
+          class="btn btn-secondary"
+          data-testid="dashboard-permissions-button"
+          @click="openDashboardPermissions"
+        >
+          <Shield :size="16" />
+          <span>Permissions</span>
+        </button>
         <button class="btn btn-primary" @click="openAddPanel" :disabled="loading">
           <Plus :size="18" />
           <span>Add Panel</span>
         </button>
       </div>
     </header>
+
+    <p v-if="dashboardPermissionsMessage" class="success-message">{{ dashboardPermissionsMessage }}</p>
 
     <div v-if="loading" class="state-container">
       <div class="loading-spinner"></div>
@@ -301,6 +335,14 @@ onUnmounted(() => {
       :panel="editingPanel || undefined"
       @close="closePanelModal"
       @saved="onPanelSaved"
+    />
+
+    <DashboardPermissionsModal
+      v-if="showDashboardPermissionsModal && dashboard && permissionsOrgId"
+      :dashboard="dashboard"
+      :org-id="permissionsOrgId"
+      @close="closeDashboardPermissionsModal"
+      @saved="onDashboardPermissionsSaved"
     />
 
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">
@@ -383,6 +425,16 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.success-message {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  background: rgba(78, 205, 196, 0.1);
+  color: var(--accent-success);
+  font-size: 0.82rem;
 }
 
 /* Buttons */

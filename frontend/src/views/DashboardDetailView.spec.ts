@@ -58,6 +58,35 @@ vi.mock('../api/panels', () => ({
   updatePanel: vi.fn(() => Promise.resolve())
 }))
 
+vi.mock('../components/DashboardPermissionsModal.vue', () => ({
+  default: {
+    name: 'DashboardPermissionsModal',
+    template: '<div data-testid="dashboard-permissions-modal"></div>',
+    props: ['dashboard', 'orgId'],
+  },
+}))
+
+const mockCurrentOrg = {
+  value: {
+    id: 'org-1',
+    name: 'Acme',
+    slug: 'acme',
+    role: 'admin' as 'admin' | 'editor' | 'viewer',
+    created_at: '2026-02-08T00:00:00Z',
+    updated_at: '2026-02-08T00:00:00Z',
+  },
+}
+
+const mockCurrentOrgId = { value: 'org-1' as string | null }
+
+vi.mock('../composables/useOrganization', () => ({
+  useOrganization: () => ({
+    currentOrg: mockCurrentOrg,
+    currentOrgId: mockCurrentOrgId,
+    fetchOrganizations: vi.fn(() => Promise.resolve()),
+  }),
+}))
+
 // Mock vue3-grid-layout-next
 vi.mock('vue3-grid-layout-next', () => ({
   GridLayout: {
@@ -132,6 +161,7 @@ describe('DashboardDetailView', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-02-02T12:00:00Z'))
+    mockCurrentOrg.value.role = 'admin'
   })
 
   afterEach(() => {
@@ -180,6 +210,28 @@ describe('DashboardDetailView', () => {
     const addBtn = wrapper.find('.btn-primary')
     expect(addBtn.exists()).toBe(true)
     expect(addBtn.text()).toContain('Add Panel')
+  })
+
+  it('should show dashboard permissions button only for admins', async () => {
+    const adminWrapper = mount(DashboardDetailView)
+    await flushPromises()
+
+    expect(adminWrapper.find('[data-testid="dashboard-permissions-button"]').exists()).toBe(true)
+
+    mockCurrentOrg.value.role = 'viewer'
+    const viewerWrapper = mount(DashboardDetailView)
+    await flushPromises()
+
+    expect(viewerWrapper.find('[data-testid="dashboard-permissions-button"]').exists()).toBe(false)
+  })
+
+  it('opens dashboard permissions modal', async () => {
+    const wrapper = mount(DashboardDetailView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="dashboard-permissions-button"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="dashboard-permissions-modal"]').exists()).toBe(true)
   })
 
   it('should open panel modal when Add Panel is clicked', async () => {

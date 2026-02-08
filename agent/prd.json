@@ -320,7 +320,7 @@
       "test_commands": [
         "cd backend && go test ./internal/handlers -run Group"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "RBAC-BE-GROUPS-002",

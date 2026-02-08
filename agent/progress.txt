@@ -325,3 +325,19 @@
   - agent/progress.txt
 - Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/components/DashboardList.spec.ts src/components/FolderPermissionsModal.spec.ts`)
 - Browser validation: passing (happy path: logged in as admin, opened `/dashboards` folder `Permissions`, added a user ACL entry, saved successfully; permission/failure state: forced invalid `current_org_id` and confirmed `Not a member of this organization`; no runtime page errors observed)
+
+## Task RBAC-FE-UI-DASH-001: Add dashboard permission editor UI - 2026-02-08T21:43:19Z
+- What was done:
+  - Added `DashboardPermissionsModal` with ACL load/edit/save support for user/group principals, duplicate-entry validation, and inline success/error feedback
+  - Wired a `Permissions` action into `DashboardDetailView` so dashboard ACLs can be edited from the dashboard detail flow
+  - Added dashboard-detail feedback after ACL updates and ensured org context is loaded before resolving permission controls
+  - Added frontend tests for dashboard ACL modal behavior and dashboard-detail permission action visibility/open flow
+- Files changed:
+  - frontend/src/components/DashboardPermissionsModal.vue
+  - frontend/src/components/DashboardPermissionsModal.spec.ts
+  - frontend/src/views/DashboardDetailView.vue
+  - frontend/src/views/DashboardDetailView.spec.ts
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/components/DashboardPermissionsModal.spec.ts src/views/DashboardDetailView.spec.ts`)
+- Browser validation: passing (happy path: opened `/dashboards/85b40e99-6ae4-4b21-8cf1-afa2ee805c5c`, opened dashboard `Permissions`, validated duplicate-principal error state, and saved ACL successfully; failure state: opened `/dashboards/not-a-real-dashboard-id` and confirmed `Dashboard not found`; no runtime page errors observed)
