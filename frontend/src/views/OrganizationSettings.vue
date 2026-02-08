@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, UserPlus, Trash2, Shield, Edit2, Users } from 'lucide-vue-next'
 import type { Organization, Member, MembershipRole } from '../types/organization'
+import type { UserGroup, UserGroupMembership } from '../types/rbac'
 import {
   getOrganization,
   updateOrganization,
@@ -12,6 +13,15 @@ import {
   updateMemberRole,
   removeMember,
 } from '../api/organizations'
+import {
+  listGroups,
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  listGroupMembers,
+  addGroupMember,
+  removeGroupMember,
+} from '../api/groups'
 import { useOrganization } from '../composables/useOrganization'
 
 const route = useRoute()
@@ -43,6 +53,30 @@ const inviteSuccess = ref<string | null>(null)
 const showDeleteConfirm = ref(false)
 const deleteLoading = ref(false)
 
+// Groups
+const groups = ref<UserGroup[]>([])
+const groupsLoading = ref(false)
+const groupsError = ref<string | null>(null)
+const groupMessage = ref<string | null>(null)
+const groupActionError = ref<string | null>(null)
+
+const showCreateGroupForm = ref(false)
+const createGroupName = ref('')
+const createGroupDescription = ref('')
+const createGroupLoading = ref(false)
+
+const editingGroupId = ref<string | null>(null)
+const editGroupName = ref('')
+const editGroupDescription = ref('')
+const groupUpdateLoading = ref(false)
+
+const expandedGroupIds = ref<string[]>([])
+const groupMembersById = ref<Record<string, UserGroupMembership[]>>({})
+const groupMembersLoading = ref<Record<string, boolean>>({})
+const groupMembersError = ref<Record<string, string | null>>({})
+const addMemberUserId = ref<Record<string, string>>({})
+const groupMemberActionLoading = ref<Record<string, boolean>>({})
+
 const isAdmin = computed(() => org.value?.role === 'admin')
 
 onMounted(async () => {
@@ -61,10 +95,26 @@ async function loadData() {
     members.value = membersData
     editName.value = orgData.name
     editSlug.value = orgData.slug
+    await loadGroups()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load organization'
   } finally {
     loading.value = false
+  }
+}
+
+async function loadGroups() {
+  groupsLoading.value = true
+  groupsError.value = null
+  try {
+    groups.value = await listGroups(orgId.value)
+    const validGroupIds = new Set(groups.value.map((group) => group.id))
+    expandedGroupIds.value = expandedGroupIds.value.filter((groupId) => validGroupIds.has(groupId))
+  } catch (e) {
+    groups.value = []
+    groupsError.value = e instanceof Error ? e.message : 'Failed to load groups'
+  } finally {
+    groupsLoading.value = false
   }
 }
 
@@ -158,6 +208,241 @@ async function handleDelete() {
   } finally {
     deleteLoading.value = false
     showDeleteConfirm.value = false
+  }
+}
+
+function resetGroupMessages() {
+  groupMessage.value = null
+  groupActionError.value = null
+}
+
+function startCreateGroup() {
+  showCreateGroupForm.value = true
+  createGroupName.value = ''
+  createGroupDescription.value = ''
+  resetGroupMessages()
+}
+
+function cancelCreateGroup() {
+  showCreateGroupForm.value = false
+  createGroupName.value = ''
+  createGroupDescription.value = ''
+  resetGroupMessages()
+}
+
+async function handleCreateGroup() {
+  const name = createGroupName.value.trim()
+  if (!name) {
+    groupActionError.value = 'Group name is required'
+    return
+  }
+
+  createGroupLoading.value = true
+  resetGroupMessages()
+  try {
+    await createGroup(orgId.value, {
+      name,
+      description: createGroupDescription.value.trim() || undefined,
+    })
+    groupMessage.value = 'Group created'
+    showCreateGroupForm.value = false
+    createGroupName.value = ''
+    createGroupDescription.value = ''
+    await loadGroups()
+  } catch (e) {
+    groupActionError.value = e instanceof Error ? e.message : 'Failed to create group'
+  } finally {
+    createGroupLoading.value = false
+  }
+}
+
+function startEditGroup(group: UserGroup) {
+  editingGroupId.value = group.id
+  editGroupName.value = group.name
+  editGroupDescription.value = group.description || ''
+  resetGroupMessages()
+}
+
+function cancelEditGroup() {
+  editingGroupId.value = null
+  editGroupName.value = ''
+  editGroupDescription.value = ''
+  resetGroupMessages()
+}
+
+async function handleUpdateGroup(group: UserGroup) {
+  const name = editGroupName.value.trim()
+  if (!name) {
+    groupActionError.value = 'Group name is required'
+    return
+  }
+
+  groupUpdateLoading.value = true
+  resetGroupMessages()
+  try {
+    await updateGroup(orgId.value, group.id, {
+      name,
+      description: editGroupDescription.value.trim() || undefined,
+    })
+    groupMessage.value = 'Group updated'
+    editingGroupId.value = null
+    editGroupName.value = ''
+    editGroupDescription.value = ''
+    await loadGroups()
+  } catch (e) {
+    groupActionError.value = e instanceof Error ? e.message : 'Failed to update group'
+  } finally {
+    groupUpdateLoading.value = false
+  }
+}
+
+async function handleDeleteGroup(group: UserGroup) {
+  if (!confirm(`Delete group "${group.name}"?`)) {
+    return
+  }
+
+  groupMemberActionLoading.value = {
+    ...groupMemberActionLoading.value,
+    [group.id]: true,
+  }
+  resetGroupMessages()
+  try {
+    await deleteGroup(orgId.value, group.id)
+    groupMessage.value = 'Group deleted'
+    delete groupMembersById.value[group.id]
+    await loadGroups()
+  } catch (e) {
+    groupActionError.value = e instanceof Error ? e.message : 'Failed to delete group'
+  } finally {
+    groupMemberActionLoading.value = {
+      ...groupMemberActionLoading.value,
+      [group.id]: false,
+    }
+  }
+}
+
+function isGroupExpanded(groupId: string): boolean {
+  return expandedGroupIds.value.includes(groupId)
+}
+
+function groupMemberCount(groupId: string): number {
+  return groupMembersById.value[groupId]?.length || 0
+}
+
+function availableMembersForGroup(groupId: string): Member[] {
+  const existing = new Set((groupMembersById.value[groupId] || []).map((member) => member.user_id))
+  return members.value.filter((member) => !existing.has(member.user_id))
+}
+
+async function loadGroupMembers(groupId: string) {
+  groupMembersLoading.value = {
+    ...groupMembersLoading.value,
+    [groupId]: true,
+  }
+  groupMembersError.value = {
+    ...groupMembersError.value,
+    [groupId]: null,
+  }
+  try {
+    groupMembersById.value = {
+      ...groupMembersById.value,
+      [groupId]: await listGroupMembers(orgId.value, groupId),
+    }
+  } catch (e) {
+    groupMembersError.value = {
+      ...groupMembersError.value,
+      [groupId]: e instanceof Error ? e.message : 'Failed to load group members',
+    }
+  } finally {
+    groupMembersLoading.value = {
+      ...groupMembersLoading.value,
+      [groupId]: false,
+    }
+  }
+}
+
+async function toggleGroupMembers(groupId: string) {
+  if (isGroupExpanded(groupId)) {
+    expandedGroupIds.value = expandedGroupIds.value.filter((id) => id !== groupId)
+    return
+  }
+
+  expandedGroupIds.value = [...expandedGroupIds.value, groupId]
+  if (!groupMembersById.value[groupId] && !groupMembersLoading.value[groupId]) {
+    await loadGroupMembers(groupId)
+  }
+}
+
+async function handleAddGroupMember(groupId: string) {
+  const userId = addMemberUserId.value[groupId]
+  if (!userId) {
+    groupMembersError.value = {
+      ...groupMembersError.value,
+      [groupId]: 'Select a member to add',
+    }
+    return
+  }
+
+  groupMemberActionLoading.value = {
+    ...groupMemberActionLoading.value,
+    [groupId]: true,
+  }
+  groupMembersError.value = {
+    ...groupMembersError.value,
+    [groupId]: null,
+  }
+  resetGroupMessages()
+
+  try {
+    await addGroupMember(orgId.value, groupId, { user_id: userId })
+    addMemberUserId.value = {
+      ...addMemberUserId.value,
+      [groupId]: '',
+    }
+    groupMessage.value = 'Group member added'
+    await loadGroupMembers(groupId)
+  } catch (e) {
+    groupMembersError.value = {
+      ...groupMembersError.value,
+      [groupId]: e instanceof Error ? e.message : 'Failed to add group member',
+    }
+  } finally {
+    groupMemberActionLoading.value = {
+      ...groupMemberActionLoading.value,
+      [groupId]: false,
+    }
+  }
+}
+
+async function handleRemoveGroupMember(groupId: string, membership: UserGroupMembership) {
+  if (!confirm(`Remove ${membership.email} from this group?`)) {
+    return
+  }
+
+  groupMemberActionLoading.value = {
+    ...groupMemberActionLoading.value,
+    [groupId]: true,
+  }
+  groupMembersError.value = {
+    ...groupMembersError.value,
+    [groupId]: null,
+  }
+  resetGroupMessages()
+
+  try {
+    await removeGroupMember(orgId.value, groupId, membership.user_id)
+    groupMessage.value = 'Group member removed'
+    await loadGroupMembers(groupId)
+  } catch (e) {
+    groupMembersError.value = {
+      ...groupMembersError.value,
+      [groupId]: e instanceof Error ? e.message : 'Failed to remove group member',
+    }
+  } finally {
+    groupMemberActionLoading.value = {
+      ...groupMemberActionLoading.value,
+      [groupId]: false,
+    }
   }
 }
 
@@ -292,6 +577,180 @@ function goBack() {
               </button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Groups Section -->
+      <section class="settings-section">
+        <div class="section-header">
+          <h2><Users :size="20" /> Groups ({{ groups.length }})</h2>
+          <button
+            v-if="isAdmin && !showCreateGroupForm"
+            class="btn btn-primary btn-sm"
+            data-testid="new-group-button"
+            @click="startCreateGroup"
+          >
+            New Group
+          </button>
+        </div>
+
+        <div v-if="groupMessage" class="success-message">{{ groupMessage }}</div>
+        <div v-if="groupActionError" class="error-message">{{ groupActionError }}</div>
+
+        <div v-if="showCreateGroupForm && isAdmin" class="group-form">
+          <div class="form-group">
+            <label>Group Name</label>
+            <input v-model="createGroupName" type="text" data-testid="create-group-name" :disabled="createGroupLoading" />
+          </div>
+          <div class="form-group">
+            <label>Description (optional)</label>
+            <input
+              v-model="createGroupDescription"
+              type="text"
+              data-testid="create-group-description"
+              :disabled="createGroupLoading"
+            />
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-secondary" @click="cancelCreateGroup" :disabled="createGroupLoading">
+              Cancel
+            </button>
+            <button
+              class="btn btn-primary"
+              data-testid="create-group-submit"
+              @click="handleCreateGroup"
+              :disabled="createGroupLoading"
+            >
+              {{ createGroupLoading ? 'Creating...' : 'Create Group' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="groupsLoading" class="inline-state">Loading groups...</div>
+        <div v-else-if="groupsError" class="error-message">{{ groupsError }}</div>
+        <div v-else-if="groups.length === 0" class="inline-state">
+          No groups yet. {{ isAdmin ? 'Create one to organize access.' : '' }}
+        </div>
+        <div v-else class="groups-list">
+          <article v-for="group in groups" :key="group.id" class="group-card" :data-testid="`group-card-${group.id}`">
+            <div class="group-header-row">
+              <div class="group-header-content">
+                <h3>{{ group.name }}</h3>
+                <p v-if="group.description" class="group-description">{{ group.description }}</p>
+                <p v-else class="group-description muted">No description</p>
+                <span class="group-meta">{{ groupMemberCount(group.id) }} members</span>
+              </div>
+              <div class="group-header-actions">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  :data-testid="`toggle-group-members-${group.id}`"
+                  @click="toggleGroupMembers(group.id)"
+                >
+                  {{ isGroupExpanded(group.id) ? 'Hide Members' : 'Show Members' }}
+                </button>
+                <template v-if="isAdmin && editingGroupId !== group.id">
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    :data-testid="`rename-group-${group.id}`"
+                    @click="startEditGroup(group)"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    class="btn btn-danger btn-sm"
+                    :data-testid="`delete-group-${group.id}`"
+                    @click="handleDeleteGroup(group)"
+                    :disabled="groupMemberActionLoading[group.id]"
+                  >
+                    Delete
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <div v-if="isAdmin && editingGroupId === group.id" class="group-form group-edit-form">
+              <div class="form-group">
+                <label>Group Name</label>
+                <input v-model="editGroupName" type="text" data-testid="edit-group-name" :disabled="groupUpdateLoading" />
+              </div>
+              <div class="form-group">
+                <label>Description (optional)</label>
+                <input
+                  v-model="editGroupDescription"
+                  type="text"
+                  data-testid="edit-group-description"
+                  :disabled="groupUpdateLoading"
+                />
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-secondary" @click="cancelEditGroup" :disabled="groupUpdateLoading">
+                  Cancel
+                </button>
+                <button
+                  class="btn btn-primary"
+                  :data-testid="`save-group-${group.id}`"
+                  @click="handleUpdateGroup(group)"
+                  :disabled="groupUpdateLoading"
+                >
+                  {{ groupUpdateLoading ? 'Saving...' : 'Save Group' }}
+                </button>
+              </div>
+            </div>
+
+            <div v-if="isGroupExpanded(group.id)" class="group-members-panel">
+              <div v-if="groupMembersLoading[group.id]" class="inline-state">Loading group members...</div>
+              <div v-else-if="groupMembersError[group.id]" class="error-message">
+                {{ groupMembersError[group.id] }}
+              </div>
+              <template v-else>
+                <div v-if="isAdmin" class="group-member-add-row">
+                  <select
+                    v-model="addMemberUserId[group.id]"
+                    :data-testid="`add-member-select-${group.id}`"
+                    :disabled="groupMemberActionLoading[group.id]"
+                  >
+                    <option value="">Select member</option>
+                    <option
+                      v-for="member in availableMembersForGroup(group.id)"
+                      :key="member.user_id"
+                      :value="member.user_id"
+                    >
+                      {{ member.name || member.email }} ({{ member.email }})
+                    </option>
+                  </select>
+                  <button
+                    class="btn btn-primary"
+                    :data-testid="`add-member-button-${group.id}`"
+                    @click="handleAddGroupMember(group.id)"
+                    :disabled="groupMemberActionLoading[group.id] || availableMembersForGroup(group.id).length === 0"
+                  >
+                    Add to Group
+                  </button>
+                </div>
+
+                <div v-if="(groupMembersById[group.id] || []).length === 0" class="inline-state">
+                  No members in this group.
+                </div>
+                <div v-else class="group-members-list">
+                  <div v-for="membership in groupMembersById[group.id]" :key="membership.id" class="group-member-item">
+                    <div class="group-member-info">
+                      <strong>{{ membership.name || membership.email }}</strong>
+                      <span>{{ membership.email }}</span>
+                    </div>
+                    <button
+                      v-if="isAdmin"
+                      class="btn btn-secondary btn-sm"
+                      :data-testid="`remove-member-${group.id}-${membership.user_id}`"
+                      @click="handleRemoveGroupMember(group.id, membership)"
+                      :disabled="groupMemberActionLoading[group.id]"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -614,6 +1073,131 @@ select:focus {
   gap: 0.5rem;
 }
 
+.inline-state {
+  padding: 0.85rem;
+  border: 1px dashed var(--border-primary);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.group-form {
+  padding: 1rem;
+  background: rgba(20, 33, 52, 0.8);
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
+  margin-bottom: 1rem;
+}
+
+.groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.group-card {
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: rgba(20, 33, 52, 0.75);
+  padding: 0.9rem;
+}
+
+.group-header-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.group-header-content {
+  min-width: 0;
+}
+
+.group-header-content h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.group-description {
+  margin: 0.25rem 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.group-description.muted {
+  opacity: 0.7;
+}
+
+.group-meta {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.group-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.group-edit-form {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+}
+
+.group-members-panel {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border-primary);
+  padding-top: 0.75rem;
+}
+
+.group-member-add-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.group-member-add-row select {
+  flex: 1;
+}
+
+.group-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.group-member-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  background: rgba(11, 19, 30, 0.45);
+}
+
+.group-member-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.group-member-info strong {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.group-member-info span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .role-select {
   width: auto;
   padding: 0.375rem 0.5rem;
@@ -790,6 +1374,17 @@ select:focus {
   .danger-item {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .group-header-row,
+  .group-member-item,
+  .group-member-add-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .group-header-actions {
+    justify-content: flex-start;
   }
 }
 </style>

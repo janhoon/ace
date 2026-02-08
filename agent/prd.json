@@ -564,7 +564,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/views"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "RBAC-FE-UI-FOLDER-001",
