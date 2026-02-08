@@ -2,6 +2,8 @@ export interface Dashboard {
   id: string
   title: string
   description?: string
+  folder_id?: string | null
+  sort_order?: number
   created_at: string
   updated_at: string
   user_id?: string

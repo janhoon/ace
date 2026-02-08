@@ -1,73 +1,159 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { ref } from 'vue'
 import DashboardList from './DashboardList.vue'
-import * as api from '../api/dashboards'
+import * as dashboardApi from '../api/dashboards'
+import * as folderApi from '../api/folders'
+
+const mockCurrentOrgId = ref<string | null>('org-1')
+const mockPush = vi.fn()
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}))
+
+vi.mock('../composables/useOrganization', () => ({
+  useOrganization: () => ({
+    currentOrgId: mockCurrentOrgId,
+  }),
+}))
 
 vi.mock('../api/dashboards')
+vi.mock('../api/folders')
 
 const mockDashboards = [
   {
     id: '123e4567-e89b-12d3-a456-426614174000',
+    folder_id: 'folder-a',
     title: 'Test Dashboard',
     description: 'Test description',
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    updated_at: '2024-01-01T00:00:00Z',
   },
   {
     id: '223e4567-e89b-12d3-a456-426614174001',
+    folder_id: null,
     title: 'Another Dashboard',
-    description: null,
     created_at: '2024-01-02T00:00:00Z',
-    updated_at: '2024-01-02T00:00:00Z'
-  }
+    updated_at: '2024-01-02T00:00:00Z',
+  },
+  {
+    id: '323e4567-e89b-12d3-a456-426614174002',
+    folder_id: 'missing-folder',
+    title: 'Needs Reassignment',
+    description: 'Folder was deleted',
+    created_at: '2024-01-03T00:00:00Z',
+    updated_at: '2024-01-03T00:00:00Z',
+  },
+]
+
+const mockFolders = [
+  {
+    id: 'folder-a',
+    organization_id: 'org-1',
+    parent_id: null,
+    name: 'Operations',
+    sort_order: 0,
+    created_by: 'user-1',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'folder-b',
+    organization_id: 'org-1',
+    parent_id: null,
+    name: 'Product',
+    sort_order: 1,
+    created_by: 'user-1',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  },
 ]
 
 describe('DashboardList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockCurrentOrgId.value = 'org-1'
   })
 
   it('displays loading state initially', () => {
-    vi.mocked(api.listDashboards).mockImplementation(() => new Promise(() => {}))
+    vi.mocked(dashboardApi.listDashboards).mockImplementation(() => new Promise(() => {}))
+    vi.mocked(folderApi.listFolders).mockImplementation(() => new Promise(() => {}))
     const wrapper = mount(DashboardList)
     expect(wrapper.text()).toContain('Loading dashboards...')
   })
 
-  it('displays dashboards after loading', async () => {
-    vi.mocked(api.listDashboards).mockResolvedValue(mockDashboards)
+  it('displays dashboards grouped by folders', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+
     const wrapper = mount(DashboardList)
     await flushPromises()
-    expect(wrapper.text()).toContain('Test Dashboard')
-    expect(wrapper.text()).toContain('Another Dashboard')
+
+    expect(wrapper.text()).toContain('Operations')
+    expect(wrapper.text()).toContain('Product')
+    expect(wrapper.text()).toContain('Unfiled Dashboards')
+
+    const operationsSection = wrapper.find('[data-testid="folder-section-folder-a"]')
+    expect(operationsSection.text()).toContain('Test Dashboard')
+
+    const unfiledSection = wrapper.find('[data-testid="folder-section-unfiled"]')
+    expect(unfiledSection.text()).toContain('Another Dashboard')
+    expect(unfiledSection.text()).toContain('Needs Reassignment')
   })
 
-  it('displays empty state when no dashboards', async () => {
-    vi.mocked(api.listDashboards).mockResolvedValue([])
+  it('displays empty state when no dashboards and no folders', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue([])
+    vi.mocked(folderApi.listFolders).mockResolvedValue([])
+
     const wrapper = mount(DashboardList)
     await flushPromises()
+
     expect(wrapper.text()).toContain('No dashboards yet')
   })
 
   it('displays error state on fetch failure', async () => {
-    vi.mocked(api.listDashboards).mockRejectedValue(new Error('Network error'))
+    vi.mocked(dashboardApi.listDashboards).mockRejectedValue(new Error('Network error'))
+    vi.mocked(folderApi.listFolders).mockResolvedValue([])
+
     const wrapper = mount(DashboardList)
     await flushPromises()
-    expect(wrapper.text()).toContain('Failed to load dashboards')
+
+    expect(wrapper.text()).toContain('Network error')
   })
 
   it('opens create modal when button is clicked', async () => {
-    vi.mocked(api.listDashboards).mockResolvedValue([])
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue([])
+    vi.mocked(folderApi.listFolders).mockResolvedValue([])
+
     const wrapper = mount(DashboardList)
     await flushPromises()
-    await wrapper.find('.btn-primary').trigger('click')
+
+    await wrapper.find('.page-header .btn-primary').trigger('click')
     expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).exists()).toBe(true)
   })
 
-  it('renders dashboard cards with titles', async () => {
-    vi.mocked(api.listDashboards).mockResolvedValue(mockDashboards)
+  it('renders dashboard cards for grouped dashboards', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+
     const wrapper = mount(DashboardList)
     await flushPromises()
+
     const cards = wrapper.findAll('.dashboard-card')
-    expect(cards.length).toBe(2)
+    expect(cards.length).toBe(3)
+  })
+
+  it('does not fetch dashboards when no organization is selected', async () => {
+    mockCurrentOrgId.value = null
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    expect(vi.mocked(dashboardApi.listDashboards)).not.toHaveBeenCalled()
+    expect(vi.mocked(folderApi.listFolders)).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('No dashboards yet')
   })
 })

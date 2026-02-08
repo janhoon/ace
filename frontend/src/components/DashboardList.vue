@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Pencil, Trash2, LayoutDashboard, AlertCircle } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, LayoutDashboard, AlertCircle, Folder as FolderIcon, Inbox } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
+import type { Folder } from '../types/folder'
 import { listDashboards, deleteDashboard } from '../api/dashboards'
+import { listFolders } from '../api/folders'
 import { useOrganization } from '../composables/useOrganization'
 import CreateDashboardModal from './CreateDashboardModal.vue'
 import EditDashboardModal from './EditDashboardModal.vue'
@@ -12,6 +14,7 @@ const router = useRouter()
 const { currentOrgId } = useOrganization()
 
 const dashboards = ref<Dashboard[]>([])
+const folders = ref<Folder[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const showCreateModal = ref(false)
@@ -20,9 +23,42 @@ const editingDashboard = ref<Dashboard | null>(null)
 const showDeleteConfirm = ref(false)
 const deletingDashboard = ref<Dashboard | null>(null)
 
+interface DashboardSection {
+  id: string | null
+  name: string
+  dashboards: Dashboard[]
+  isUnfiled: boolean
+}
+
+const groupedDashboardSections = computed<DashboardSection[]>(() => {
+  const folderIds = new Set(folders.value.map((folder) => folder.id))
+
+  const folderSections = folders.value.map((folder) => ({
+    id: folder.id,
+    name: folder.name,
+    dashboards: dashboards.value.filter((dashboard) => dashboard.folder_id === folder.id),
+    isUnfiled: false,
+  }))
+
+  const unfiledDashboards = dashboards.value.filter((dashboard) => !dashboard.folder_id || !folderIds.has(dashboard.folder_id))
+
+  return [
+    ...folderSections,
+    {
+      id: null,
+      name: 'Unfiled Dashboards',
+      dashboards: unfiledDashboards,
+      isUnfiled: true,
+    },
+  ]
+})
+
+const isCompletelyEmpty = computed(() => dashboards.value.length === 0 && folders.value.length === 0)
+
 async function fetchDashboards() {
   if (!currentOrgId.value) {
     dashboards.value = []
+    folders.value = []
     loading.value = false
     return
   }
@@ -30,7 +66,12 @@ async function fetchDashboards() {
   loading.value = true
   error.value = null
   try {
-    dashboards.value = await listDashboards(currentOrgId.value)
+    const [dashboardResponse, folderResponse] = await Promise.all([
+      listDashboards(currentOrgId.value),
+      listFolders(currentOrgId.value),
+    ])
+    dashboards.value = dashboardResponse
+    folders.value = folderResponse
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load dashboards'
   } finally {
@@ -134,7 +175,7 @@ onMounted(fetchDashboards)
       <button class="btn btn-secondary" @click="fetchDashboards">Try Again</button>
     </div>
 
-    <div v-else-if="dashboards.length === 0" class="state-container empty">
+    <div v-else-if="isCompletelyEmpty" class="state-container empty">
       <div class="empty-icon">
         <LayoutDashboard :size="64" />
       </div>
@@ -146,31 +187,55 @@ onMounted(fetchDashboards)
       </button>
     </div>
 
-    <div v-else class="dashboard-grid">
-      <div
-        v-for="dashboard in dashboards"
-        :key="dashboard.id"
-        class="dashboard-card"
-        @click="openDashboard(dashboard)"
+    <div v-else class="folder-sections">
+      <section
+        v-for="section in groupedDashboardSections"
+        :key="section.id ?? 'unfiled'"
+        class="folder-section"
+        :data-testid="`folder-section-${section.id ?? 'unfiled'}`"
       >
-        <div class="card-header">
-          <h3>{{ dashboard.title }}</h3>
-          <div class="card-actions" @click.stop>
-            <button class="btn-icon" @click="openEditModal(dashboard)" title="Edit">
-              <Pencil :size="16" />
-            </button>
-            <button class="btn-icon btn-icon-danger" @click="confirmDelete(dashboard)" title="Delete">
-              <Trash2 :size="16" />
-            </button>
+        <div class="folder-section-header">
+          <div class="folder-section-title">
+            <component :is="section.isUnfiled ? Inbox : FolderIcon" :size="18" />
+            <h2>{{ section.name }}</h2>
+          </div>
+          <span class="folder-count">{{ section.dashboards.length }}</span>
+        </div>
+        <p v-if="section.isUnfiled" class="folder-description">
+          Dashboards without an assigned folder
+        </p>
+
+        <p v-if="section.dashboards.length === 0" class="section-empty">
+          No dashboards in this section yet.
+        </p>
+
+        <div v-else class="dashboard-grid">
+          <div
+            v-for="dashboard in section.dashboards"
+            :key="dashboard.id"
+            class="dashboard-card"
+            @click="openDashboard(dashboard)"
+          >
+            <div class="card-header">
+              <h3>{{ dashboard.title }}</h3>
+              <div class="card-actions" @click.stop>
+                <button class="btn-icon" @click="openEditModal(dashboard)" title="Edit">
+                  <Pencil :size="16" />
+                </button>
+                <button class="btn-icon btn-icon-danger" @click="confirmDelete(dashboard)" title="Delete">
+                  <Trash2 :size="16" />
+                </button>
+              </div>
+            </div>
+            <p v-if="dashboard.description" class="card-description">
+              {{ dashboard.description }}
+            </p>
+            <div class="card-meta">
+              <span>Created {{ formatDate(dashboard.created_at) }}</span>
+            </div>
           </div>
         </div>
-        <p v-if="dashboard.description" class="card-description">
-          {{ dashboard.description }}
-        </p>
-        <div class="card-meta">
-          <span>Created {{ formatDate(dashboard.created_at) }}</span>
-        </div>
-      </div>
+      </section>
     </div>
 
     <CreateDashboardModal
@@ -360,6 +425,66 @@ onMounted(fetchDashboards)
   border-radius: 20px;
   color: var(--text-tertiary);
   margin-bottom: 1rem;
+}
+
+.folder-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.folder-section {
+  background: var(--surface-1);
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.folder-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.folder-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--text-primary);
+}
+
+.folder-section-title h2 {
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.folder-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-primary);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+.folder-description {
+  margin-bottom: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.section-empty {
+  margin-top: 0.8rem;
+  color: var(--text-tertiary);
+  font-size: 0.84rem;
 }
 
 .dashboard-grid {
