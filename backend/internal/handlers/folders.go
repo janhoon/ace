@@ -11,15 +11,20 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/janhoon/dash/backend/internal/auth"
+	"github.com/janhoon/dash/backend/internal/authz"
 	"github.com/janhoon/dash/backend/internal/models"
 )
 
 type FolderHandler struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	authz *authz.Service
 }
 
 func NewFolderHandler(pool *pgxpool.Pool) *FolderHandler {
-	return &FolderHandler{pool: pool}
+	return &FolderHandler{
+		pool:  pool,
+		authz: authz.NewService(pool),
+	}
 }
 
 func (h *FolderHandler) checkOrgMembership(ctx context.Context, userID, orgID uuid.UUID) (string, error) {
@@ -167,6 +172,16 @@ func (h *FolderHandler) List(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"failed to scan folder"}`, http.StatusInternalServerError)
 			return
 		}
+
+		canView, err := h.authz.Can(ctx, userID, orgID, authz.ResourceTypeFolder, folder.ID, authz.ActionView)
+		if err != nil {
+			http.Error(w, `{"error":"failed to evaluate folder permissions"}`, http.StatusInternalServerError)
+			return
+		}
+		if !canView {
+			continue
+		}
+
 		folders = append(folders, folder)
 	}
 
@@ -226,6 +241,16 @@ func (h *FolderHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	canView, err := h.authz.Can(ctx, userID, folder.OrganizationID, authz.ResourceTypeFolder, folder.ID, authz.ActionView)
+	if err != nil {
+		http.Error(w, `{"error":"failed to evaluate folder permissions"}`, http.StatusInternalServerError)
+		return
+	}
+	if !canView {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(folder)
 }
@@ -271,13 +296,19 @@ func (h *FolderHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role, err := h.checkOrgMembership(ctx, userID, orgID)
+	_, err = h.checkOrgMembership(ctx, userID, orgID)
 	if err != nil {
 		http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
 		return
 	}
-	if role == string(models.RoleViewer) {
-		http.Error(w, `{"error":"viewers cannot update folders"}`, http.StatusForbidden)
+
+	canEdit, err := h.authz.Can(ctx, userID, orgID, authz.ResourceTypeFolder, id, authz.ActionEdit)
+	if err != nil {
+		http.Error(w, `{"error":"failed to evaluate folder permissions"}`, http.StatusInternalServerError)
+		return
+	}
+	if !canEdit {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 		return
 	}
 
@@ -371,13 +402,19 @@ func (h *FolderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role, err := h.checkOrgMembership(ctx, userID, orgID)
+	_, err = h.checkOrgMembership(ctx, userID, orgID)
 	if err != nil {
 		http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
 		return
 	}
-	if role == string(models.RoleViewer) {
-		http.Error(w, `{"error":"viewers cannot delete folders"}`, http.StatusForbidden)
+
+	canEdit, err := h.authz.Can(ctx, userID, orgID, authz.ResourceTypeFolder, id, authz.ActionEdit)
+	if err != nil {
+		http.Error(w, `{"error":"failed to evaluate folder permissions"}`, http.StatusInternalServerError)
+		return
+	}
+	if !canEdit {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 		return
 	}
 

@@ -132,10 +132,10 @@ func main() {
 
 	// Panel routes
 	panelHandler := handlers.NewPanelHandler(pool)
-	mux.HandleFunc("POST /api/dashboards/{id}/panels", panelHandler.Create)
-	mux.HandleFunc("GET /api/dashboards/{id}/panels", panelHandler.ListByDashboard)
-	mux.HandleFunc("PUT /api/panels/{id}", panelHandler.Update)
-	mux.HandleFunc("DELETE /api/panels/{id}", panelHandler.Delete)
+	mux.HandleFunc("POST /api/dashboards/{id}/panels", auth.RequireAuth(jwtManager, panelHandler.Create))
+	mux.HandleFunc("GET /api/dashboards/{id}/panels", auth.RequireAuth(jwtManager, panelHandler.ListByDashboard))
+	mux.HandleFunc("PUT /api/panels/{id}", auth.RequireAuth(jwtManager, panelHandler.Update))
+	mux.HandleFunc("DELETE /api/panels/{id}", auth.RequireAuth(jwtManager, panelHandler.Delete))
 
 	// Prometheus data source routes (legacy, backwards compatible)
 	prometheusHandler := handlers.NewPrometheusHandler(prometheusURL)

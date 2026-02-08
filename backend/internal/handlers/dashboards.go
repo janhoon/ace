@@ -9,15 +9,20 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/janhoon/dash/backend/internal/auth"
+	"github.com/janhoon/dash/backend/internal/authz"
 	"github.com/janhoon/dash/backend/internal/models"
 )
 
 type DashboardHandler struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	authz *authz.Service
 }
 
 func NewDashboardHandler(pool *pgxpool.Pool) *DashboardHandler {
-	return &DashboardHandler{pool: pool}
+	return &DashboardHandler{
+		pool:  pool,
+		authz: authz.NewService(pool),
+	}
 }
 
 // checkOrgMembership verifies the user is a member of the organization
@@ -111,7 +116,6 @@ func (h *DashboardHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	// Verify user is member of org
 	_, err = h.checkOrgMembership(ctx, userID, orgID)
 	if err != nil {
 		http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
@@ -136,6 +140,16 @@ func (h *DashboardHandler) List(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"failed to scan dashboard"}`, http.StatusInternalServerError)
 			return
 		}
+
+		canView, err := h.authz.Can(ctx, userID, orgID, authz.ResourceTypeDashboard, d.ID, authz.ActionView)
+		if err != nil {
+			http.Error(w, `{"error":"failed to evaluate dashboard permissions"}`, http.StatusInternalServerError)
+			return
+		}
+		if !canView {
+			continue
+		}
+
 		dashboards = append(dashboards, d)
 	}
 
@@ -186,6 +200,16 @@ func (h *DashboardHandler) Get(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
 			return
 		}
+
+		canView, err := h.authz.Can(ctx, userID, *dashboard.OrganizationID, authz.ResourceTypeDashboard, dashboard.ID, authz.ActionView)
+		if err != nil {
+			http.Error(w, `{"error":"failed to evaluate dashboard permissions"}`, http.StatusInternalServerError)
+			return
+		}
+		if !canView {
+			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -226,14 +250,19 @@ func (h *DashboardHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	// Verify user is member of the dashboard's org
 	if orgID != nil {
-		role, err := h.checkOrgMembership(ctx, userID, *orgID)
+		_, err := h.checkOrgMembership(ctx, userID, *orgID)
 		if err != nil {
 			http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
 			return
 		}
-		// Only admin and editor can update
-		if role == "viewer" {
-			http.Error(w, `{"error":"viewers cannot update dashboards"}`, http.StatusForbidden)
+
+		canEdit, err := h.authz.Can(ctx, userID, *orgID, authz.ResourceTypeDashboard, id, authz.ActionEdit)
+		if err != nil {
+			http.Error(w, `{"error":"failed to evaluate dashboard permissions"}`, http.StatusInternalServerError)
+			return
+		}
+		if !canEdit {
+			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 			return
 		}
 	}
@@ -287,14 +316,19 @@ func (h *DashboardHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// Verify user is member of the dashboard's org
 	if orgID != nil {
-		role, err := h.checkOrgMembership(ctx, userID, *orgID)
+		_, err := h.checkOrgMembership(ctx, userID, *orgID)
 		if err != nil {
 			http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
 			return
 		}
-		// Only admin can delete
-		if role != "admin" {
-			http.Error(w, `{"error":"only admins can delete dashboards"}`, http.StatusForbidden)
+
+		canEdit, err := h.authz.Can(ctx, userID, *orgID, authz.ResourceTypeDashboard, id, authz.ActionEdit)
+		if err != nil {
+			http.Error(w, `{"error":"failed to evaluate dashboard permissions"}`, http.StatusInternalServerError)
+			return
+		}
+		if !canEdit {
+			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 			return
 		}
 	}

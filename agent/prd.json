@@ -425,7 +425,7 @@
       "test_commands": [
         "cd backend && go test ./internal/handlers"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "RBAC-BE-PERM-003",

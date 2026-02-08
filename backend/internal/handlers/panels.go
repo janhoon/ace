@@ -7,19 +7,65 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/janhoon/dash/backend/internal/auth"
+	"github.com/janhoon/dash/backend/internal/authz"
 	"github.com/janhoon/dash/backend/internal/models"
 )
 
 type PanelHandler struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	authz *authz.Service
 }
 
 func NewPanelHandler(pool *pgxpool.Pool) *PanelHandler {
-	return &PanelHandler{pool: pool}
+	return &PanelHandler{
+		pool:  pool,
+		authz: authz.NewService(pool),
+	}
+}
+
+func (h *PanelHandler) loadDashboardAccess(ctx context.Context, dashboardID uuid.UUID) (uuid.UUID, error) {
+	var orgID *uuid.UUID
+	err := h.pool.QueryRow(ctx, `SELECT organization_id FROM dashboards WHERE id = $1`, dashboardID).Scan(&orgID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if orgID == nil {
+		return uuid.Nil, pgx.ErrNoRows
+	}
+
+	return *orgID, nil
+}
+
+func (h *PanelHandler) loadPanelDashboardAccess(ctx context.Context, panelID uuid.UUID) (uuid.UUID, uuid.UUID, error) {
+	var dashboardID uuid.UUID
+	var orgID *uuid.UUID
+	err := h.pool.QueryRow(ctx,
+		`SELECT p.dashboard_id, d.organization_id
+		 FROM panels p
+		 JOIN dashboards d ON d.id = p.dashboard_id
+		 WHERE p.id = $1`,
+		panelID,
+	).Scan(&dashboardID, &orgID)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	if orgID == nil {
+		return uuid.Nil, uuid.Nil, pgx.ErrNoRows
+	}
+
+	return dashboardID, *orgID, nil
 }
 
 func (h *PanelHandler) Create(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	dashboardIDStr := r.PathValue("id")
 	dashboardID, err := uuid.Parse(dashboardIDStr)
 	if err != nil {
@@ -41,11 +87,23 @@ func (h *PanelHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	// Verify dashboard exists
-	var exists bool
-	err = h.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM dashboards WHERE id = $1)`, dashboardID).Scan(&exists)
-	if err != nil || !exists {
+	orgID, err := h.loadDashboardAccess(ctx, dashboardID)
+	if err == pgx.ErrNoRows {
 		http.Error(w, `{"error":"dashboard not found"}`, http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, `{"error":"failed to fetch dashboard"}`, http.StatusInternalServerError)
+		return
+	}
+
+	canEdit, err := h.authz.Can(ctx, userID, orgID, authz.ResourceTypeDashboard, dashboardID, authz.ActionEdit)
+	if err != nil {
+		http.Error(w, `{"error":"failed to evaluate dashboard permissions"}`, http.StatusInternalServerError)
+		return
+	}
+	if !canEdit {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 		return
 	}
 
@@ -86,6 +144,12 @@ func (h *PanelHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PanelHandler) ListByDashboard(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	dashboardIDStr := r.PathValue("id")
 	dashboardID, err := uuid.Parse(dashboardIDStr)
 	if err != nil {
@@ -95,6 +159,26 @@ func (h *PanelHandler) ListByDashboard(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+
+	orgID, err := h.loadDashboardAccess(ctx, dashboardID)
+	if err == pgx.ErrNoRows {
+		http.Error(w, `{"error":"dashboard not found"}`, http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, `{"error":"failed to fetch dashboard"}`, http.StatusInternalServerError)
+		return
+	}
+
+	canView, err := h.authz.Can(ctx, userID, orgID, authz.ResourceTypeDashboard, dashboardID, authz.ActionView)
+	if err != nil {
+		http.Error(w, `{"error":"failed to evaluate dashboard permissions"}`, http.StatusInternalServerError)
+		return
+	}
+	if !canView {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+		return
+	}
 
 	rows, err := h.pool.Query(ctx,
 		`SELECT id, dashboard_id, title, type, grid_pos, query, created_at, updated_at
@@ -135,6 +219,12 @@ func (h *PanelHandler) ListByDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PanelHandler) Update(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	idStr := r.PathValue("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -150,6 +240,26 @@ func (h *PanelHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+
+	dashboardID, orgID, err := h.loadPanelDashboardAccess(ctx, id)
+	if err == pgx.ErrNoRows {
+		http.Error(w, `{"error":"panel not found"}`, http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, `{"error":"failed to fetch panel"}`, http.StatusInternalServerError)
+		return
+	}
+
+	canEdit, err := h.authz.Can(ctx, userID, orgID, authz.ResourceTypeDashboard, dashboardID, authz.ActionEdit)
+	if err != nil {
+		http.Error(w, `{"error":"failed to evaluate dashboard permissions"}`, http.StatusInternalServerError)
+		return
+	}
+	if !canEdit {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+		return
+	}
 
 	var gridPosJSON []byte
 	if req.GridPos != nil {
@@ -186,6 +296,12 @@ func (h *PanelHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PanelHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
 	idStr := r.PathValue("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -195,6 +311,26 @@ func (h *PanelHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+
+	dashboardID, orgID, err := h.loadPanelDashboardAccess(ctx, id)
+	if err == pgx.ErrNoRows {
+		http.Error(w, `{"error":"panel not found"}`, http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, `{"error":"failed to fetch panel"}`, http.StatusInternalServerError)
+		return
+	}
+
+	canEdit, err := h.authz.Can(ctx, userID, orgID, authz.ResourceTypeDashboard, dashboardID, authz.ActionEdit)
+	if err != nil {
+		http.Error(w, `{"error":"failed to evaluate dashboard permissions"}`, http.StatusInternalServerError)
+		return
+	}
+	if !canEdit {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+		return
+	}
 
 	result, err := h.pool.Exec(ctx, `DELETE FROM panels WHERE id = $1`, id)
 	if err != nil {

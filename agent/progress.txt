@@ -214,3 +214,19 @@
   - agent/progress.txt
 - Tests: passing (`cd backend && go test ./...`)
 - Browser validation: n/a (no frontend changes)
+
+## Task RBAC-BE-PERM-002: Enforce permissions in folder and dashboard handlers - 2026-02-08T17:44:13Z
+- What was done:
+  - Integrated RBAC authorization checks into folder and dashboard handlers so list/get operations require `view` and update/delete operations require `edit`
+  - Applied permission-aware filtering to folder and dashboard list endpoints so responses only include resources the caller can view
+  - Updated panel handlers to require authenticated users and enforce dashboard-level `view`/`edit` permission checks for panel list/create/update/delete operations
+  - Wrapped panel routes with JWT auth middleware in the API router so panel endpoints consistently run with authenticated user context
+- Files changed:
+  - backend/internal/handlers/folders.go
+  - backend/internal/handlers/dashboards.go
+  - backend/internal/handlers/panels.go
+  - backend/cmd/api/main.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)
