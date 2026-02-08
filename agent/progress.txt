@@ -246,3 +246,20 @@
   - agent/progress.txt
 - Tests: passing (`cd backend && go test ./...`)
 - Browser validation: n/a (no frontend changes)
+
+## Task RBAC-FE-API-001: Add frontend groups and ACL API modules - 2026-02-08T20:24:04Z
+- What was done:
+  - Added typed RBAC frontend models for user groups, group memberships, ACL entries, and replace-permissions payloads
+  - Added `groups` API module for org-scoped group CRUD and membership management endpoints with auth headers and normalized backend error handling
+  - Added `permissions` API module for folder/dashboard ACL list and replace endpoints with status-aware error messages
+  - Added focused Vitest coverage for group and permission API modules covering endpoint paths, methods, request payloads, auth headers, and error payload handling
+- Files changed:
+  - frontend/src/types/rbac.ts
+  - frontend/src/api/groups.ts
+  - frontend/src/api/groups.spec.ts
+  - frontend/src/api/permissions.ts
+  - frontend/src/api/permissions.spec.ts
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/api/groups.spec.ts src/api/permissions.spec.ts`)
+- Browser validation: passing (happy path: `/login` mode toggle login -> register -> login; failure state: invalid sign-in shows `Invalid email or password`; no runtime page errors while exercising flow)
