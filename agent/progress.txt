@@ -341,3 +341,18 @@
   - agent/progress.txt
 - Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/components/DashboardPermissionsModal.spec.ts src/views/DashboardDetailView.spec.ts`)
 - Browser validation: passing (happy path: opened `/dashboards/85b40e99-6ae4-4b21-8cf1-afa2ee805c5c`, opened dashboard `Permissions`, validated duplicate-principal error state, and saved ACL successfully; failure state: opened `/dashboards/not-a-real-dashboard-id` and confirmed `Dashboard not found`; no runtime page errors observed)
+
+## Task SSO-FE-API-001: Add frontend organization SSO API module - 2026-02-08T21:48:10Z
+- What was done:
+  - Added new frontend SSO type models for Google and Microsoft org config responses and update payloads
+  - Added SSO API client functions to get/update Google and Microsoft org SSO configs using org-scoped endpoints
+  - Added status-aware + payload-aware error normalization for common SSO responses (403 admin required, 404 not configured, backend-provided validation messages)
+  - Added Vitest coverage for endpoint paths, methods, request payloads, auth header behavior, and error handling
+- Files changed:
+  - frontend/src/types/sso.ts
+  - frontend/src/api/sso.ts
+  - frontend/src/api/sso.spec.ts
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/api/sso.spec.ts`)
+- Browser validation: passing (happy path: opened `/login`, toggled login -> register -> login mode successfully; failure state: attempted invalid sign-in and confirmed `Invalid email or password`; no runtime page errors observed while exercising the flow)
