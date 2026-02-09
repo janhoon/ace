@@ -1,3 +1,49 @@
+## Task UX-EXPLORER-004: Restore drag-and-drop moves in Finder tree - 2026-02-09T09:55:10Z
+- What was done:
+  - Re-enabled dashboard drag sources directly in the unified tree list rows
+  - Wired tree folder/unfiled rows as active drop targets with visible drop-highlight feedback
+  - Added a component test that verifies moving dashboards through tree drag-and-drop updates folder assignment
+- Files changed:
+  - frontend/src/components/DashboardList.vue
+  - frontend/src/components/DashboardList.spec.ts
+  - progress.txt
+- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
+- Browser validation: passing (verified dragging `Scratchpad` from Unfiled to `Platform` in dev-browser)
+
+## Task UX-EXPLORER-003: Remove duplicate explorer panes for Finder-only list - 2026-02-09T09:51:00Z
+- What was done:
+  - Consolidated dashboard navigation to a single visible Finder-style explorer pane
+  - Added active path and context subtitle directly above the list so navigation context remains visible without a second content panel
+  - Hid the duplicate center and preview panes to remove repeated folder/dashboard content and keep one navigation surface
+- Files changed:
+  - frontend/src/components/DashboardList.vue
+  - progress.txt
+- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
+- Browser validation: passing (validated single visible pane with dev-browser on `http://localhost:5173/dashboards`)
+
+## Task UX-EXPLORER-002: Unify folders and dashboards into OS-style tree - 2026-02-09T09:48:35Z
+- What was done:
+  - Reworked the explorer tree so folders and dashboards are shown together in one hierarchy like a desktop file browser
+  - Added nested dashboard rows under expanded folders (and under Unfiled), with single-click preview and double-click open
+  - Kept folder-first navigation while improving scanability with mixed folder/file row styling and persistent subtree counts
+- Files changed:
+  - frontend/src/components/DashboardList.vue
+  - progress.txt
+- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
+- Browser validation: passing (validated unified tree interactions with dev-browser on `http://localhost:5173/dashboards`)
+
+## Task UX-EXPLORER-001: Simplify dashboard folder explorer navigation - 2026-02-09T09:44:10Z
+- What was done:
+  - Audited the existing dashboard explorer behavior with dev-browser against seeded nested folder data
+  - Updated tree navigation to be easier to scan with explicit folder controls (expand all/collapse), stronger row states, and double-click expand behavior
+  - Changed folder counts in the tree to reflect subtree totals so parent folders show meaningful numbers
+  - Added selected-folder subfolder chips and clearer subtitle context to make folder traversal more intuitive
+- Files changed:
+  - frontend/src/components/DashboardList.vue
+  - progress.txt
+- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
+- Browser validation: passing (validated before/after explorer behavior with dev-browser on `http://localhost:5173/dashboards`)
+
 ## Task SSO-FE-UI-002: Restructure SSO settings into configure flow - 2026-02-09T00:20:30Z
 - What was done:
   - Reworked the SSO section to present a single configure entry point plus a provider list with status and edit/add actions

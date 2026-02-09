@@ -51,9 +51,11 @@ const movingDashboardId = ref<string | null>(null)
 const searchQuery = ref('')
 const expandedFolderIds = ref<string[]>([])
 const selectedExplorerNode = ref<'all' | 'unfiled' | `folder:${string}`>('all')
+const selectedTreeDashboardId = ref<string | null>(null)
 const hoveredDashboardId = ref<string | null>(null)
 const showInlineFolderForm = ref(false)
 const inlineFolderParentId = ref<string | null>(null)
+const unfiledExpanded = ref(true)
 
 interface DashboardSection {
   id: string | null
@@ -68,6 +70,7 @@ interface FolderTreeRow {
   depth: number
   hasChildren: boolean
   isExpanded: boolean
+  dashboards: Dashboard[]
 }
 
 interface Breadcrumb {
@@ -81,6 +84,17 @@ const canCreateFolder = computed(() => currentOrg.value?.role === 'admin' || cur
 const canManageDashboards = computed(() => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor')
 const normalizedSearchQuery = computed(() => searchQuery.value.trim().toLowerCase())
 const hasSearchQuery = computed(() => normalizedSearchQuery.value.length > 0)
+
+function dashboardMatchesSearch(dashboard: Dashboard): boolean {
+  if (!hasSearchQuery.value) {
+    return true
+  }
+
+  return [dashboard.title, dashboard.description ?? '']
+    .join(' ')
+    .toLowerCase()
+    .includes(normalizedSearchQuery.value)
+}
 
 const folderById = computed(() => {
   const map = new Map<string, Folder>()
@@ -122,6 +136,32 @@ const folderChildrenMap = computed(() => {
 
 const rootFolders = computed(() => folderChildrenMap.value.get(null) ?? [])
 
+const folderDashboardCountMap = computed(() => {
+  const counts = new Map<string, number>()
+
+  function countFolderTree(folderId: string): number {
+    const cached = counts.get(folderId)
+    if (cached !== undefined) {
+      return cached
+    }
+
+    let total = dashboardsByFolder.value.get(folderId)?.length ?? 0
+    const children = folderChildrenMap.value.get(folderId) ?? []
+    for (const child of children) {
+      total += countFolderTree(child.id)
+    }
+
+    counts.set(folderId, total)
+    return total
+  }
+
+  for (const folder of folders.value) {
+    countFolderTree(folder.id)
+  }
+
+  return counts
+})
+
 const selectedFolderId = computed(() => {
   if (!selectedExplorerNode.value.startsWith('folder:')) {
     return null
@@ -136,9 +176,12 @@ const selectedFolder = computed(() => {
   return folderById.value.get(selectedFolderId.value) ?? null
 })
 
-const groupedDashboardSections = computed<DashboardSection[]>(() => {
+const unfiledDashboards = computed(() => {
   const folderIds = new Set(folders.value.map((folder) => folder.id))
+  return dashboards.value.filter((dashboard) => !dashboard.folder_id || !folderIds.has(dashboard.folder_id))
+})
 
+const groupedDashboardSections = computed<DashboardSection[]>(() => {
   const folderSections = folders.value
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -150,14 +193,12 @@ const groupedDashboardSections = computed<DashboardSection[]>(() => {
       folder,
     }))
 
-  const unfiledDashboards = dashboards.value.filter((dashboard) => !dashboard.folder_id || !folderIds.has(dashboard.folder_id))
-
   return [
     ...folderSections,
     {
       id: null,
       name: 'Unfiled Dashboards',
-      dashboards: unfiledDashboards,
+      dashboards: unfiledDashboards.value,
       isUnfiled: true,
       folder: null,
     },
@@ -177,23 +218,21 @@ const sectionScopeFolderIds = computed(() => {
     return new Set<string>()
   }
 
-  const scoped = new Set<string>()
-  const queue: string[] = [selectedFolderId.value]
-
-  while (queue.length > 0) {
-    const current = queue.shift()
-    if (!current || scoped.has(current)) {
-      continue
-    }
-
-    scoped.add(current)
-    const children = folderChildrenMap.value.get(current) ?? []
-    for (const child of children) {
-      queue.push(child.id)
-    }
+  const scoped = new Set<string>([selectedFolderId.value])
+  const children = folderChildrenMap.value.get(selectedFolderId.value) ?? []
+  for (const child of children) {
+    scoped.add(child.id)
   }
 
   return scoped
+})
+
+const selectedFolderChildren = computed(() => {
+  if (!selectedFolderId.value) {
+    return []
+  }
+
+  return (folderChildrenMap.value.get(selectedFolderId.value) ?? []).filter((folder) => folderVisibilityForSearch.value.get(folder.id))
 })
 
 const folderVisibilityForSearch = computed(() => {
@@ -210,16 +249,9 @@ const folderVisibilityForSearch = computed(() => {
     return folder.name.toLowerCase().includes(normalizedSearchQuery.value)
   }
 
-  function dashboardMatches(dashboard: Dashboard): boolean {
-    return [dashboard.title, dashboard.description ?? '']
-      .join(' ')
-      .toLowerCase()
-      .includes(normalizedSearchQuery.value)
-  }
-
   function evaluate(folder: Folder): boolean {
     const ownDashboards = dashboardsByFolder.value.get(folder.id) ?? []
-    const ownDashboardMatch = ownDashboards.some(dashboardMatches)
+    const ownDashboardMatch = ownDashboards.some(dashboardMatchesSearch)
     const childFolders = folderChildrenMap.value.get(folder.id) ?? []
     const childMatch = childFolders.some(evaluate)
     const visible = folderMatches(folder) || ownDashboardMatch || childMatch
@@ -234,6 +266,25 @@ const folderVisibilityForSearch = computed(() => {
   return visibility
 })
 
+const treeDashboardsByFolder = computed(() => {
+  const map = new Map<string, Dashboard[]>()
+  for (const folder of folders.value) {
+    const dashboardsInFolder = (dashboardsByFolder.value.get(folder.id) ?? [])
+      .filter(dashboardMatchesSearch)
+      .sort((a, b) => a.title.localeCompare(b.title))
+    map.set(folder.id, dashboardsInFolder)
+  }
+  return map
+})
+
+const unfiledTreeDashboards = computed(() =>
+  unfiledDashboards.value
+    .filter(dashboardMatchesSearch)
+    .sort((a, b) => a.title.localeCompare(b.title)),
+)
+
+const isUnfiledExpanded = computed(() => hasSearchQuery.value || unfiledExpanded.value)
+
 const explorerTreeRows = computed<FolderTreeRow[]>(() => {
   const expanded = new Set(expandedFolderIds.value)
   const rows: FolderTreeRow[] = []
@@ -246,13 +297,15 @@ const explorerTreeRows = computed<FolderTreeRow[]>(() => {
       }
 
       const visibleChildren = (folderChildrenMap.value.get(folder.id) ?? []).filter((child) => folderVisibilityForSearch.value.get(child.id))
+      const visibleDashboards = treeDashboardsByFolder.value.get(folder.id) ?? []
       const isExpanded = hasSearchQuery.value || expanded.has(folder.id)
 
       rows.push({
         folder,
         depth,
-        hasChildren: visibleChildren.length > 0,
+        hasChildren: visibleChildren.length > 0 || visibleDashboards.length > 0,
         isExpanded,
+        dashboards: visibleDashboards,
       })
 
       if (visibleChildren.length > 0 && isExpanded) {
@@ -321,22 +374,16 @@ const activeExplorerSubtitle = computed(() => {
     return 'Dashboards without a folder assignment'
   }
   if (selectedFolder.value) {
-    return 'Folder contents and nested dashboards'
+    const directDashboardCount = dashboardsByFolder.value.get(selectedFolder.value.id)?.length ?? 0
+    const childFolderCount = folderChildrenMap.value.get(selectedFolder.value.id)?.length ?? 0
+    const dashboardLabel = directDashboardCount === 1 ? 'dashboard' : 'dashboards'
+    const childLabel = childFolderCount === 1 ? 'subfolder' : 'subfolders'
+    return `${directDashboardCount} ${dashboardLabel} in this folder - ${childFolderCount} ${childLabel}`
   }
   return 'Browse folders and dashboards in explorer layout'
 })
 
 const filteredSections = computed<DashboardSection[]>(() => {
-  function dashboardMatches(dashboard: Dashboard): boolean {
-    if (!hasSearchQuery.value) {
-      return true
-    }
-    return [dashboard.title, dashboard.description ?? '']
-      .join(' ')
-      .toLowerCase()
-      .includes(normalizedSearchQuery.value)
-  }
-
   function sectionInScope(section: DashboardSection): boolean {
     if (selectedExplorerNode.value === 'all') {
       return true
@@ -356,7 +403,7 @@ const filteredSections = computed<DashboardSection[]>(() => {
   return groupedDashboardSections.value
     .filter(sectionInScope)
     .map((section) => {
-      const dashboardsForSection = section.dashboards.filter(dashboardMatches)
+      const dashboardsForSection = section.dashboards.filter(dashboardMatchesSearch)
       return {
         ...section,
         dashboards: dashboardsForSection,
@@ -436,6 +483,10 @@ function ensureRootFoldersExpanded() {
 
   if (hoveredDashboardId.value && !dashboards.value.some((dashboard) => dashboard.id === hoveredDashboardId.value)) {
     hoveredDashboardId.value = null
+  }
+
+  if (selectedTreeDashboardId.value && !dashboards.value.some((dashboard) => dashboard.id === selectedTreeDashboardId.value)) {
+    selectedTreeDashboardId.value = null
   }
 }
 
@@ -679,6 +730,8 @@ function toggleFolderExpanded(folderId: string) {
 }
 
 function selectExplorerFolder(folderId: string) {
+  selectedTreeDashboardId.value = null
+  hoveredDashboardId.value = null
   selectedExplorerNode.value = `folder:${folderId}`
   const set = new Set(expandedFolderIds.value)
   let cursor = folderById.value.get(folderId) ?? null
@@ -692,11 +745,43 @@ function selectExplorerFolder(folderId: string) {
 }
 
 function selectExplorerAll() {
+  selectedTreeDashboardId.value = null
+  hoveredDashboardId.value = null
   selectedExplorerNode.value = 'all'
 }
 
 function selectExplorerUnfiled() {
+  selectedTreeDashboardId.value = null
+  hoveredDashboardId.value = null
   selectedExplorerNode.value = 'unfiled'
+}
+
+function selectExplorerDashboard(dashboard: Dashboard) {
+  selectedTreeDashboardId.value = dashboard.id
+  hoveredDashboardId.value = dashboard.id
+}
+
+function expandAllFolders() {
+  expandedFolderIds.value = folders.value.map((folder) => folder.id)
+  unfiledExpanded.value = true
+}
+
+function collapseTree() {
+  if (!selectedFolder.value) {
+    expandedFolderIds.value = []
+    unfiledExpanded.value = false
+    return
+  }
+
+  const expanded = new Set<string>()
+  let cursor: Folder | null = selectedFolder.value
+  while (cursor?.parent_id) {
+    expanded.add(cursor.parent_id)
+    cursor = folderById.value.get(cursor.parent_id) ?? null
+  }
+
+  expandedFolderIds.value = Array.from(expanded)
+  unfiledExpanded.value = false
 }
 
 function onBreadcrumbSelect(item: Breadcrumb) {
@@ -718,7 +803,7 @@ function showDashboardPreview(dashboardId: string) {
 }
 
 function clearDashboardPreview(dashboardId: string) {
-  if (hoveredDashboardId.value === dashboardId) {
+  if (hoveredDashboardId.value === dashboardId && selectedTreeDashboardId.value !== dashboardId) {
     hoveredDashboardId.value = null
   }
 }
@@ -799,6 +884,30 @@ onMounted(() => {
           />
         </div>
 
+        <div class="finder-header">
+          <div class="breadcrumbs" aria-label="Current folder path">
+            <template v-for="(item, index) in breadcrumbs" :key="`sidebar-${item.type === 'folder' ? item.id : item.type}`">
+              <button
+                class="breadcrumb-item"
+                :class="{ 'breadcrumb-item-active': index === breadcrumbs.length - 1 }"
+                @click="onBreadcrumbSelect(item)"
+              >
+                {{ item.label }}
+              </button>
+              <ChevronRight v-if="index < breadcrumbs.length - 1" :size="14" class="breadcrumb-separator" />
+            </template>
+          </div>
+          <p>{{ activeExplorerSubtitle }}</p>
+        </div>
+
+        <div class="tree-toolbar">
+          <p>Explorer</p>
+          <div class="tree-toolbar-actions">
+            <button type="button" class="tree-toolbar-btn" @click="expandAllFolders">Expand all</button>
+            <button type="button" class="tree-toolbar-btn" @click="collapseTree">Collapse</button>
+          </div>
+        </div>
+
         <nav class="tree-nav" aria-label="Folder tree">
           <button
             class="tree-item tree-item-root"
@@ -812,7 +921,13 @@ onMounted(() => {
           </button>
 
           <div v-for="row in explorerTreeRows" :key="row.folder.id" class="tree-node-wrapper" :style="{ '--depth': `${row.depth}` }">
-            <div class="tree-item-row" :data-testid="`tree-row-${row.folder.id}`" @dragover.prevent="onSectionDragOver(row.folder.id)" @drop.prevent="onSectionDrop(row.folder.id)">
+            <div
+              class="tree-item-row"
+              :class="{ 'tree-item-row-drop-active': dropTargetSectionId === normalizeSectionId(row.folder.id) }"
+              :data-testid="`tree-row-${row.folder.id}`"
+              @dragover.prevent="onSectionDragOver(row.folder.id)"
+              @drop.prevent="onSectionDrop(row.folder.id)"
+            >
               <button
                 v-if="row.hasChildren"
                 class="tree-toggle"
@@ -829,26 +944,105 @@ onMounted(() => {
                 :class="{ 'tree-item-active': selectedExplorerNode === `folder:${row.folder.id}` }"
                 :data-testid="`tree-node-${row.folder.id}`"
                 @click="selectExplorerFolder(row.folder.id)"
+                @dblclick="row.hasChildren ? toggleFolderExpanded(row.folder.id) : undefined"
               >
                 <FolderIcon :size="14" />
                 <span>{{ row.folder.name }}</span>
-                <span class="tree-count">{{ dashboardsByFolder.get(row.folder.id)?.length ?? 0 }}</span>
+                <span class="tree-count">{{ folderDashboardCountMap.get(row.folder.id) ?? 0 }}</span>
               </button>
+            </div>
+
+            <div
+              v-for="dashboard in row.dashboards"
+              v-show="row.isExpanded"
+              :key="dashboard.id"
+              class="tree-node-wrapper"
+              :style="{ '--depth': `${row.depth + 1}` }"
+            >
+              <div
+                class="tree-item-row tree-item-row-dashboard"
+                :data-testid="`tree-dashboard-row-${dashboard.id}`"
+                @mouseenter="showDashboardPreview(dashboard.id)"
+                @mouseleave="clearDashboardPreview(dashboard.id)"
+              >
+                <span class="tree-toggle-placeholder"></span>
+                <button
+                  class="tree-item tree-file-item"
+                  :class="{ 'tree-item-active': selectedTreeDashboardId === dashboard.id }"
+                  :data-testid="`tree-dashboard-${dashboard.id}`"
+                  :draggable="canManageDashboards"
+                  @dragstart="onDashboardDragStart(dashboard)"
+                  @dragend="onDashboardDragEnd"
+                  @click="selectExplorerDashboard(dashboard)"
+                  @dblclick="openDashboard(dashboard)"
+                >
+                  <FileText :size="13" />
+                  <span>{{ dashboard.title }}</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          <button
-            class="tree-item tree-item-unfiled"
-            :class="{ 'tree-item-active': selectedExplorerNode === 'unfiled' }"
-            data-testid="tree-node-unfiled"
-            @click="selectExplorerUnfiled"
-            @dragover.prevent="onSectionDragOver(null)"
-            @drop.prevent="onSectionDrop(null)"
-          >
-            <Inbox :size="15" />
-            <span>Unfiled</span>
-            <span class="tree-count">{{ unfiledDashboardCount }}</span>
-          </button>
+          <div class="tree-node-wrapper" :style="{ '--depth': '0' }">
+            <div
+              class="tree-item-row tree-item-row-unfiled"
+              :class="{ 'tree-item-row-drop-active': dropTargetSectionId === normalizeSectionId(null) }"
+              @dragover.prevent="onSectionDragOver(null)"
+              @drop.prevent="onSectionDrop(null)"
+            >
+              <button
+                v-if="unfiledTreeDashboards.length > 0"
+                class="tree-toggle"
+                data-testid="folder-toggle-unfiled"
+                @click.stop="unfiledExpanded = !unfiledExpanded"
+              >
+                <ChevronDown v-if="isUnfiledExpanded" :size="14" />
+                <ChevronRight v-else :size="14" />
+              </button>
+              <span v-else class="tree-toggle-placeholder"></span>
+
+              <button
+                class="tree-item tree-item-unfiled"
+                :class="{ 'tree-item-active': selectedExplorerNode === 'unfiled' }"
+                data-testid="tree-node-unfiled"
+                @click="selectExplorerUnfiled"
+              >
+                <Inbox :size="15" />
+                <span>Unfiled</span>
+                <span class="tree-count">{{ unfiledDashboardCount }}</span>
+              </button>
+            </div>
+
+            <div
+              v-for="dashboard in unfiledTreeDashboards"
+              v-show="isUnfiledExpanded"
+              :key="dashboard.id"
+              class="tree-node-wrapper"
+              :style="{ '--depth': '1' }"
+            >
+              <div
+                class="tree-item-row tree-item-row-dashboard"
+                :data-testid="`tree-dashboard-row-${dashboard.id}`"
+                @mouseenter="showDashboardPreview(dashboard.id)"
+                @mouseleave="clearDashboardPreview(dashboard.id)"
+              >
+                <span class="tree-toggle-placeholder"></span>
+                <button
+                  class="tree-item tree-file-item"
+                  :class="{ 'tree-item-active': selectedTreeDashboardId === dashboard.id }"
+                  :data-testid="`tree-dashboard-${dashboard.id}`"
+                  :draggable="canManageDashboards"
+                  @dragstart="onDashboardDragStart(dashboard)"
+                  @dragend="onDashboardDragEnd"
+                  @click="selectExplorerDashboard(dashboard)"
+                  @dblclick="openDashboard(dashboard)"
+                >
+                  <FileText :size="13" />
+                  <span>{{ dashboard.title }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </nav>
 
         <div v-if="showInlineFolderForm" class="inline-folder-create" data-testid="inline-folder-create">
@@ -898,6 +1092,23 @@ onMounted(() => {
         <div class="main-heading">
           <h2>{{ activeExplorerTitle }}</h2>
           <p>{{ activeExplorerSubtitle }}</p>
+        </div>
+
+        <div v-if="selectedFolderChildren.length > 0" class="subfolder-strip">
+          <p>Subfolders</p>
+          <div class="subfolder-list">
+            <button
+              v-for="child in selectedFolderChildren"
+              :key="child.id"
+              type="button"
+              class="subfolder-chip"
+              @click="selectExplorerFolder(child.id)"
+            >
+              <FolderIcon :size="14" />
+              <span>{{ child.name }}</span>
+              <span class="subfolder-chip-count">{{ folderDashboardCountMap.get(child.id) ?? 0 }}</span>
+            </button>
+          </div>
         </div>
 
         <div v-if="hasNoFolders" class="folder-cta" data-testid="folder-empty-cta">
@@ -1242,7 +1453,7 @@ onMounted(() => {
 
 .explorer-shell {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -1257,9 +1468,32 @@ onMounted(() => {
 }
 
 .explorer-sidebar {
-  position: sticky;
-  top: 1rem;
-  padding: 0.85rem;
+  position: static;
+  padding: 0.95rem;
+  min-height: 640px;
+}
+
+.explorer-main,
+.preview-pane {
+  display: none;
+}
+
+.finder-header {
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 0.58rem 0.65rem;
+  margin-bottom: 0.65rem;
+}
+
+.finder-header .breadcrumbs {
+  margin-bottom: 0.35rem;
+}
+
+.finder-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
 }
 
 .explorer-search {
@@ -1272,6 +1506,46 @@ onMounted(() => {
   color: var(--text-secondary);
   padding: 0.55rem 0.6rem;
   margin-bottom: 0.75rem;
+}
+
+.tree-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.tree-toolbar p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tree-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tree-toolbar-btn {
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  padding: 0.22rem 0.48rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.tree-toolbar-btn:hover {
+  border-color: var(--border-secondary);
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .explorer-search input {
@@ -1289,7 +1563,7 @@ onMounted(() => {
 .tree-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.22rem;
 }
 
 .tree-node-wrapper {
@@ -1299,7 +1573,21 @@ onMounted(() => {
 .tree-item-row {
   display: flex;
   align-items: center;
+  gap: 0.2rem;
   padding-left: calc(var(--depth) * 14px);
+  border-radius: 9px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.tree-item-row:hover {
+  border-color: var(--border-primary);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+.tree-item-row-drop-active {
+  border-color: rgba(56, 189, 248, 0.72);
+  background: rgba(56, 189, 248, 0.15);
 }
 
 .tree-toggle,
@@ -1339,15 +1627,56 @@ onMounted(() => {
 }
 
 .tree-item:hover {
-  border-color: var(--border-primary);
-  background: var(--surface-2);
+  border-color: rgba(56, 189, 248, 0.2);
+  background: rgba(56, 189, 248, 0.08);
   color: var(--text-primary);
 }
 
 .tree-item-active {
-  border-color: rgba(56, 189, 248, 0.35);
-  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.18);
   color: var(--text-primary);
+}
+
+.tree-item-active .tree-count {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(56, 189, 248, 0.16);
+  color: var(--text-primary);
+}
+
+.tree-item-row-dashboard {
+  border-color: transparent;
+  background: transparent;
+}
+
+.tree-item-row-dashboard:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+.tree-file-item {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  padding-top: 0.32rem;
+  padding-bottom: 0.32rem;
+}
+
+.tree-file-item[draggable='true'] {
+  cursor: grab;
+}
+
+.tree-file-item[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.tree-file-item:hover {
+  border-color: rgba(56, 189, 248, 0.2);
+  color: var(--text-primary);
+}
+
+.tree-file-item.tree-item-active {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(56, 189, 248, 0.14);
 }
 
 .tree-count {
@@ -1448,6 +1777,61 @@ onMounted(() => {
 
 .main-heading {
   margin-bottom: 0.8rem;
+}
+
+.subfolder-strip {
+  margin-bottom: 0.9rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  background: var(--surface-2);
+  padding: 0.7rem;
+}
+
+.subfolder-strip p {
+  margin: 0 0 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.subfolder-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.subfolder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 999px;
+  padding: 0.32rem 0.58rem;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.subfolder-chip:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.subfolder-chip-count {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.66rem;
+  font-family: var(--font-mono);
 }
 
 .main-heading h2 {
@@ -1809,12 +2193,7 @@ onMounted(() => {
 
 @media (max-width: 1280px) {
   .explorer-shell {
-    grid-template-columns: 260px minmax(0, 1fr);
-  }
-
-  .preview-pane {
-    grid-column: 1 / -1;
-    position: static;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1841,11 +2220,6 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .explorer-sidebar,
-  .preview-pane {
-    position: static;
-  }
-
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -1858,6 +2232,29 @@ onMounted(() => {
   .folder-cta {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .tree-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tree-toolbar-actions {
+    width: 100%;
+  }
+
+  .tree-toolbar-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .subfolder-list {
+    flex-direction: column;
+  }
+
+  .subfolder-chip {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .empty-actions {
