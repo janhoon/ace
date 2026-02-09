@@ -15,11 +15,17 @@ const mockCurrentOrg = ref({
   updated_at: '2026-02-08T00:00:00Z',
 })
 const mockPush = vi.fn()
+const mockReplace = vi.fn()
+const mockRoute = ref({
+  query: {} as Record<string, unknown>,
+})
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: mockReplace,
   }),
+  useRoute: () => mockRoute.value,
 }))
 
 vi.mock('../composables/useOrganization', () => ({
@@ -85,6 +91,7 @@ describe('DashboardList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCurrentOrgId.value = 'org-1'
+    mockRoute.value = { query: {} }
     mockCurrentOrg.value = {
       id: 'org-1',
       name: 'Acme',
@@ -150,6 +157,24 @@ describe('DashboardList', () => {
 
     await wrapper.find('.page-header .btn-primary').trigger('click')
     expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).props('initialMode')).toBe('create')
+  })
+
+  it('opens create modal in grafana mode from dashboard query param', async () => {
+    mockRoute.value = {
+      query: {
+        newDashboardMode: 'grafana',
+      },
+    }
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue([])
+    vi.mocked(folderApi.listFolders).mockResolvedValue([])
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).props('initialMode')).toBe('grafana')
+    expect(mockReplace).toHaveBeenCalledWith({ query: {} })
   })
 
   it('shows new folder action for admin and editor only', async () => {

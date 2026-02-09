@@ -41,7 +41,6 @@ const navItems: NavItem[] = [
     ],
   },
   { id: 'datasources', icon: Database, label: 'Data Sources', path: '/datasources' },
-  { id: 'grafana-converter', icon: LayoutDashboard, label: 'Grafana Converter', path: '/convert/grafana' },
 ]
 
 const openNavGroups = ref<Record<string, boolean>>({

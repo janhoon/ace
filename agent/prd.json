@@ -335,7 +335,7 @@
         "cd frontend && npm run type-check",
         "cd backend && go test ./internal/converter/..."
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "DASHBOARD-YAML-EDITOR-001",

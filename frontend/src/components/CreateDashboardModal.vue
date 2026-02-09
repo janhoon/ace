@@ -2,7 +2,16 @@
 import { computed, ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import { createDashboard, importDashboardYaml } from '../api/dashboards'
+import { convertGrafanaDashboard } from '../api/converter'
 import { useOrganization } from '../composables/useOrganization'
+
+type CreationMode = 'create' | 'import' | 'grafana'
+
+const props = withDefaults(defineProps<{
+  initialMode?: CreationMode
+}>(), {
+  initialMode: 'create',
+})
 
 const emit = defineEmits<{
   close: []
@@ -13,11 +22,15 @@ const { currentOrgId } = useOrganization()
 
 const title = ref('')
 const description = ref('')
-const mode = ref<'create' | 'import'>('create')
+const mode = ref<CreationMode>(props.initialMode)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const yamlFileName = ref('')
 const yamlContent = ref('')
+const grafanaFileName = ref('')
+const grafanaSource = ref('')
+const grafanaWarnings = ref<string[]>([])
+const convertingGrafana = ref(false)
 
 interface ImportPreview {
   title: string
@@ -32,6 +45,8 @@ const submitLabel = computed(() => {
   }
   return mode.value === 'create' ? 'Create Dashboard' : 'Import Dashboard'
 })
+
+const canConvertGrafana = computed(() => grafanaSource.value.trim().length > 0 && !convertingGrafana.value && !loading.value)
 
 function normalizeYamlValue(value: string): string {
   const trimmed = value.trim()
@@ -79,18 +94,37 @@ function buildYamlPreview(rawYaml: string): ImportPreview {
   }
 }
 
-function setMode(nextMode: 'create' | 'import') {
+function setMode(nextMode: CreationMode) {
   mode.value = nextMode
   error.value = null
+}
+
+function setImportPreviewFromDocument(document: {
+  dashboard: {
+    title: string
+    description?: string
+    panels: unknown[]
+  }
+}) {
+  importPreview.value = {
+    title: document.dashboard.title,
+    description: document.dashboard.description ?? '',
+    panelCount: document.dashboard.panels.length,
+  }
+}
+
+function clearImportState() {
+  yamlContent.value = ''
+  yamlFileName.value = ''
+  importPreview.value = null
+  grafanaWarnings.value = []
 }
 
 async function handleYamlFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
 
-  yamlContent.value = ''
-  yamlFileName.value = ''
-  importPreview.value = null
+  clearImportState()
   error.value = null
 
   if (!file) {
@@ -119,6 +153,65 @@ async function handleYamlFileChange(event: Event) {
   }
 }
 
+async function handleGrafanaFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  grafanaSource.value = ''
+  grafanaFileName.value = ''
+  clearImportState()
+  error.value = null
+
+  if (!file) {
+    return
+  }
+
+  const lowerName = file.name.toLowerCase()
+  if (!lowerName.endsWith('.json')) {
+    error.value = 'Please upload a .json file'
+    return
+  }
+
+  try {
+    const content = await file.text()
+    if (!content.trim()) {
+      error.value = 'Grafana JSON file is empty'
+      return
+    }
+    grafanaSource.value = content
+    grafanaFileName.value = file.name
+  } catch {
+    error.value = 'Failed to read selected Grafana file'
+  }
+}
+
+async function convertGrafana() {
+  if (!currentOrgId.value) {
+    error.value = 'No organization selected'
+    return
+  }
+
+  if (!grafanaSource.value.trim()) {
+    error.value = 'Paste or upload Grafana JSON before converting'
+    return
+  }
+
+  convertingGrafana.value = true
+  error.value = null
+  clearImportState()
+
+  try {
+    const response = await convertGrafanaDashboard(grafanaSource.value, 'yaml')
+    yamlContent.value = response.content
+    grafanaWarnings.value = response.warnings
+    setImportPreviewFromDocument(response.document)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to convert Grafana dashboard'
+  } finally {
+    convertingGrafana.value = false
+  }
+}
+
 async function handleSubmit() {
   if (!currentOrgId.value) {
     error.value = 'No organization selected'
@@ -130,8 +223,10 @@ async function handleSubmit() {
     return
   }
 
-  if (mode.value === 'import' && !importPreview.value) {
-    error.value = 'Upload a valid YAML file before importing'
+  if ((mode.value === 'import' || mode.value === 'grafana') && !importPreview.value) {
+    error.value = mode.value === 'grafana'
+      ? 'Convert Grafana JSON before importing'
+      : 'Upload a valid YAML file before importing'
     return
   }
 
@@ -186,6 +281,15 @@ async function handleSubmit() {
           >
             Import YAML
           </button>
+          <button
+            type="button"
+            class="mode-option"
+            :class="{ active: mode === 'grafana' }"
+            :disabled="loading"
+            @click="setMode('grafana')"
+          >
+            Import Grafana
+          </button>
         </div>
 
         <div v-if="mode === 'create'">
@@ -213,7 +317,7 @@ async function handleSubmit() {
           </div>
         </div>
 
-        <div v-else>
+        <div v-else-if="mode === 'import'">
           <div class="form-group">
             <label for="yaml-file">YAML file <span class="required">*</span></label>
             <input
@@ -231,6 +335,54 @@ async function handleSubmit() {
             <p v-if="importPreview.description">{{ importPreview.description }}</p>
             <p>{{ importPreview.panelCount }} panel{{ importPreview.panelCount === 1 ? '' : 's' }}</p>
             <p v-if="yamlFileName" class="file-name">File: {{ yamlFileName }}</p>
+          </div>
+        </div>
+
+        <div v-else>
+          <div class="form-group">
+            <label for="grafana-file">Grafana JSON file</label>
+            <input
+              id="grafana-file"
+              type="file"
+              accept=".json,application/json"
+              :disabled="loading || convertingGrafana"
+              @change="handleGrafanaFileChange"
+            />
+            <p class="field-hint">Upload a Grafana dashboard JSON file or paste JSON below.</p>
+          </div>
+
+          <div class="form-group">
+            <label for="grafana-source">Grafana JSON <span class="required">*</span></label>
+            <textarea
+              id="grafana-source"
+              v-model="grafanaSource"
+              rows="6"
+              :disabled="loading || convertingGrafana"
+              placeholder="Paste Grafana dashboard JSON here"
+              data-testid="grafana-source"
+            ></textarea>
+            <p v-if="grafanaFileName" class="field-hint">File: {{ grafanaFileName }}</p>
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-secondary btn-convert"
+            :disabled="!canConvertGrafana"
+            data-testid="grafana-convert"
+            @click="convertGrafana"
+          >
+            {{ convertingGrafana ? 'Converting...' : 'Convert to Dash YAML' }}
+          </button>
+
+          <ul v-if="grafanaWarnings.length" class="warning-list" data-testid="grafana-warnings">
+            <li v-for="warning in grafanaWarnings" :key="warning">{{ warning }}</li>
+          </ul>
+
+          <div v-if="importPreview" class="import-preview" data-testid="yaml-preview">
+            <p><strong>Preview:</strong> {{ importPreview.title }}</p>
+            <p v-if="importPreview.description">{{ importPreview.description }}</p>
+            <p>{{ importPreview.panelCount }} panel{{ importPreview.panelCount === 1 ? '' : 's' }}</p>
+            <p class="file-name">Converted from Grafana JSON</p>
           </div>
         </div>
 
@@ -334,7 +486,7 @@ form {
 
 .mode-toggle {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   margin-bottom: 1.25rem;
 }
@@ -436,6 +588,17 @@ form {
 
 .file-name {
   color: var(--text-tertiary);
+}
+
+.btn-convert {
+  margin-bottom: 0.75rem;
+}
+
+.warning-list {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  color: #facc15;
+  font-size: 0.8rem;
 }
 
 .error-message {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Plus, Pencil, Trash2, LayoutDashboard, AlertCircle, Folder as FolderIcon, Inbox, Shield } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import type { Folder } from '../types/folder'
@@ -12,6 +12,7 @@ import EditDashboardModal from './EditDashboardModal.vue'
 import FolderPermissionsModal from './FolderPermissionsModal.vue'
 
 const router = useRouter()
+const route = useRoute()
 const { currentOrgId, currentOrg } = useOrganization()
 
 const dashboards = ref<Dashboard[]>([])
@@ -19,6 +20,7 @@ const folders = ref<Folder[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const showCreateModal = ref(false)
+const createModalInitialMode = ref<'create' | 'import' | 'grafana'>('create')
 const showEditModal = ref(false)
 const editingDashboard = ref<Dashboard | null>(null)
 const showDeleteConfirm = ref(false)
@@ -99,8 +101,20 @@ watch(currentOrgId, () => {
   fetchDashboards()
 })
 
-function openCreateModal() {
+function normalizeCreateMode(rawMode: unknown): 'create' | 'import' | 'grafana' | null {
+  if (rawMode === 'create' || rawMode === 'import' || rawMode === 'grafana') {
+    return rawMode
+  }
+  return null
+}
+
+function openCreateModalWithMode(initialMode: 'create' | 'import' | 'grafana') {
+  createModalInitialMode.value = initialMode
   showCreateModal.value = true
+}
+
+function openCreateModal() {
+  openCreateModalWithMode('create')
 }
 
 function openCreateFolderModal() {
@@ -226,6 +240,19 @@ async function handleCreateFolder() {
 }
 
 onMounted(fetchDashboards)
+
+onMounted(() => {
+  const modeFromQuery = normalizeCreateMode(route.query.newDashboardMode)
+  if (!modeFromQuery) {
+    return
+  }
+
+  openCreateModalWithMode(modeFromQuery)
+
+  const nextQuery = { ...route.query }
+  delete nextQuery.newDashboardMode
+  router.replace({ query: nextQuery })
+})
 </script>
 
 <template>
@@ -352,6 +379,7 @@ onMounted(fetchDashboards)
 
     <CreateDashboardModal
       v-if="showCreateModal"
+      :initial-mode="createModalInitialMode"
       @close="closeCreateModal"
       @created="onDashboardCreated"
     />

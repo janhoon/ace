@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import CreateDashboardModal from './CreateDashboardModal.vue'
 import * as api from '../api/dashboards'
+import * as converterApi from '../api/converter'
 
 vi.mock('../api/dashboards')
+vi.mock('../api/converter')
 vi.mock('../composables/useOrganization', () => ({
   useOrganization: () => ({
     currentOrgId: { value: 'org-1' },
@@ -131,5 +133,61 @@ describe('CreateDashboardModal', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Invalid YAML file. Missing dashboard section')
+  })
+
+  it('imports dashboard from grafana json conversion', async () => {
+    vi.mocked(converterApi.convertGrafanaDashboard).mockResolvedValue({
+      format: 'yaml',
+      content: 'schema_version: 1\ndashboard:\n  title: Converted Dashboard\n  panels:\n    - title: Requests\n',
+      document: {
+        schema_version: 1,
+        dashboard: {
+          title: 'Converted Dashboard',
+          description: 'From Grafana',
+          panels: [
+            {
+              title: 'Requests',
+              type: 'line_chart',
+              grid_pos: { x: 0, y: 0, w: 24, h: 8 },
+            },
+          ],
+        },
+      },
+      warnings: ['Converted unsupported panel type'],
+    })
+    vi.mocked(api.importDashboardYaml).mockResolvedValue({
+      id: 'converted-1',
+      title: 'Converted Dashboard',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    })
+
+    const wrapper = mount(CreateDashboardModal)
+    await wrapper.findAll('button').find((button) => button.text() === 'Import Grafana')?.trigger('click')
+    await wrapper.get('[data-testid="grafana-source"]').setValue('{"dashboard":{"title":"grafana"}}')
+    await wrapper.get('[data-testid="grafana-convert"]').trigger('click')
+    await flushPromises()
+
+    expect(converterApi.convertGrafanaDashboard).toHaveBeenCalledWith('{"dashboard":{"title":"grafana"}}', 'yaml')
+    expect(wrapper.get('[data-testid="yaml-preview"]').text()).toContain('Converted Dashboard')
+    expect(wrapper.get('[data-testid="grafana-warnings"]').text()).toContain('unsupported panel type')
+
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(api.importDashboardYaml).toHaveBeenCalledWith('org-1', expect.stringContaining('schema_version'))
+    expect(wrapper.emitted('created')).toBeTruthy()
+  })
+
+  it('shows conversion error when grafana payload is invalid', async () => {
+    vi.mocked(converterApi.convertGrafanaDashboard).mockRejectedValue(new Error('invalid grafana dashboard JSON'))
+
+    const wrapper = mount(CreateDashboardModal)
+    await wrapper.findAll('button').find((button) => button.text() === 'Import Grafana')?.trigger('click')
+    await wrapper.get('[data-testid="grafana-source"]').setValue('{')
+    await wrapper.get('[data-testid="grafana-convert"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('invalid grafana dashboard JSON')
   })
 })
