@@ -298,7 +298,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/components/CreateDashboard"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "GRAFANA-IMPORT-INTEGRATION-001",

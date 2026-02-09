@@ -78,7 +78,7 @@ describe('CreateDashboardModal', () => {
 
     const input = wrapper.find('input#yaml-file')
     const file = new File([
-      'schema_version: 1\ndashboard:\n  title: Imported Dashboard\n  panels:\n    - title: Requests\n      type: line_chart\n',
+      'schema_version: 1\ndashboard:\n  title: Imported Dashboard\n  panels:\n    - title: Requests\n      type: line_chart\n    - title: Errors\n      type: stat\n',
     ], 'dashboard.yaml', { type: 'application/x-yaml' })
 
     Object.defineProperty(input.element, 'files', {
@@ -88,6 +88,7 @@ describe('CreateDashboardModal', () => {
     await input.trigger('change')
     await flushPromises()
     expect(wrapper.find('[data-testid="yaml-preview"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('2 panels')
 
     await wrapper.find('form').trigger('submit')
     await flushPromises()
@@ -111,5 +112,24 @@ describe('CreateDashboardModal', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Please upload a .yaml or .yml file')
+  })
+
+  it('shows validation error for invalid dashboard yaml shape', async () => {
+    const wrapper = mount(CreateDashboardModal)
+    await wrapper.findAll('button').find((button) => button.text() === 'Import YAML')?.trigger('click')
+
+    const input = wrapper.find('input#yaml-file')
+    const file = new File(['schema_version: 1\nname: invalid\n'], 'dashboard.yaml', {
+      type: 'application/x-yaml',
+    })
+
+    Object.defineProperty(input.element, 'files', {
+      value: [file],
+      writable: false,
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Invalid YAML file. Missing dashboard section')
   })
 })

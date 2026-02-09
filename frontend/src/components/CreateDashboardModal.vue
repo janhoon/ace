@@ -45,6 +45,11 @@ function normalizeYamlValue(value: string): string {
 }
 
 function buildYamlPreview(rawYaml: string): ImportPreview {
+  const schemaVersionMatch = rawYaml.match(/(?:^|\n)schema_version:\s*(.+)/)
+  if (!schemaVersionMatch) {
+    throw new Error('Missing schema_version')
+  }
+
   const dashboardSectionMatch = rawYaml.match(/(?:^|\n)dashboard:\s*\n([\s\S]*)/)
   if (!dashboardSectionMatch) {
     throw new Error('Missing dashboard section')
@@ -62,7 +67,10 @@ function buildYamlPreview(rawYaml: string): ImportPreview {
   }
 
   const descriptionMatch = dashboardSection.match(/(?:^|\n)\s{2}description:\s*(.+)/)
-  const panelCount = (dashboardSection.match(/(?:^|\n)\s{4}-\s+title:\s*/g) ?? []).length
+  const panelsSectionMatch = dashboardSection.match(
+    /(?:^|\n)\s{2}panels:\s*\n([\s\S]*?)(?=\n\s{2}[a-zA-Z_][\w-]*:\s*|\s*$)/,
+  )
+  const panelCount = (panelsSectionMatch?.[1]?.match(/(?:^|\n)\s{4}-\s+/g) ?? []).length
 
   return {
     title: extractedTitle,
@@ -105,8 +113,9 @@ async function handleYamlFileChange(event: Event) {
     importPreview.value = buildYamlPreview(content)
     yamlContent.value = content
     yamlFileName.value = file.name
-  } catch {
-    error.value = 'Invalid YAML file. Expected dashboard document format.'
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : 'Expected dashboard document format'
+    error.value = `Invalid YAML file. ${reason}`
   }
 }
 
