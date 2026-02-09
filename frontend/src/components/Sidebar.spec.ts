@@ -70,4 +70,33 @@ describe('Sidebar', () => {
     expect(wrapper.get('.sidebar').classes()).toContain('expanded')
     expect(wrapper.get('.sidebar-header').classes()).not.toContain('collapsed')
   })
+
+  it('temporarily expands when hovered while collapsed', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1000,
+    })
+
+    const wrapper = mount(Sidebar, {
+      global: {
+        stubs: {
+          OrganizationDropdown: true,
+          CreateOrganizationModal: true,
+        },
+      },
+    })
+
+    expect(wrapper.get('.sidebar').classes()).not.toContain('expanded')
+
+    await wrapper.get('.sidebar').trigger('mouseenter')
+
+    expect(wrapper.get('.sidebar').classes()).toContain('expanded')
+    expect(wrapper.get('.sidebar-header').classes()).not.toContain('collapsed')
+
+    await wrapper.get('.sidebar').trigger('mouseleave')
+
+    expect(wrapper.get('.sidebar').classes()).not.toContain('expanded')
+    expect(wrapper.get('.sidebar-header').classes()).toContain('collapsed')
+  })
 })

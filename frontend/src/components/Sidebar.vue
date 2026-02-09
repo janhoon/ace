@@ -13,7 +13,12 @@ const { fetchOrganizations, clearOrganizations, currentOrg } = useOrganization()
 const { logout, user } = useAuth()
 
 const isExpanded = ref(typeof window !== 'undefined' ? window.innerWidth > 1100 : true)
+const isHoverExpanded = ref(false)
 const showCreateOrgModal = ref(false)
+
+const isVisuallyExpanded = computed(() => {
+  return isExpanded.value || isHoverExpanded.value
+})
 
 interface NavItem {
   id: string
@@ -95,6 +100,16 @@ function toggleSidebar() {
   isExpanded.value = !isExpanded.value
 }
 
+function handleSidebarMouseEnter() {
+  if (!isExpanded.value) {
+    isHoverExpanded.value = true
+  }
+}
+
+function handleSidebarMouseLeave() {
+  isHoverExpanded.value = false
+}
+
 function handleOrgCreated() {
   showCreateOrgModal.value = false
   fetchOrganizations()
@@ -110,11 +125,16 @@ defineExpose({ isExpanded })
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ expanded: isExpanded }">
-    <div class="sidebar-header" :class="{ collapsed: !isExpanded }">
+  <aside
+    class="sidebar"
+    :class="{ expanded: isVisuallyExpanded }"
+    @mouseenter="handleSidebarMouseEnter"
+    @mouseleave="handleSidebarMouseLeave"
+  >
+    <div class="sidebar-header" :class="{ collapsed: !isVisuallyExpanded }">
       <div class="sidebar-logo">
         <Activity class="logo-icon" :size="24" />
-        <div v-if="isExpanded" class="logo-copy">
+        <div v-if="isVisuallyExpanded" class="logo-copy">
           <span class="logo-text">Dash</span>
           <span class="logo-subtext">developer cockpit</span>
         </div>
@@ -124,7 +144,7 @@ defineExpose({ isExpanded })
       </button>
     </div>
 
-    <OrganizationDropdown :expanded="isExpanded" @createOrg="showCreateOrgModal = true" />
+    <OrganizationDropdown :expanded="isVisuallyExpanded" @createOrg="showCreateOrgModal = true" />
 
     <nav class="sidebar-nav">
       <div class="nav-main">
@@ -137,13 +157,13 @@ defineExpose({ isExpanded })
             class="nav-item"
             :class="{ active: isActive(item) }"
             @click="handleNavItemClick(item)"
-            :title="isExpanded ? undefined : item.label"
+            :title="isVisuallyExpanded ? undefined : item.label"
           >
             <component :is="item.icon" :size="20" />
-            <span v-if="isExpanded" class="nav-label">{{ item.label }}</span>
+            <span v-if="isVisuallyExpanded" class="nav-label">{{ item.label }}</span>
             <span v-else class="nav-tooltip">{{ item.label }}</span>
             <span
-              v-if="isExpanded && item.children"
+              v-if="isVisuallyExpanded && item.children"
               class="nav-chevron-toggle"
               @click.stop="toggleNavGroup(item.id)"
             >
@@ -152,7 +172,7 @@ defineExpose({ isExpanded })
           </button>
 
           <div
-            v-if="isExpanded && item.children && isNavGroupOpen(item.id)"
+            v-if="isVisuallyExpanded && item.children && isNavGroupOpen(item.id)"
             class="nav-children"
           >
             <button
@@ -174,22 +194,22 @@ defineExpose({ isExpanded })
           class="nav-item"
           :class="{ active: isRouteMatch('/settings') }"
           @click="navigate(settingsPath)"
-          :title="isExpanded ? undefined : 'Settings'"
+          :title="isVisuallyExpanded ? undefined : 'Settings'"
         >
           <Settings :size="20" />
-          <span v-if="isExpanded" class="nav-label">Settings</span>
+          <span v-if="isVisuallyExpanded" class="nav-label">Settings</span>
           <span v-else class="nav-tooltip">Settings</span>
         </button>
-        <div v-if="isExpanded && user" class="user-info">
+        <div v-if="isVisuallyExpanded && user" class="user-info">
           <span class="user-email">{{ user.email }}</span>
         </div>
         <button
           class="nav-item logout-btn"
           @click="handleLogout"
-          :title="isExpanded ? undefined : 'Log out'"
+          :title="isVisuallyExpanded ? undefined : 'Log out'"
         >
           <LogOut :size="20" />
-          <span v-if="isExpanded" class="nav-label">Log out</span>
+          <span v-if="isVisuallyExpanded" class="nav-label">Log out</span>
           <span v-else class="nav-tooltip">Log out</span>
         </button>
       </div>
