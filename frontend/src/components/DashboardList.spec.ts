@@ -152,6 +152,72 @@ describe('DashboardList', () => {
     expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).exists()).toBe(true)
   })
 
+  it('shows new folder action for admin and editor only', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+
+    const adminWrapper = mount(DashboardList)
+    await flushPromises()
+    expect(adminWrapper.find('[data-testid="new-folder-header"]').exists()).toBe(true)
+
+    mockCurrentOrg.value = {
+      ...mockCurrentOrg.value,
+      role: 'editor',
+    }
+    const editorWrapper = mount(DashboardList)
+    await flushPromises()
+    expect(editorWrapper.find('[data-testid="new-folder-header"]').exists()).toBe(true)
+
+    mockCurrentOrg.value = {
+      ...mockCurrentOrg.value,
+      role: 'viewer',
+    }
+    const viewerWrapper = mount(DashboardList)
+    await flushPromises()
+    expect(viewerWrapper.find('[data-testid="new-folder-header"]').exists()).toBe(false)
+  })
+
+  it('shows no-folder CTA and creates folder from CTA action', async () => {
+    vi.mocked(dashboardApi.listDashboards)
+      .mockResolvedValueOnce([
+        {
+          id: '223e4567-e89b-12d3-a456-426614174001',
+          folder_id: null,
+          title: 'Another Dashboard',
+          created_at: '2024-01-02T00:00:00Z',
+          updated_at: '2024-01-02T00:00:00Z',
+        },
+      ])
+      .mockResolvedValueOnce([])
+    vi.mocked(folderApi.listFolders)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+    vi.mocked(folderApi.createFolder).mockResolvedValue({
+      id: 'new-folder',
+      organization_id: 'org-1',
+      parent_id: null,
+      name: 'Operations',
+      sort_order: 0,
+      created_by: 'user-1',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    })
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="folder-empty-cta"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="new-folder-cta"]').trigger('click')
+    await wrapper.get('#folder-name').setValue('Operations')
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(vi.mocked(folderApi.createFolder)).toHaveBeenCalledWith('org-1', { name: 'Operations' })
+    expect(vi.mocked(dashboardApi.listDashboards).mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(vi.mocked(folderApi.listFolders).mock.calls.length).toBeGreaterThanOrEqual(2)
+  })
+
   it('renders dashboard cards for grouped dashboards', async () => {
     vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
     vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
@@ -191,6 +257,20 @@ describe('DashboardList', () => {
     expect(vi.mocked(dashboardApi.listDashboards)).not.toHaveBeenCalled()
     expect(vi.mocked(folderApi.listFolders)).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('No dashboards yet')
+  })
+
+  it('does not render folder create controls for viewers in empty states', async () => {
+    mockCurrentOrg.value = {
+      ...mockCurrentOrg.value,
+      role: 'viewer',
+    }
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue([])
+    vi.mocked(folderApi.listFolders).mockResolvedValue([])
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="new-folder-empty"]').exists()).toBe(false)
   })
 
   it('refreshes dashboard sections after folder permission updates', async () => {

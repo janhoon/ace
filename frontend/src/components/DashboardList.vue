@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, LayoutDashboard, AlertCircle, Folder as FolderIco
 import type { Dashboard } from '../types/dashboard'
 import type { Folder } from '../types/folder'
 import { listDashboards, deleteDashboard } from '../api/dashboards'
-import { listFolders } from '../api/folders'
+import { listFolders, createFolder } from '../api/folders'
 import { useOrganization } from '../composables/useOrganization'
 import CreateDashboardModal from './CreateDashboardModal.vue'
 import EditDashboardModal from './EditDashboardModal.vue'
@@ -26,6 +26,10 @@ const deletingDashboard = ref<Dashboard | null>(null)
 const showFolderPermissionsModal = ref(false)
 const selectedFolderForPermissions = ref<Folder | null>(null)
 const folderPermissionsMessage = ref<string | null>(null)
+const showCreateFolderModal = ref(false)
+const creatingFolder = ref(false)
+const folderName = ref('')
+const folderError = ref<string | null>(null)
 
 interface DashboardSection {
   id: string | null
@@ -36,6 +40,7 @@ interface DashboardSection {
 }
 
 const isOrgAdmin = computed(() => currentOrg.value?.role === 'admin')
+const canCreateFolder = computed(() => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor')
 
 const groupedDashboardSections = computed<DashboardSection[]>(() => {
   const folderIds = new Set(folders.value.map((folder) => folder.id))
@@ -63,6 +68,7 @@ const groupedDashboardSections = computed<DashboardSection[]>(() => {
 })
 
 const isCompletelyEmpty = computed(() => dashboards.value.length === 0 && folders.value.length === 0)
+const hasNoFolders = computed(() => folders.value.length === 0)
 
 async function fetchDashboards() {
   if (!currentOrgId.value) {
@@ -95,6 +101,18 @@ watch(currentOrgId, () => {
 
 function openCreateModal() {
   showCreateModal.value = true
+}
+
+function openCreateFolderModal() {
+  folderName.value = ''
+  folderError.value = null
+  showCreateFolderModal.value = true
+}
+
+function closeCreateFolderModal() {
+  showCreateFolderModal.value = false
+  folderName.value = ''
+  folderError.value = null
 }
 
 function closeCreateModal() {
@@ -180,6 +198,33 @@ async function onFolderPermissionsSaved() {
   await fetchDashboards()
 }
 
+async function handleCreateFolder() {
+  if (!folderName.value.trim()) {
+    folderError.value = 'Folder name is required'
+    return
+  }
+
+  if (!currentOrgId.value) {
+    folderError.value = 'No organization selected'
+    return
+  }
+
+  creatingFolder.value = true
+  folderError.value = null
+
+  try {
+    await createFolder(currentOrgId.value, {
+      name: folderName.value.trim(),
+    })
+    closeCreateFolderModal()
+    await fetchDashboards()
+  } catch (e) {
+    folderError.value = e instanceof Error ? e.message : 'Failed to create folder'
+  } finally {
+    creatingFolder.value = false
+  }
+}
+
 onMounted(fetchDashboards)
 </script>
 
@@ -190,10 +235,16 @@ onMounted(fetchDashboards)
         <h1>Dashboards</h1>
         <p class="header-subtitle">Monitor your metrics and visualize data</p>
       </div>
-      <button class="btn btn-primary" @click="openCreateModal">
+      <div class="header-actions">
+        <button v-if="canCreateFolder" class="btn btn-secondary" data-testid="new-folder-header" @click="openCreateFolderModal">
+          <FolderIcon :size="18" />
+          <span>New Folder</span>
+        </button>
+        <button class="btn btn-primary" @click="openCreateModal">
         <Plus :size="18" />
         <span>New Dashboard</span>
-      </button>
+        </button>
+      </div>
     </header>
 
     <div v-if="loading" class="state-container">
@@ -213,14 +264,30 @@ onMounted(fetchDashboards)
       </div>
       <h2>No dashboards yet</h2>
       <p>Create your first dashboard to start monitoring your metrics</p>
-      <button class="btn btn-primary" @click="openCreateModal">
-        <Plus :size="18" />
-        <span>Create Dashboard</span>
-      </button>
+      <div class="empty-actions">
+        <button v-if="canCreateFolder" class="btn btn-secondary" data-testid="new-folder-empty" @click="openCreateFolderModal">
+          <FolderIcon :size="18" />
+          <span>Create Folder</span>
+        </button>
+        <button class="btn btn-primary" @click="openCreateModal">
+          <Plus :size="18" />
+          <span>Create Dashboard</span>
+        </button>
+      </div>
     </div>
 
     <div v-else class="folder-sections">
       <p v-if="folderPermissionsMessage" class="success-message">{{ folderPermissionsMessage }}</p>
+      <div v-if="hasNoFolders" class="folder-cta" data-testid="folder-empty-cta">
+        <div>
+          <h2>No folders yet</h2>
+          <p>Use folders to organize dashboards by team, service, or environment.</p>
+        </div>
+        <button v-if="canCreateFolder" class="btn btn-secondary" data-testid="new-folder-cta" @click="openCreateFolderModal">
+          <FolderIcon :size="16" />
+          <span>New Folder</span>
+        </button>
+      </div>
 
       <section
         v-for="section in groupedDashboardSections"
@@ -305,6 +372,37 @@ onMounted(fetchDashboards)
       @saved="onFolderPermissionsSaved"
     />
 
+    <div v-if="showCreateFolderModal" class="modal-overlay" @click.self="closeCreateFolderModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Create folder dialog">
+        <h2>Create Folder</h2>
+        <p class="modal-description">Organize dashboards into shared sections.</p>
+        <form @submit.prevent="handleCreateFolder">
+          <div class="form-group">
+            <label for="folder-name">Folder Name</label>
+            <input
+              id="folder-name"
+              v-model="folderName"
+              type="text"
+              placeholder="Operations"
+              :disabled="creatingFolder"
+              autocomplete="off"
+            />
+          </div>
+
+          <p v-if="folderError" class="error-message">{{ folderError }}</p>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" :disabled="creatingFolder" @click="closeCreateFolderModal">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="creatingFolder">
+              {{ creatingFolder ? 'Creating...' : 'Create Folder' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">
       <div class="modal delete-modal">
         <div class="modal-icon">
@@ -341,6 +439,12 @@ onMounted(fetchDashboards)
   background: var(--surface-1);
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow-sm);
+}
+
+.header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .header-content h1 {
@@ -486,10 +590,40 @@ onMounted(fetchDashboards)
   margin-bottom: 1rem;
 }
 
+.empty-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
 .folder-sections {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.folder-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px dashed var(--border-secondary);
+  border-radius: 12px;
+  padding: 0.95rem 1rem;
+  background: var(--surface-2);
+}
+
+.folder-cta h2 {
+  margin: 0;
+  font-size: 0.94rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.folder-cta p {
+  margin: 0.3rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
 }
 
 .folder-section {
@@ -662,6 +796,43 @@ onMounted(fetchDashboards)
   animation: slideUp 0.3s ease-out;
 }
 
+.modal-description {
+  color: var(--text-secondary);
+  margin: 0.5rem 0 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  color: var(--text-primary);
+  font-size: 0.84rem;
+}
+
+.form-group input {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.error-message {
+  margin: 0;
+  color: var(--accent-danger);
+  font-size: 0.82rem;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -731,6 +902,15 @@ onMounted(fetchDashboards)
     align-items: stretch;
   }
 
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -738,6 +918,16 @@ onMounted(fetchDashboards)
   .folder-section-meta {
     flex-direction: column;
     align-items: flex-end;
+  }
+
+  .folder-cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .empty-actions {
+    flex-direction: column;
+    width: 100%;
   }
 }
 </style>

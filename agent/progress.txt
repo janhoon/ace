@@ -452,3 +452,17 @@
   - agent/progress.txt
 - Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts`)
 - Browser validation: failing (dev-browser skill unavailable in this environment)
+
+## Task FOLDER-FE-UI-004: Expose dashboard folder creation entry points - 2026-02-09T00:30:05Z
+- What was done:
+  - Added `New Folder` entry point in the dashboards header for admin/editor roles and preserved viewer read-only behavior
+  - Added no-folder CTA in dashboards list state (`No folders yet`) with a folder creation action for admin/editor users
+  - Added create-folder modal flow (name validation, submit, API call, refresh) wired to existing folder API and org context
+  - Extended dashboard list tests to cover role-based create control visibility and no-folder CTA create flow
+- Files changed:
+  - frontend/src/components/DashboardList.vue
+  - frontend/src/components/DashboardList.spec.ts
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
+- Browser validation: failing (could not run; `dev-browser` skill is unavailable in this environment)
