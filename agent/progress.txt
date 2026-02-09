@@ -35,3 +35,9 @@ Last updated: 2026-02-09 10:06 UTC
 - Files changed: `frontend/src/components/DashboardList.vue`, `frontend/src/components/DashboardList.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`), passing (targeted touched-area test `src/components/DashboardList.spec.ts`; `npm run type-check` passing)
 - Browser validation: failing (required `dev-browser` skill is unavailable in this environment; skill lookup returned "not found")
+
+## Task SINGLE-CLICK-001: Change from double-click to single-click for folders and dashboards - 2026-02-09 10:17 UTC
+- What was done: Updated explorer interactions so folder rows now expand/collapse on single click while selecting the folder, removed tree double-click handlers, and changed tree dashboard clicks to open dashboards immediately; added tests for single-click folder toggling and single-click dashboard navigation.
+- Files changed: `frontend/src/components/DashboardList.vue`, `frontend/src/components/DashboardList.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`), passing (targeted touched-area test `src/components/DashboardList.spec.ts`; `npm run type-check` passing)
+- Browser validation: failing (required `dev-browser` skill is unavailable in this environment; skill lookup returned "not found")

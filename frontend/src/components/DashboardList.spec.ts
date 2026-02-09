@@ -143,6 +143,36 @@ describe('DashboardList', () => {
     expect(wrapper.text()).not.toContain('in this folder')
   })
 
+  it('toggles folder expansion with single click', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    const dashboardRow = wrapper.get('[data-testid="tree-dashboard-row-123e4567-e89b-12d3-a456-426614174000"]')
+    const dashboardRowContainer = dashboardRow.element.parentElement as HTMLElement
+    expect(dashboardRowContainer.style.display).toBe('')
+
+    await wrapper.get('[data-testid="tree-node-folder-a"]').trigger('click')
+    expect(dashboardRowContainer.style.display).toBe('none')
+
+    await wrapper.get('[data-testid="tree-node-folder-a"]').trigger('click')
+    expect(dashboardRowContainer.style.display).toBe('')
+  })
+
+  it('opens dashboards from tree on single click', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="tree-dashboard-123e4567-e89b-12d3-a456-426614174000"]').trigger('click')
+
+    expect(mockPush).toHaveBeenCalledWith('/dashboards/123e4567-e89b-12d3-a456-426614174000')
+  })
+
   it('displays empty state when no dashboards and no folders', async () => {
     vi.mocked(dashboardApi.listDashboards).mockResolvedValue([])
     vi.mocked(folderApi.listFolders).mockResolvedValue([])

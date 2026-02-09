@@ -554,7 +554,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/views/Dashboards"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

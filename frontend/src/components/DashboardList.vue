@@ -681,6 +681,13 @@ function toggleFolderExpanded(folderId: string) {
   expandedFolderIds.value = Array.from(set)
 }
 
+function onTreeFolderClick(folderId: string, hasChildren: boolean) {
+  selectExplorerFolder(folderId)
+  if (hasChildren) {
+    toggleFolderExpanded(folderId)
+  }
+}
+
 function selectExplorerFolder(folderId: string) {
   selectedTreeDashboardId.value = null
   hoveredDashboardId.value = null
@@ -891,8 +898,7 @@ onMounted(() => {
                 class="tree-item"
                 :class="{ 'tree-item-active': selectedExplorerNode === `folder:${row.folder.id}` }"
                 :data-testid="`tree-node-${row.folder.id}`"
-                @click="selectExplorerFolder(row.folder.id)"
-                @dblclick="row.hasChildren ? toggleFolderExpanded(row.folder.id) : undefined"
+                @click="onTreeFolderClick(row.folder.id, row.hasChildren)"
               >
                 <FolderIcon :size="14" />
                 <span>{{ row.folder.name }}</span>
@@ -921,8 +927,7 @@ onMounted(() => {
                   :draggable="canManageDashboards"
                   @dragstart="onDashboardDragStart(dashboard)"
                   @dragend="onDashboardDragEnd"
-                  @click="selectExplorerDashboard(dashboard)"
-                  @dblclick="openDashboard(dashboard)"
+                  @click="selectExplorerDashboard(dashboard); openDashboard(dashboard)"
                 >
                   <FileText :size="13" />
                   <span>{{ dashboard.title }}</span>
@@ -951,8 +956,7 @@ onMounted(() => {
                 :draggable="canManageDashboards"
                 @dragstart="onDashboardDragStart(dashboard)"
                 @dragend="onDashboardDragEnd"
-                @click="selectExplorerDashboard(dashboard)"
-                @dblclick="openDashboard(dashboard)"
+                @click="selectExplorerDashboard(dashboard); openDashboard(dashboard)"
               >
                 <FileText :size="13" />
                 <span>{{ dashboard.title }}</span>
