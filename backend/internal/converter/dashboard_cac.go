@@ -18,10 +18,13 @@ type DashboardDocument struct {
 }
 
 type DashboardResource struct {
-	ID          *uuid.UUID      `json:"id,omitempty" yaml:"id,omitempty"`
-	Title       string          `json:"title" yaml:"title"`
-	Description *string         `json:"description,omitempty" yaml:"description,omitempty"`
-	Panels      []PanelResource `json:"panels" yaml:"panels"`
+	ID              *uuid.UUID         `json:"id,omitempty" yaml:"id,omitempty"`
+	Title           string             `json:"title" yaml:"title"`
+	Description     *string            `json:"description,omitempty" yaml:"description,omitempty"`
+	Panels          []PanelResource    `json:"panels" yaml:"panels"`
+	Variables       []VariableResource `json:"variables,omitempty" yaml:"variables,omitempty"`
+	TimeRange       *TimeRangeResource `json:"time_range,omitempty" yaml:"time_range,omitempty"`
+	RefreshInterval *string            `json:"refresh_interval,omitempty" yaml:"refresh_interval,omitempty"`
 }
 
 type PanelResource struct {
@@ -30,6 +33,20 @@ type PanelResource struct {
 	GridPos      map[string]int  `json:"grid_pos" yaml:"grid_pos"`
 	Query        json.RawMessage `json:"query,omitempty" yaml:"query,omitempty"`
 	DataSourceID *uuid.UUID      `json:"datasource_id,omitempty" yaml:"datasource_id,omitempty"`
+}
+
+type VariableResource struct {
+	Name       string `json:"name" yaml:"name"`
+	Type       string `json:"type" yaml:"type"`
+	Label      string `json:"label,omitempty" yaml:"label,omitempty"`
+	Query      string `json:"query,omitempty" yaml:"query,omitempty"`
+	Multi      bool   `json:"multi,omitempty" yaml:"multi,omitempty"`
+	IncludeAll bool   `json:"include_all,omitempty" yaml:"include_all,omitempty"`
+}
+
+type TimeRangeResource struct {
+	From string `json:"from" yaml:"from"`
+	To   string `json:"to" yaml:"to"`
 }
 
 func NormalizeFormat(format string) string {

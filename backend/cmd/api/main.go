@@ -165,6 +165,10 @@ func main() {
 	mux.HandleFunc("POST /api/datasources/{id}/query", auth.RequireAuth(jwtManager, dsHandler.Query))
 	mux.HandleFunc("POST /api/datasources/{id}/stream", auth.RequireAuth(jwtManager, dsHandler.Stream))
 
+	// Grafana conversion route
+	grafanaConverterHandler := handlers.NewGrafanaConverterHandler()
+	mux.HandleFunc("POST /api/convert/grafana", auth.RequireAuth(jwtManager, grafanaConverterHandler.Convert))
+
 	// Apply CORS middleware
 	handler := corsMiddleware(mux)
 

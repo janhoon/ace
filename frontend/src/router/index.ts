@@ -6,6 +6,7 @@ import Explore from '../views/Explore.vue'
 import ExploreLogs from '../views/ExploreLogs.vue'
 import OrganizationSettings from '../views/OrganizationSettings.vue'
 import DataSourceSettings from '../views/DataSourceSettings.vue'
+import GrafanaConverter from '../views/GrafanaConverter.vue'
 import LoginView from '../views/LoginView.vue'
 
 const router = createRouter({
@@ -55,6 +56,11 @@ const router = createRouter({
       path: '/datasources',
       name: 'datasources',
       component: DataSourceSettings
+    },
+    {
+      path: '/convert/grafana',
+      name: 'grafana-converter',
+      component: GrafanaConverter
     }
   ]
 })
