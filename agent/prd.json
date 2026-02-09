@@ -46,7 +46,7 @@
         "cd backend && go test ./internal/handlers/...",
         "cd backend && go test ./internal/authz/..."
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "SIDEBAR-OVERFLOW-001",

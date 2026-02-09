@@ -180,6 +180,92 @@ func TestPermissionHandler_AdminCanManageFolderAndDashboardPermissions(t *testin
 	}
 }
 
+func TestDashboardHandler_Create_SetsDefaultDashboardPermissions(t *testing.T) {
+	orgHandler, authHandler, cleanup := setupOrgTestWithRedis(t)
+	defer cleanup()
+
+	dashboardHandler := NewDashboardHandler(testPool)
+	permissionHandler := NewPermissionHandler(testPool)
+	authzService := authz.NewService(testPool)
+
+	adminResp := createTestUser(t, authHandler, "testperm-default-admin@example.com")
+	editorResp := createTestUser(t, authHandler, "testperm-default-editor@example.com")
+	viewerResp := createTestUser(t, authHandler, "testperm-default-viewer@example.com")
+
+	editorUserID := mustGetUserIDByEmail(t, "testperm-default-editor@example.com")
+	viewerUserID := mustGetUserIDByEmail(t, "testperm-default-viewer@example.com")
+
+	org := createTestOrganization(t, orgHandler, adminResp.AccessToken, "perm-default-org")
+
+	inviteUserToOrganization(
+		t,
+		orgHandler,
+		adminResp.AccessToken,
+		org.ID,
+		"testperm-default-editor@example.com",
+		models.RoleEditor,
+		editorResp.AccessToken,
+	)
+
+	inviteUserToOrganization(
+		t,
+		orgHandler,
+		adminResp.AccessToken,
+		org.ID,
+		"testperm-default-viewer@example.com",
+		models.RoleViewer,
+		viewerResp.AccessToken,
+	)
+
+	dashboard := createTestDashboardForPermissions(t, dashboardHandler, editorResp.AccessToken, org.ID, "Default ACL Dashboard")
+
+	editorPermission, err := authzService.ResolvePermission(
+		context.Background(),
+		editorUserID,
+		org.ID,
+		authz.ResourceTypeDashboard,
+		dashboard.ID,
+	)
+	if err != nil {
+		t.Fatalf("expected no error resolving creator permission: %v", err)
+	}
+	if editorPermission != authz.PermissionAdmin {
+		t.Fatalf("expected creator dashboard permission %q, got %q", authz.PermissionAdmin, editorPermission)
+	}
+
+	viewerPermission, err := authzService.ResolvePermission(
+		context.Background(),
+		viewerUserID,
+		org.ID,
+		authz.ResourceTypeDashboard,
+		dashboard.ID,
+	)
+	if err != nil {
+		t.Fatalf("expected no error resolving member permission: %v", err)
+	}
+	if viewerPermission != authz.PermissionView {
+		t.Fatalf("expected org member dashboard permission %q, got %q", authz.PermissionView, viewerPermission)
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/api/dashboards/"+dashboard.ID.String()+"/permissions", nil)
+	listReq.Header.Set("Authorization", "Bearer "+adminResp.AccessToken)
+	listReq.SetPathValue("id", dashboard.ID.String())
+	listW := httptest.NewRecorder()
+
+	auth.RequireAuth(testJWTManager, permissionHandler.ListDashboardPermissions)(listW, listReq)
+	if listW.Code != http.StatusOK {
+		t.Fatalf("expected status 200 listing default dashboard permissions, got %d: %s", listW.Code, listW.Body.String())
+	}
+
+	var permissions []models.ResourcePermissionEntry
+	if err := json.NewDecoder(listW.Body).Decode(&permissions); err != nil {
+		t.Fatalf("failed to decode dashboard permissions: %v", err)
+	}
+	if len(permissions) != 3 {
+		t.Fatalf("expected 3 default dashboard ACL entries, got %d", len(permissions))
+	}
+}
+
 func TestPermissionHandler_RejectsNonAdminAndCrossOrgPrincipal(t *testing.T) {
 	orgHandler, authHandler, cleanup := setupOrgTestWithRedis(t)
 	defer cleanup()

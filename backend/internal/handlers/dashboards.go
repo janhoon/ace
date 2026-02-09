@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/authz"
@@ -78,16 +79,49 @@ func (h *DashboardHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx, err := h.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		http.Error(w, `{"error":"failed to create dashboard"}`, http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(ctx)
+
 	var dashboard models.Dashboard
-	err = h.pool.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`INSERT INTO dashboards (title, description, organization_id, created_by)
 		 VALUES ($1, $2, $3, $4)
 		 RETURNING id, title, description, folder_id, sort_order, created_at, updated_at, organization_id, created_by`,
 		req.Title, req.Description, orgID, userID,
 	).Scan(&dashboard.ID, &dashboard.Title, &dashboard.Description, &dashboard.FolderID, &dashboard.SortOrder,
 		&dashboard.CreatedAt, &dashboard.UpdatedAt, &dashboard.OrganizationID, &dashboard.CreatedBy)
-
 	if err != nil {
+		http.Error(w, `{"error":"failed to create dashboard"}`, http.StatusInternalServerError)
+		return
+	}
+
+	_, err = tx.Exec(ctx,
+		`INSERT INTO resource_permissions (organization_id, resource_type, resource_id, principal_type, principal_id, permission, created_by)
+		 SELECT om.organization_id, $2, $3, $4, om.user_id,
+		 	CASE WHEN om.user_id = $5 THEN $6 ELSE $7 END,
+		 	$5
+		 FROM organization_memberships om
+		 WHERE om.organization_id = $1
+		 ON CONFLICT (resource_type, resource_id, principal_type, principal_id)
+		 DO UPDATE SET permission = EXCLUDED.permission, created_by = EXCLUDED.created_by, updated_at = NOW()`,
+		orgID,
+		authz.ResourceTypeDashboard,
+		dashboard.ID,
+		models.PrincipalTypeUser,
+		userID,
+		models.ResourcePermissionAdmin,
+		models.ResourcePermissionView,
+	)
+	if err != nil {
+		http.Error(w, `{"error":"failed to create dashboard"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		http.Error(w, `{"error":"failed to create dashboard"}`, http.StatusInternalServerError)
 		return
 	}
