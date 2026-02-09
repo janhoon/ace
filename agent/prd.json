@@ -1,6 +1,6 @@
 {
   "project": "dash",
-  "version": 6,
+  "version": 7,
   "feature_selection": {
     "mode": "auto",
     "rules_in_order": [
@@ -14,226 +14,447 @@
   },
   "features": [
     {
-      "id": "ORG-FE-UI-002",
-      "name": "Center organization creation dialog",
-      "category": "Organization UX",
+      "id": "PERMISSIONS-FIX-001",
+      "name": "Fix default dashboard permissions (401 error on new dashboards)",
+      "category": "Permissions/Bug Fix",
       "task_size": "small",
-      "description": "Move organization creation from sideboard placement to a centered modal experience.",
-      "why_it_matters": "Creating an organization is a primary flow and should appear in a focused, expected dialog position.",
+      "priority": "high",
+      "description": "Fix 401 error when creating new dashboards by setting proper default permissions.",
+      "why_it_matters": "Critical bug blocking basic dashboard creation workflow. Users cannot access dashboards they just created.",
       "depends_on": [],
       "unblocks": [],
       "requirements": [
-        "Open organization creation in a centered modal on desktop",
-        "Keep mobile behavior usable (full-screen modal/sheet is acceptable)",
-        "Preserve existing create-organization validation and submit behavior",
-        "Add tests confirming the create organization flow renders as a centered modal and still submits"
+        "Set default permissions when dashboard is created",
+        "Default: org members can view, creator can edit/admin",
+        "Use org-role fallback instead of fail-closed for dashboards with no ACL",
+        "Ensure creator can immediately access their dashboard"
       ],
       "steps": [
-        "Replace sideboard/sheet mounting point with shared modal container in the org creation flow",
-        "Ensure focus trap, escape close, and submit states still work",
-        "Verify trigger entry points continue opening the create dialog",
-        "Add tests in organization settings/org switcher view spec files"
+        "Update dashboard creation handler to set default permissions",
+        "Modify authz service to use org-role fallback for dashboards with no ACL",
+        "Add tests for default permission behavior",
+        "Verify existing dashboards with explicit ACLs unchanged"
       ],
       "acceptance_criteria": [
-        "Organization create dialog appears centered on desktop",
-        "Mobile presentation remains fully usable",
-        "Form submission and error handling match previous behavior",
-        "Tests fail if dialog reverts to sideboard placement",
-        "Happy-path create and close behaviors are covered"
+        "Creating a dashboard no longer results in 401 error",
+        "New dashboard is immediately viewable by creator",
+        "Other org members can view the dashboard",
+        "Creator can edit and manage permissions",
+        "Existing dashboards with explicit ACLs unchanged"
+      ],
+      "test_commands": [
+        "cd backend && go test ./internal/handlers/...",
+        "cd backend && go test ./internal/authz/..."
+      ],
+      "passes": false
+    },
+    {
+      "id": "SIDEBAR-OVERFLOW-001",
+      "name": "Fix sidebar expand button overflow when collapsed",
+      "category": "Navigation/Bug Fix",
+      "task_size": "small",
+      "description": "Fix expand button overflowing into main content when sidebar is collapsed.",
+      "why_it_matters": "Visual bug that makes the UI look broken and unprofessional.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Fix CSS positioning/layout of expand button",
+        "Ensure button stays within collapsed sidebar width",
+        "Maintain button functionality (expand on click)",
+        "Test on different screen sizes"
+      ],
+      "steps": [
+        "Update Sidebar.vue CSS for collapsed state",
+        "Fix button positioning to stay within bounds",
+        "Test expand/collapse transitions",
+        "Verify on mobile and desktop"
+      ],
+      "acceptance_criteria": [
+        "Expand button fully contained within collapsed sidebar",
+        "No visual overflow into content area",
+        "Button remains clickable and functional",
+        "Works on all screen sizes",
+        "Smooth transition when expanding/collapsing"
       ],
       "test_commands": [
         "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/views"
+        "cd frontend && npm run test -- src/components/Sidebar"
       ],
-      "passes": true
+      "passes": false
     },
     {
-      "id": "SSO-FE-UI-002",
-      "name": "Restructure SSO settings into configure flow",
-      "category": "Organization Settings/SSO",
+      "id": "SIDEBAR-HOVER-001",
+      "name": "Auto-expand sidebar on hover when collapsed",
+      "category": "Navigation/UX",
       "task_size": "small",
-      "description": "Replace static provider cards with a single configure entry point and provider list.",
-      "why_it_matters": "SSO setup should match common admin workflows where providers are managed from one configuration flow.",
-      "depends_on": [],
-      "unblocks": [
-        "SSO-FE-UI-003"
-      ],
+      "description": "When sidebar is collapsed and user hovers over it, automatically expand to reveal full navigation.",
+      "why_it_matters": "Some navigation items become inaccessible when sidebar is collapsed. Hover-expand provides quick access.",
+      "depends_on": ["SIDEBAR-OVERFLOW-001"],
+      "unblocks": [],
       "requirements": [
-        "Show one primary \"Configure SSO\" entry point in organization settings",
-        "List configured providers with status and edit actions",
-        "Expose an \"Add SSO\" action for adding another provider"
+        "Detect hover on collapsed sidebar",
+        "Smoothly expand sidebar on hover",
+        "Keep expanded while mouse is over sidebar",
+        "Collapse back when mouse leaves",
+        "Ensure all navigation items are accessible when expanded"
       ],
       "steps": [
-        "Refactor OrganizationSettings SSO section into a provider-management shell",
-        "Render configured-provider rows/cards with enabled state",
-        "Gate mutation controls to org admins"
+        "Add hover event listeners to collapsed sidebar",
+        "Implement temporary expand state (different from toggle)",
+        "Add smooth CSS transitions",
+        "Handle edge cases (mouse leaving quickly, etc.)"
       ],
       "acceptance_criteria": [
-        "SSO section no longer presents only two static configuration screens",
-        "Admins can start configuration from a single flow",
-        "Existing provider update behavior is preserved"
+        "Sidebar expands on hover when collapsed",
+        "Smooth transition animation",
+        "All navigation items visible when expanded on hover",
+        "Collapses back when hover ends",
+        "No layout shift/jank during expansion"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/components/Sidebar"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SSO-CONFIGURED-ONLY-001",
+      "name": "Show only configured authentication methods on SSO settings",
+      "category": "Organization Settings/SSO",
+      "task_size": "medium",
+      "description": "Update SSO settings to only show configured authentication methods, with Add Authentication flow for adding new providers.",
+      "why_it_matters": "Current UI shows all provider options upfront, creating clutter. Should only show what's actually configured.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "List view showing only configured authentication methods",
+        "Email/Password shown by default (cannot be removed)",
+        "Each configured provider shows status (enabled/disabled), settings icon",
+        "Add Authentication button (admin only)",
+        "Provider picker modal with Google and Microsoft options",
+        "Configuration form appears after provider selection"
+      ],
+      "steps": [
+        "Update OrganizationSettings.vue SSO section to show configured providers only",
+        "Add Email/Password as default always-visible method",
+        "Implement Add Authentication button with provider picker",
+        "Move Google/Microsoft forms to appear after selection",
+        "Add remove/disable options for configured providers"
+      ],
+      "acceptance_criteria": [
+        "Only configured auth methods visible on settings page",
+        "Email/Password always shown",
+        "Add Authentication button available for admins",
+        "Provider picker shows Google and Microsoft",
+        "Selected provider opens configuration form",
+        "Configured providers can be edited or removed"
       ],
       "test_commands": [
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts"
       ],
-      "passes": true
+      "passes": false
     },
     {
-      "id": "SSO-FE-UI-003",
-      "name": "Add provider picker and SSO config modal/page",
-      "category": "Organization Settings/SSO",
-      "task_size": "small",
-      "description": "Implement the configure SSO interaction where admin selects a provider and then configures it.",
-      "why_it_matters": "Provider-first setup reduces confusion and supports adding multiple SSO providers over time.",
-      "depends_on": [
-        "SSO-FE-UI-002"
-      ],
-      "unblocks": [],
-      "requirements": [
-        "Open a modal/page/expanded panel from Configure SSO",
-        "Prompt for provider selection before showing provider-specific fields",
-        "Support both add-new and edit-existing provider flows",
-        "Add tests for configure SSO entry point, provider selection, and add-provider flows"
-      ],
-      "steps": [
-        "Build provider selection step in the SSO configure flow",
-        "Render provider-specific forms after selection",
-        "Submit payloads through existing SSO API helpers and refresh provider list",
-        "Extend OrganizationSettings SSO specs for new flow",
-        "Mock provider load/save endpoints for both success and error cases"
-      ],
-      "acceptance_criteria": [
-        "Admin can choose provider at configuration time",
-        "Admin can add another provider from the same configure flow",
-        "Save and validation errors are shown clearly",
-        "Provider selection and add-provider flows are covered in tests",
-        "Tests verify failure states without broken UI state"
-      ],
-      "test_commands": [
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts"
-      ],
-      "passes": true
-    },
-    {
-      "id": "FOLDER-FE-UI-004",
-      "name": "Expose dashboard folder creation entry points",
-      "category": "Dashboard/Folders",
-      "task_size": "small",
-      "description": "Make folder creation clearly available from dashboard screens where users manage folders.",
-      "why_it_matters": "Folder support is incomplete if users cannot easily discover where to create folders.",
+      "id": "ORG-SETTINGS-SIDEBAR-001",
+      "name": "Add secondary sidebar to organization settings",
+      "category": "Organization Settings/UX",
+      "task_size": "medium",
+      "description": "Replace long single-page settings with secondary sidebar organizing settings into General, Members, and Groups sections.",
+      "why_it_matters": "Current single-page view with all settings is overwhelming. Secondary sidebar provides better organization and navigation.",
       "depends_on": [],
       "unblocks": [],
       "requirements": [
-        "Add visible \"New folder\" action in dashboards view for admin/editor",
-        "Provide empty-state CTA when no folders exist",
-        "Keep viewer experience read-only with no create control",
-        "Add frontend coverage for visible folder-create entry points and role-based control visibility"
+        "Add secondary sidebar on organization settings page",
+        "Sidebar shows three sections: General, Members, Groups",
+        "Clicking section updates main content area",
+        "URL reflects current section",
+        "Active section highlighted in sidebar",
+        "Mobile-friendly (collapse sidebar on small screens)"
       ],
       "steps": [
-        "Add folder create trigger in dashboard toolbar/header",
-        "Wire trigger to folder create modal/form and refresh list on save",
-        "Show role-appropriate visibility for create controls",
-        "Extend dashboards view/component tests for folder create CTA",
-        "Mock folder API create/list responses"
+        "Create secondary sidebar component for org settings",
+        "Split OrganizationSettings.vue into three section components",
+        "Update routing to support /settings/org/:id/:section",
+        "Implement section navigation and highlighting",
+        "Add responsive behavior for mobile"
       ],
       "acceptance_criteria": [
-        "Admin/editor can discover and open folder creation quickly",
-        "Viewer cannot access folder create control",
-        "New folder appears in the grouped dashboard list after creation",
-        "Folder creation entry point tests pass",
-        "Role-based visibility is covered for create controls"
+        "Secondary sidebar appears on organization settings",
+        "Three sections clearly separated",
+        "Clicking section navigates to that content",
+        "URL updates with section path",
+        "Active section highlighted",
+        "Mobile view collapses secondary sidebar"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views/OrganizationSettings"
+      ],
+      "passes": false
+    },
+    {
+      "id": "DASHBOARD-SETTINGS-001",
+      "name": "Add dashboard settings page accessible while viewing dashboard",
+      "category": "Dashboard/Settings",
+      "task_size": "medium",
+      "description": "Add settings page/panel accessible from dashboard view for managing dashboard configuration.",
+      "why_it_matters": "Users should be able to configure dashboards without leaving the dashboard view.",
+      "depends_on": [],
+      "unblocks": ["DASHBOARD-EXPORT-001"],
+      "requirements": [
+        "Settings icon/button in dashboard toolbar",
+        "Settings panel or page with dashboard configuration options",
+        "Options: name, description, time range defaults, refresh interval, variables",
+        "Save changes without leaving dashboard view",
+        "Permission checks (editor/admin only)"
+      ],
+      "steps": [
+        "Add settings button to dashboard toolbar",
+        "Create dashboard settings component/modal",
+        "Implement form for dashboard configuration",
+        "Add save handler with permission checks",
+        "Update dashboard view to reflect changes"
+      ],
+      "acceptance_criteria": [
+        "Settings accessible from dashboard view",
+        "All dashboard configuration options available",
+        "Changes save and apply immediately",
+        "Viewers see settings but cannot edit",
+        "No need to navigate away from dashboard"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views/DashboardDetail"
+      ],
+      "passes": true
+    },
+    {
+      "id": "DASHBOARD-EXPORT-001",
+      "name": "Export dashboard as YAML from dashboard settings",
+      "category": "Dashboard/Export",
+      "task_size": "small",
+      "description": "Add export functionality to dashboard settings to download dashboard as YAML file.",
+      "why_it_matters": "Users need easy way to export dashboards for backup, sharing, or version control.",
+      "depends_on": ["DASHBOARD-SETTINGS-001"],
+      "unblocks": [],
+      "requirements": [
+        "Export button in dashboard settings",
+        "Generate YAML file from current dashboard",
+        "Download file with proper naming",
+        "Include all panels, queries, variables, settings",
+        "Use existing CaC export implementation"
+      ],
+      "steps": [
+        "Add export button to dashboard settings",
+        "Wire up to existing export API endpoint",
+        "Implement file download with proper naming",
+        "Test with various dashboard configurations"
+      ],
+      "acceptance_criteria": [
+        "Export button available in dashboard settings",
+        "Clicking export downloads YAML file",
+        "YAML file is valid and can be imported",
+        "File name matches dashboard name",
+        "All dashboard data preserved in export"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd backend && go test ./internal/handlers/..."
+      ],
+      "passes": false
+    },
+    {
+      "id": "DASHBOARD-IMPORT-YAML-001",
+      "name": "Import dashboard YAML when creating new dashboard",
+      "category": "Dashboard/Import",
+      "task_size": "small",
+      "description": "Add option to import a YAML file when creating a new dashboard.",
+      "why_it_matters": "Users need to import previously exported dashboards or dashboards from other sources.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Import from YAML option in new dashboard flow",
+        "File upload input for YAML file",
+        "Validate YAML format before import",
+        "Parse and create dashboard from YAML",
+        "Show preview before final creation"
+      ],
+      "steps": [
+        "Update CreateDashboardModal with import option",
+        "Add file upload input",
+        "Implement YAML validation and parsing",
+        "Add preview step before creation",
+        "Wire up to existing import API"
+      ],
+      "acceptance_criteria": [
+        "Import option available when creating dashboard",
+        "File upload accepts .yaml and .yml files",
+        "Valid YAML creates dashboard with all data",
+        "Invalid YAML shows clear error message",
+        "User can review dashboard before creating"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/components/CreateDashboard"
+      ],
+      "passes": false
+    },
+    {
+      "id": "GRAFANA-IMPORT-INTEGRATION-001",
+      "name": "Integrate Grafana converter into new dashboard flow",
+      "category": "Dashboard/Migration",
+      "task_size": "medium",
+      "description": "Move Grafana dashboard converter from dedicated page into new dashboard creation flow.",
+      "why_it_matters": "Grafana import should be part of dashboard creation workflow, not a separate page.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Import from Grafana option in new dashboard flow",
+        "File upload for Grafana JSON",
+        "Convert Grafana JSON to Dash format",
+        "Show preview of converted dashboard",
+        "Show conversion warnings/unsupported features",
+        "Remove standalone Grafana converter page"
+      ],
+      "steps": [
+        "Add Grafana import option to CreateDashboardModal",
+        "Integrate existing converter backend",
+        "Add preview step with conversion warnings",
+        "Allow editing before final creation",
+        "Remove/redirect old converter page"
+      ],
+      "acceptance_criteria": [
+        "Grafana import available when creating dashboard",
+        "Grafana JSON converts to Dash dashboard",
+        "Preview shows converted dashboard layout",
+        "Warnings displayed for unsupported features",
+        "Old converter page removed/redirects to new flow"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd backend && go test ./internal/converter/..."
+      ],
+      "passes": false
+    },
+    {
+      "id": "DASHBOARD-YAML-EDITOR-001",
+      "name": "Dashboard YAML editor with Grafana conversion",
+      "category": "Dashboard/Advanced",
+      "task_size": "medium",
+      "description": "Add YAML editor view for dashboards allowing direct editing and Grafana JSON conversion.",
+      "why_it_matters": "Advanced users need direct YAML editing and quick Grafana migration path.",
+      "depends_on": ["DASHBOARD-SETTINGS-001"],
+      "unblocks": [],
+      "requirements": [
+        "YAML editor tab/view in dashboard settings",
+        "Syntax-highlighted YAML editor",
+        "Live validation of YAML",
+        "Replace with Grafana button to convert/paste Grafana JSON",
+        "Save changes to update dashboard",
+        "Diff view showing changes before save"
+      ],
+      "steps": [
+        "Add YAML editor tab to dashboard settings",
+        "Integrate Monaco/CodeMirror for YAML editing",
+        "Add YAML validation",
+        "Implement Grafana JSON → YAML conversion",
+        "Add diff view for changes",
+        "Wire up save handler"
+      ],
+      "acceptance_criteria": [
+        "YAML editor accessible from dashboard view",
+        "Current dashboard YAML displayed and editable",
+        "Syntax highlighting and validation work",
+        "Grafana JSON can be pasted and converted to YAML",
+        "Changes save and update dashboard immediately",
+        "Diff view shows what will change"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views/DashboardDetail"
+      ],
+      "passes": false
+    },
+    {
+      "id": "DASHBOARDS-DRAG-DROP-001",
+      "name": "Drag-and-drop dashboards to folders",
+      "category": "Dashboard Management/UX",
+      "task_size": "medium",
+      "description": "Allow users to click and drag dashboards to move them between folders.",
+      "why_it_matters": "Drag-and-drop is intuitive for organizing dashboards, better than current edit modal flow.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Draggable dashboard cards in dashboard list",
+        "Drop zones for folders",
+        "Visual feedback during drag",
+        "API call to update dashboard folder assignment",
+        "Optimistic UI update with rollback on error",
+        "Respect permissions (editor/admin only)"
+      ],
+      "steps": [
+        "Add drag-and-drop library or native HTML5 drag API",
+        "Make dashboard cards draggable",
+        "Add drop zones to folder sections",
+        "Implement visual feedback (ghost image, drop targets)",
+        "Wire up folder assignment API call",
+        "Add permission checks"
+      ],
+      "acceptance_criteria": [
+        "Dashboards can be dragged from one folder to another",
+        "Visual feedback shows valid drop targets",
+        "Dashboard appears in new folder after drop",
+        "API call updates backend folder assignment",
+        "Viewers cannot drag dashboards",
+        "Errors show clear feedback and revert UI"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/components/DashboardList"
+      ],
+      "passes": false
+    },
+    {
+      "id": "DASHBOARDS-FILE-EXPLORER-001",
+      "name": "Redesign dashboards view as file explorer",
+      "category": "Dashboard Management/UX",
+      "task_size": "large",
+      "description": "Redesign dashboards view to look and behave like a file explorer with folders and files.",
+      "why_it_matters": "Current layout doesn't make sense. File explorer metaphor is familiar and intuitive for managing hierarchical content.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Tree/list view showing folders with expand/collapse",
+        "Dashboards shown as items under folders",
+        "Clear folder hierarchy visualization",
+        "Breadcrumbs for current location",
+        "Search and filter capabilities",
+        "Folder creation in-place",
+        "Dashboard preview on hover"
+      ],
+      "steps": [
+        "Design file explorer layout (VSCode/Finder style)",
+        "Implement tree view component for folders",
+        "Add expand/collapse functionality",
+        "Add breadcrumb navigation",
+        "Implement search across folders",
+        "Add inline folder creation",
+        "Preserve all existing functionality"
+      ],
+      "acceptance_criteria": [
+        "Layout resembles familiar file explorer",
+        "Folders can be expanded/collapsed",
+        "Dashboards clearly grouped under folders",
+        "Navigation makes sense and is intuitive",
+        "Search works across folders and dashboards",
+        "All existing functionality preserved"
       ],
       "test_commands": [
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/views src/components"
       ],
-      "passes": true
-    },
-    {
-      "id": "CAC-001",
-      "name": "Configuration as Code (CaC) for Dashboards",
-      "category": "Dashboard/GitOps",
-      "task_size": "large",
-      "description": "Allow dashboards to be defined and managed as code (YAML/JSON files) for version control and GitOps workflows.",
-      "why_it_matters": "Teams need to version control dashboards alongside application code and deploy them via CI/CD.",
-      "depends_on": [],
-      "unblocks": [],
-      "requirements": [
-        "Export dashboards to YAML/JSON files",
-        "Import dashboards from files (provisioning)",
-        "File-based dashboard sync (watch directory for changes)",
-        "Dashboard schema validation (JSON Schema)",
-        "CLI tool for dashboard management",
-        "Diff view for dashboard changes",
-        "Support both YAML and JSON formats"
-      ],
-      "steps": [
-        "Create dashboard schema validation (JSON Schema)",
-        "Add API endpoints: GET /api/dashboards/{id}/export, POST /api/dashboards/import",
-        "Build file watcher for provisioning directory",
-        "Implement conflict resolution (file vs database)",
-        "Create CLI tool for dashboard export/import",
-        "Add frontend conversion page with file upload and preview"
-      ],
-      "acceptance_criteria": [
-        "Dashboards can be exported to valid YAML/JSON",
-        "Dashboards can be imported from YAML/JSON files",
-        "File watcher detects changes and syncs dashboards",
-        "CLI tool can export and import dashboards",
-        "Conflicts are handled gracefully with user feedback",
-        "All panels, queries, datasources, and variables are preserved in export/import"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/converter/...",
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/views/DashboardExport"
-      ],
-      "passes": true
-    },
-    {
-      "id": "GRAFANA-CONVERTER-001",
-      "name": "Grafana Dashboard Converter",
-      "category": "Migration/Conversion",
-      "task_size": "large",
-      "description": "Convert Grafana dashboard JSON exports to Dash-compatible format for easy migration.",
-      "why_it_matters": "Users need a migration path from Grafana to Dash without manually recreating dashboards.",
-      "depends_on": [],
-      "unblocks": [],
-      "requirements": [
-        "Parse Grafana dashboard JSON format (v8-v11)",
-        "Map Grafana panel types to Dash panel types (graph → line, gauge → gauge, stat → stat, etc.)",
-        "Convert PromQL queries (maintain compatibility)",
-        "Map variables and templating",
-        "Convert time ranges and refresh intervals",
-        "Handle unsupported features gracefully (with warnings)",
-        "CLI tool: dash convert grafana.json --output dash.json",
-        "Web UI: Upload Grafana JSON, download Dash YAML/JSON"
-      ],
-      "steps": [
-        "Create backend/cmd/converter/main.go - CLI tool",
-        "Create backend/internal/converter/grafana.go - Parser and mapper",
-        "Add POST /api/convert/grafana - API endpoint (upload JSON, return Dash format)",
-        "Build frontend conversion page with file upload and preview",
-        "Add validation report showing what was converted and what was skipped",
-        "Support panel types: Graph, Gauge, Stat, Pie Chart, Logs"
-      ],
-      "acceptance_criteria": [
-        "Grafana v8-v11 dashboards can be converted successfully",
-        "All supported panel types are mapped correctly",
-        "PromQL queries are preserved",
-        "Variables and templating work in converted dashboards",
-        "Unsupported features generate clear warnings",
-        "CLI tool can convert dashboards from command line",
-        "Web UI allows upload, preview, and download of converted dashboards"
-      ],
-      "test_commands": [
-        "cd backend && go test ./internal/converter/...",
-        "cd frontend && npm run type-check",
-        "cd frontend && npm run test -- src/views/GrafanaConverter"
-      ],
-      "passes": true
+      "passes": false
     }
   ]
 }

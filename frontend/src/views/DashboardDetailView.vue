@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
-import { ArrowLeft, Plus, Trash2, LayoutGrid, AlertCircle, Shield } from 'lucide-vue-next'
+import { ArrowLeft, Plus, Trash2, LayoutGrid, AlertCircle, Shield, Settings } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import type { Panel as PanelType } from '../types/panel'
 import { getDashboard } from '../api/dashboards'
@@ -10,6 +10,7 @@ import { listPanels, deletePanel, updatePanel } from '../api/panels'
 import Panel from '../components/Panel.vue'
 import PanelEditModal from '../components/PanelEditModal.vue'
 import DashboardPermissionsModal from '../components/DashboardPermissionsModal.vue'
+import DashboardSettingsModal from '../components/DashboardSettingsModal.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useOrganization } from '../composables/useOrganization'
@@ -28,11 +29,28 @@ const editingPanel = ref<PanelType | null>(null)
 const showDeleteConfirm = ref(false)
 const deletingPanel = ref<PanelType | null>(null)
 const showDashboardPermissionsModal = ref(false)
+const showDashboardSettingsModal = ref(false)
 const dashboardPermissionsMessage = ref<string | null>(null)
+const dashboardSettingsMessage = ref<string | null>(null)
 
 const dashboardId = route.params.id as string
-const canManageDashboardPermissions = computed(() => currentOrg.value?.role !== 'viewer')
+const canManageDashboardPermissions = computed(() => Boolean(currentOrg.value && currentOrg.value.role !== 'viewer'))
+const canEditDashboardSettings = computed(() => Boolean(currentOrg.value && (currentOrg.value.role === 'admin' || currentOrg.value.role === 'editor')))
 const permissionsOrgId = computed(() => currentOrgId.value || dashboard.value?.organization_id || null)
+
+interface DashboardViewSettings {
+  timeRangePreset: string
+  refreshInterval: string
+  variables: string[]
+}
+
+const DASHBOARD_VIEW_SETTINGS_KEY = 'dashboard_view_settings'
+
+const dashboardSettings = ref<DashboardViewSettings>({
+  timeRangePreset: '1h',
+  refreshInterval: 'off',
+  variables: [],
+})
 
 function dashboardLoadErrorMessage(cause: unknown): string {
   if (cause instanceof Error && cause.message === 'Not a member of this organization') {
@@ -47,7 +65,17 @@ const colNum = 12
 const rowHeight = 100
 
 // Time range composable for panel data refresh
-const { timeRange, onRefresh, cleanup: cleanupTimeRange, pauseAutoRefresh, resumeAutoRefresh } = useTimeRange()
+const {
+  timeRange,
+  selectedPreset,
+  refreshIntervalValue,
+  setPreset,
+  setRefreshInterval,
+  onRefresh,
+  cleanup: cleanupTimeRange,
+  pauseAutoRefresh,
+  resumeAutoRefresh,
+} = useTimeRange()
 
 // Register refresh callback to refetch panel data when time range changes or auto-refresh triggers
 let unsubscribeRefresh: (() => void) | null = null
@@ -85,6 +113,48 @@ async function fetchDashboard() {
   }
 }
 
+function readStoredDashboardSettings(): Record<string, DashboardViewSettings> {
+  const rawSettings = localStorage.getItem(DASHBOARD_VIEW_SETTINGS_KEY)
+  if (!rawSettings) {
+    return {}
+  }
+
+  try {
+    const parsed = JSON.parse(rawSettings) as Record<string, DashboardViewSettings>
+    return parsed
+  } catch {
+    return {}
+  }
+}
+
+function loadDashboardViewSettings() {
+  const allSettings = readStoredDashboardSettings()
+  const storedSettings = allSettings[dashboardId]
+
+  if (storedSettings) {
+    dashboardSettings.value = {
+      timeRangePreset: storedSettings.timeRangePreset,
+      refreshInterval: storedSettings.refreshInterval,
+      variables: storedSettings.variables || [],
+    }
+  } else {
+    dashboardSettings.value = {
+      timeRangePreset: selectedPreset.value,
+      refreshInterval: refreshIntervalValue.value,
+      variables: [],
+    }
+  }
+
+  setPreset(dashboardSettings.value.timeRangePreset)
+  setRefreshInterval(dashboardSettings.value.refreshInterval)
+}
+
+function persistDashboardViewSettings(settings: DashboardViewSettings) {
+  const allSettings = readStoredDashboardSettings()
+  allSettings[dashboardId] = settings
+  localStorage.setItem(DASHBOARD_VIEW_SETTINGS_KEY, JSON.stringify(allSettings))
+}
+
 async function fetchPanels() {
   try {
     panels.value = await listPanels(dashboardId)
@@ -98,6 +168,7 @@ async function loadData() {
   error.value = null
   await fetchDashboard()
   if (!error.value) {
+    loadDashboardViewSettings()
     await fetchPanels()
   }
   loading.value = false
@@ -159,6 +230,37 @@ function openDashboardPermissions() {
 
 function closeDashboardPermissionsModal() {
   showDashboardPermissionsModal.value = false
+}
+
+function openDashboardSettings() {
+  dashboardSettingsMessage.value = null
+  showDashboardSettingsModal.value = true
+}
+
+function closeDashboardSettingsModal() {
+  showDashboardSettingsModal.value = false
+}
+
+function onDashboardSettingsSaved(payload: {
+  title: string
+  description: string
+  settings: DashboardViewSettings
+}) {
+  if (dashboard.value) {
+    dashboard.value = {
+      ...dashboard.value,
+      title: payload.title,
+      description: payload.description || undefined,
+    }
+  }
+
+  dashboardSettings.value = payload.settings
+  persistDashboardViewSettings(payload.settings)
+  setPreset(payload.settings.timeRangePreset)
+  setRefreshInterval(payload.settings.refreshInterval)
+
+  dashboardSettingsMessage.value = `Saved settings for "${payload.title}"`
+  closeDashboardSettingsModal()
 }
 
 async function onDashboardPermissionsSaved() {
@@ -268,6 +370,15 @@ onUnmounted(() => {
       <div class="header-right">
         <TimeRangePicker />
         <button
+          v-if="dashboard"
+          class="btn btn-secondary"
+          data-testid="dashboard-settings-button"
+          @click="openDashboardSettings"
+        >
+          <Settings :size="16" />
+          <span>Settings</span>
+        </button>
+        <button
           v-if="canManageDashboardPermissions && dashboard && permissionsOrgId"
           class="btn btn-secondary"
           data-testid="dashboard-permissions-button"
@@ -284,6 +395,7 @@ onUnmounted(() => {
     </header>
 
     <p v-if="dashboardPermissionsMessage" class="success-message">{{ dashboardPermissionsMessage }}</p>
+    <p v-if="dashboardSettingsMessage" class="success-message">{{ dashboardSettingsMessage }}</p>
 
     <div v-if="loading" class="state-container">
       <div class="loading-spinner"></div>
@@ -361,6 +473,15 @@ onUnmounted(() => {
       :org-id="permissionsOrgId"
       @close="closeDashboardPermissionsModal"
       @saved="onDashboardPermissionsSaved"
+    />
+
+    <DashboardSettingsModal
+      v-if="showDashboardSettingsModal && dashboard"
+      :dashboard="dashboard"
+      :can-edit="canEditDashboardSettings"
+      :default-settings="dashboardSettings"
+      @close="closeDashboardSettingsModal"
+      @saved="onDashboardSettingsSaved"
     />
 
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">

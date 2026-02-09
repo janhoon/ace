@@ -66,6 +66,14 @@ vi.mock('../components/DashboardPermissionsModal.vue', () => ({
   },
 }))
 
+vi.mock('../components/DashboardSettingsModal.vue', () => ({
+  default: {
+    name: 'DashboardSettingsModal',
+    template: '<div data-testid="dashboard-settings-modal"></div>',
+    props: ['dashboard', 'canEdit', 'defaultSettings'],
+  },
+}))
+
 const mockCurrentOrg = {
   value: {
     id: 'org-1',
@@ -232,6 +240,30 @@ describe('DashboardDetailView', () => {
     await wrapper.get('[data-testid="dashboard-permissions-button"]').trigger('click')
 
     expect(wrapper.find('[data-testid="dashboard-permissions-modal"]').exists()).toBe(true)
+  })
+
+  it('shows dashboard settings button for viewers and admins', async () => {
+    mockCurrentOrg.value.role = 'admin'
+    const adminWrapper = mount(DashboardDetailView)
+    await flushPromises()
+    expect(adminWrapper.find('[data-testid="dashboard-settings-button"]').exists()).toBe(true)
+
+    mockCurrentOrg.value.role = 'viewer'
+    const viewerWrapper = mount(DashboardDetailView)
+    await flushPromises()
+    expect(viewerWrapper.find('[data-testid="dashboard-settings-button"]').exists()).toBe(true)
+  })
+
+  it('opens settings modal and passes read-only mode for viewers', async () => {
+    mockCurrentOrg.value.role = 'viewer'
+    const wrapper = mount(DashboardDetailView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="dashboard-settings-button"]').trigger('click')
+
+    const settingsModal = wrapper.getComponent({ name: 'DashboardSettingsModal' })
+    expect(wrapper.find('[data-testid="dashboard-settings-modal"]').exists()).toBe(true)
+    expect(settingsModal.props('canEdit')).toBe(false)
   })
 
   it('shows forbidden state for denied dashboard deep link', async () => {
