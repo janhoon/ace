@@ -1,3 +1,13 @@
+## Task DASHBOARD-UI-TIMERANGE-001: Fix dashboard time range dropdown layering - 2026-02-09T13:17:57Z
+- What was done:
+  - Fixed dashboard header layering so the time range dropdown renders above panel content instead of behind it
+  - Added an explicit stacking order on the dashboard header and grid container to avoid backdrop-filter stacking-context overlap
+- Files changed:
+  - frontend/src/views/DashboardDetailView.vue
+  - progress.txt
+- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/views/DashboardDetailView.spec.ts`)
+- Browser validation: n/a (not run in this environment)
+
 ## Task UX-EXPLORER-004: Restore drag-and-drop moves in Finder tree - 2026-02-09T09:55:10Z
 - What was done:
   - Re-enabled dashboard drag sources directly in the unified tree list rows

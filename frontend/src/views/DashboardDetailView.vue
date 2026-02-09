@@ -512,6 +512,8 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 20;
   margin-bottom: 1.15rem;
   padding: 1rem 1.2rem;
   border: 1px solid var(--border-primary);
@@ -682,6 +684,8 @@ onUnmounted(() => {
 
 /* Grid Layout */
 .grid-layout {
+  position: relative;
+  z-index: 1;
   min-height: 400px;
   padding-bottom: 0.7rem;
 }
