@@ -1,6 +1,6 @@
 {
   "project": "dash",
-  "version": 7,
+  "version": 8,
   "feature_selection": {
     "mode": "auto",
     "rules_in_order": [
@@ -455,6 +455,106 @@
         "cd frontend && npm run test -- src/views src/components"
       ],
       "passes": true
+    },
+    {
+      "id": "UNFILED-DASHBOARDS-ROOT-001",
+      "name": "Move unfiled dashboards to root level in explorer",
+      "category": "Dashboard Explorer/UX",
+      "task_size": "small",
+      "fizzy_ticket": 168,
+      "description": "Instead of having a separate 'Unfiled Dashboards' section, show unfiled dashboards at the root level of the explorer alongside first-level folders.",
+      "why_it_matters": "Unfiled dashboards in their own section creates unnecessary separation. Root-level placement is more intuitive.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Unfiled dashboards appear at root level",
+        "Shown alongside folders (not in separate section)",
+        "Same visual treatment as items in folders",
+        "No special 'Unfiled' heading or section"
+      ],
+      "steps": [
+        "Update dashboard explorer component to show unfiled dashboards at root",
+        "Remove 'Unfiled Dashboards' section/heading",
+        "Ensure unfiled dashboards intermix naturally with folders",
+        "Test sorting and ordering behavior"
+      ],
+      "acceptance_criteria": [
+        "Unfiled dashboards visible at root level",
+        "Intermixed with folders in natural order",
+        "No separate 'Unfiled Dashboards' section",
+        "Clean, unified explorer view"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views/Dashboards"
+      ],
+      "passes": true
+    },
+    {
+      "id": "BREADCRUMBS-CLEANUP-001",
+      "name": "Remove dashboard count subtext from breadcrumbs",
+      "category": "Dashboard Explorer/UI Cleanup",
+      "task_size": "small",
+      "fizzy_ticket": 169,
+      "description": "Remove the subtext showing dashboard count from breadcrumbs for a cleaner, more minimal UI.",
+      "why_it_matters": "Breadcrumbs showing 'X dashboards in this folder' adds unnecessary clutter.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Breadcrumbs show only folder/path names",
+        "No dashboard count subtext",
+        "Clean, minimal breadcrumb trail"
+      ],
+      "steps": [
+        "Update breadcrumb component to remove count subtext",
+        "Ensure only folder names/path shown",
+        "Test with various folder depths",
+        "Verify styling remains clean"
+      ],
+      "acceptance_criteria": [
+        "Dashboard count removed from breadcrumbs",
+        "Only folder names/path shown",
+        "Breadcrumb styling remains clean"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/components/Breadcrumbs"
+      ],
+      "passes": false
+    },
+    {
+      "id": "SINGLE-CLICK-001",
+      "name": "Change from double-click to single-click for folders and dashboards",
+      "category": "Dashboard Explorer/UX",
+      "task_size": "small",
+      "fizzy_ticket": 170,
+      "description": "Change interaction from double-click to single-click for expanding folders and opening dashboards.",
+      "why_it_matters": "Double-click is slower and less intuitive than single-click. Single-click matches standard file explorer behavior.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Single-click on folder expands/collapses it",
+        "Single-click on dashboard opens it",
+        "No need for double-click",
+        "Matches standard file explorer behavior"
+      ],
+      "steps": [
+        "Update folder click handler from dblclick to click",
+        "Update dashboard click handler from dblclick to click",
+        "Remove double-click event listeners",
+        "Test interaction feels natural and responsive"
+      ],
+      "acceptance_criteria": [
+        "Single-click expands/collapses folders",
+        "Single-click opens dashboards",
+        "Double-click no longer required",
+        "Behavior feels responsive and natural"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views/Dashboards"
+      ],
+      "passes": false
     }
   ]
 }

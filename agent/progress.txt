@@ -1,90 +1,31 @@
-# Progress Log - Dash Project
+=== Dash Project - Sprint Progress ===
+Started: 2026-02-09
 
-## Previous Sprint Complete (2026-02-09)
+Previous Sprint (Completed 2026-02-09):
+- ✅ ORG-FE-UI-002: Organization settings UX polish
+- ✅ SSO-FE-UI-002: SSO settings display polish  
+- ✅ SSO-FE-UI-003: SSO error handling improvements
+- ✅ FOLDER-FE-UI-004: Folder navigation and breadcrumb fixes
+- ✅ CAC-001: Configuration as Code (YAML export/import)
+- ✅ GRAFANA-CONVERTER-001: Grafana dashboard converter
 
-All tasks from previous PRD completed successfully:
-- ✅ Organization creation modal centered
-- ✅ SSO settings restructured
-- ✅ SSO provider picker implemented
-- ✅ Folder creation entry points added
-- ✅ Configuration as Code (CaC) for dashboards
-- ✅ Grafana dashboard converter
+All 6 tasks completed and pushed to master.
 
-See progress.txt.backup for detailed history.
+Current Sprint (Starting 2026-02-09):
+New UX improvements and cleanup tasks added to Fizzy board.
+
+Queued Tasks (3 small):
+1. UNFILED-DASHBOARDS-ROOT-001 (#168) - Move unfiled dashboards to root level
+2. BREADCRUMBS-CLEANUP-001 (#169) - Remove dashboard count from breadcrumbs
+3. SINGLE-CLICK-001 (#170) - Change to single-click for folders/dashboards
+
+Next: Start with UNFILED-DASHBOARDS-ROOT-001 (first queued task)
 
 ---
+Last updated: 2026-02-09 10:06 UTC
 
-## Current Sprint Started: 2026-02-09
-
-Working on UX improvements and bug fixes.
-
-## Task DASHBOARD-SETTINGS-001: Add dashboard settings page accessible while viewing dashboard - 2026-02-09T01:06:52Z
-- What was done: Added an in-view Dashboard Settings modal from the dashboard toolbar, with editable name/description/default time range/refresh interval/variables for editors and read-only visibility for viewers; persisted view settings per dashboard in localStorage and applied time-range/refresh defaults immediately on save.
-- Files changed: `frontend/src/components/DashboardSettingsModal.vue`, `frontend/src/views/DashboardDetailView.vue`, `frontend/src/views/DashboardDetailView.spec.ts`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/views/DashboardDetailView.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (required `dev-browser` skill unavailable in this environment; could not run real-browser flow validation)
-
-## Task PERMISSIONS-FIX-001: Fix default dashboard permissions (401 error on new dashboards) - 2026-02-09T01:08:59Z
-- What was done: Updated dashboard creation to run in a transaction and seed default dashboard ACL entries for all org members (view) with creator elevated to admin; added coverage verifying creator gets admin, org members get view, and default ACL entries are persisted.
-- Files changed: `backend/internal/handlers/dashboards.go`, `backend/internal/handlers/permissions_test.go`, `agent/prd.json`, `agent/progress.txt`
-- Tests: passing (`cd backend && go test ./...`)
-
-## Task SIDEBAR-OVERFLOW-001: Fix sidebar expand button overflow when collapsed - 2026-02-09T01:10:39Z
-- What was done: Updated collapsed sidebar header layout to stack logo and toggle button vertically so the expand control stays contained within the 64px collapsed rail; added a Sidebar component test that verifies collapsed header state and expand toggle behavior.
-- Files changed: `frontend/src/components/Sidebar.vue`, `frontend/src/components/Sidebar.spec.ts`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/Sidebar.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)
-
-## Task SSO-CONFIGURED-ONLY-001: Show only configured authentication methods on SSO settings - 2026-02-09T01:12:40Z
-- What was done: Updated the SSO section to always show Email/Password as a built-in method, list only configured external providers in the main view, switch admin entry point to an Add Authentication action with provider picker for unconfigured providers, and keep provider-specific settings/edit flows available per configured provider.
-- Files changed: `frontend/src/views/OrganizationSettings.vue`, `frontend/src/views/OrganizationSettings.spec.ts`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/views/OrganizationSettings.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)
-
-## Task DASHBOARD-EXPORT-001: Export dashboard as YAML from dashboard settings - 2026-02-09T01:15:33Z
-- What was done: Added YAML export capability in dashboard settings with an Export YAML action that calls the dashboard export API, downloads a `.yaml` file named from the dashboard title, and shows success/error feedback for both happy-path and permission/failure responses.
-- Files changed: `frontend/src/api/dashboards.ts`, `frontend/src/components/DashboardSettingsModal.vue`, `frontend/src/api/dashboards.export.spec.ts`, `frontend/src/components/DashboardSettingsModal.spec.ts`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/api/dashboards.export.spec.ts src/components/DashboardSettingsModal.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)
-
-## Task DASHBOARD-IMPORT-YAML-001: Import dashboard YAML when creating new dashboard - 2026-02-09T01:18:46Z
-- What was done: Added an Import YAML mode to the create dashboard modal with `.yaml/.yml` file selection, client-side document validation/preview (title, description, panel count), and submit wiring to the backend dashboard import endpoint while preserving the existing manual create flow.
-- Files changed: `frontend/src/components/CreateDashboardModal.vue`, `frontend/src/components/CreateDashboardModal.spec.ts`, `frontend/src/api/dashboards.ts`, `frontend/src/api/dashboards.import.spec.ts`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/CreateDashboardModal.spec.ts src/api/dashboards.import.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)
-
-## Task ORG-SETTINGS-SIDEBAR-001: Add secondary sidebar to organization settings - 2026-02-09T01:21:51Z
-- What was done: Added section-based organization settings navigation with a secondary sidebar for General/Members/Groups, URL-driven section routing (`/settings/org/:id/:section`) with invalid-section redirect to `general`, and responsive mobile sidebar behavior that collapses into a horizontal section rail.
-- Files changed: `frontend/src/views/OrganizationSettings.vue`, `frontend/src/views/OrganizationSettings.spec.ts`, `frontend/src/router/index.ts`, `frontend/src/components/Sidebar.vue`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/views/OrganizationSettings.spec.ts src/components/Sidebar.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation for section switching and role-gated settings views)
-
-## Task DASHBOARD-IMPORT-YAML-001: Import dashboard YAML when creating new dashboard - 2026-02-09T01:23:37Z
-- What was done: Tightened client-side YAML validation in the create dashboard import flow by requiring `schema_version` and `dashboard` sections, improved panel counting in preview, and added coverage for invalid dashboard-shape files while keeping import/create modes intact.
-- Files changed: `frontend/src/components/CreateDashboardModal.vue`, `frontend/src/components/CreateDashboardModal.spec.ts`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/CreateDashboardModal.spec.ts src/api/dashboards.import.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation for YAML import happy path and invalid-file state)
-
-## Task GRAFANA-IMPORT-INTEGRATION-001: Integrate Grafana converter into new dashboard flow - 2026-02-09T01:27:11Z
-- What was done: Added an Import Grafana mode to the new dashboard modal with JSON upload/paste, converter API integration, warnings display, preview before import, and import submit wiring; removed standalone Grafana Converter navigation/page and redirected legacy `/convert/grafana` routes into the dashboard creation flow.
-- Files changed: `frontend/src/components/CreateDashboardModal.vue`, `frontend/src/components/CreateDashboardModal.spec.ts`, `frontend/src/components/DashboardList.vue`, `frontend/src/components/DashboardList.spec.ts`, `frontend/src/components/Sidebar.vue`, `frontend/src/router/index.ts`, `frontend/src/views/GrafanaConverter.vue`, `frontend/src/views/GrafanaConverter.spec.ts`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/CreateDashboardModal.spec.ts src/components/DashboardList.spec.ts src/components/Sidebar.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; could not run required real-browser validation for Grafana import happy path and conversion error state)
-
-## Task DASHBOARD-YAML-EDITOR-001: Dashboard YAML editor with Grafana conversion - 2026-02-09T09:16:13Z
-- What was done: Added a YAML Editor tab in dashboard settings with live schema validation, inline diff preview, Grafana JSON replace-and-convert workflow, and YAML save handling that updates dashboard metadata/default settings while keeping existing settings/export behavior.
-- Files changed: `frontend/src/components/DashboardSettingsModal.vue`, `frontend/src/components/DashboardSettingsModal.spec.ts`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/DashboardSettingsModal.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; could not run required real-browser YAML editor and Grafana conversion flow checks)
-
-## Task DASHBOARDS-DRAG-DROP-001: Drag-and-drop dashboards to folders - 2026-02-09T09:18:41Z
-- What was done: Added native drag-and-drop folder reassignment in the dashboards list for admin/editor roles with drop-zone visual feedback, optimistic in-memory card moves, backend folder update calls, and automatic rollback plus inline error feedback when the move request fails.
+## Task UNFILED-DASHBOARDS-ROOT-001: Move unfiled dashboards to root level in explorer - 2026-02-09 10:12 UTC
+- What was done: Removed the dedicated "Unfiled" tree node/section and rendered unfiled dashboards directly at root level in the explorer/main view alongside folders, while preserving drag/drop to root and existing dashboard interactions.
 - Files changed: `frontend/src/components/DashboardList.vue`, `frontend/src/components/DashboardList.spec.ts`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/DashboardList.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; could not run required real-browser validation for drag/drop happy path and permission-restricted viewer behavior)
-
-## Task DASHBOARDS-FILE-EXPLORER-001: Redesign dashboards view as file explorer - 2026-02-09T09:26:49Z
-- What was done: Reworked dashboards into a file-explorer layout with a searchable/collapsible folder tree, breadcrumb navigation, scope-aware section filtering (all/unfiled/folder subtree), inline folder creation in the explorer pane, and hover preview details for dashboard cards while preserving drag/drop, edit/delete, and folder permissions flows.
-- Files changed: `frontend/src/components/DashboardList.vue`, `agent/prd.json`, `agent/progress.txt`
-- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/DashboardList.spec.ts`, plus `npm run type-check`)
-- Browser validation: failing (`dev-browser` skill unavailable in this environment; skill load returned "not found", so required real-browser happy-path and failure-state validation could not be executed)
+- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`), passing (targeted touched-area test `src/components/DashboardList.spec.ts`)
+- Browser validation: failing (required `dev-browser` skill is unavailable in this environment; skill lookup returned "not found")

@@ -118,14 +118,15 @@ describe('DashboardList', () => {
 
     expect(wrapper.text()).toContain('Operations')
     expect(wrapper.text()).toContain('Product')
-    expect(wrapper.text()).toContain('Unfiled Dashboards')
+    expect(wrapper.text()).not.toContain('Unfiled Dashboards')
 
     const operationsSection = wrapper.find('[data-testid="folder-section-folder-a"]')
     expect(operationsSection.text()).toContain('Test Dashboard')
 
-    const unfiledSection = wrapper.find('[data-testid="folder-section-unfiled"]')
-    expect(unfiledSection.text()).toContain('Another Dashboard')
-    expect(unfiledSection.text()).toContain('Needs Reassignment')
+    const rootSection = wrapper.find('[data-testid="folder-section-root"]')
+    expect(rootSection.text()).toContain('Another Dashboard')
+    expect(rootSection.text()).toContain('Needs Reassignment')
+    expect(wrapper.find('[data-testid="tree-node-unfiled"]').exists()).toBe(false)
   })
 
   it('displays empty state when no dashboards and no folders', async () => {

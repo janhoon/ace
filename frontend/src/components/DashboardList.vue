@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   AlertCircle,
   Folder as FolderIcon,
-  Inbox,
   Shield,
   ChevronRight,
   ChevronDown,
@@ -50,19 +49,17 @@ const dropTargetSectionId = ref<string | null>(null)
 const movingDashboardId = ref<string | null>(null)
 const searchQuery = ref('')
 const expandedFolderIds = ref<string[]>([])
-const selectedExplorerNode = ref<'all' | 'unfiled' | `folder:${string}`>('all')
+const selectedExplorerNode = ref<'all' | `folder:${string}`>('all')
 const selectedTreeDashboardId = ref<string | null>(null)
 const hoveredDashboardId = ref<string | null>(null)
 const showInlineFolderForm = ref(false)
 const inlineFolderParentId = ref<string | null>(null)
-const unfiledExpanded = ref(true)
 
 interface DashboardSection {
-  id: string | null
+  id: string
   name: string
   dashboards: Dashboard[]
-  isUnfiled: boolean
-  folder: Folder | null
+  folder: Folder
 }
 
 interface FolderTreeRow {
@@ -76,7 +73,7 @@ interface FolderTreeRow {
 interface Breadcrumb {
   id: string
   label: string
-  type: 'all' | 'unfiled' | 'folder'
+  type: 'all' | 'folder'
 }
 
 const isOrgAdmin = computed(() => currentOrg.value?.role === 'admin')
@@ -182,36 +179,19 @@ const unfiledDashboards = computed(() => {
 })
 
 const groupedDashboardSections = computed<DashboardSection[]>(() => {
-  const folderSections = folders.value
+  return folders.value
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((folder) => ({
       id: folder.id,
       name: folder.name,
       dashboards: dashboards.value.filter((dashboard) => dashboard.folder_id === folder.id),
-      isUnfiled: false,
       folder,
     }))
-
-  return [
-    ...folderSections,
-    {
-      id: null,
-      name: 'Unfiled Dashboards',
-      dashboards: unfiledDashboards.value,
-      isUnfiled: true,
-      folder: null,
-    },
-  ]
 })
 
 const isCompletelyEmpty = computed(() => dashboards.value.length === 0 && folders.value.length === 0)
 const hasNoFolders = computed(() => folders.value.length === 0)
-
-const unfiledDashboardCount = computed(() => {
-  const section = groupedDashboardSections.value.find((item) => item.isUnfiled)
-  return section?.dashboards.length ?? 0
-})
 
 const sectionScopeFolderIds = computed(() => {
   if (!selectedFolderId.value) {
@@ -283,7 +263,13 @@ const unfiledTreeDashboards = computed(() =>
     .sort((a, b) => a.title.localeCompare(b.title)),
 )
 
-const isUnfiledExpanded = computed(() => hasSearchQuery.value || unfiledExpanded.value)
+const rootDashboardsForMain = computed(() => {
+  if (selectedExplorerNode.value !== 'all') {
+    return []
+  }
+
+  return unfiledTreeDashboards.value
+})
 
 const explorerTreeRows = computed<FolderTreeRow[]>(() => {
   const expanded = new Set(expandedFolderIds.value)
@@ -325,15 +311,6 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
     type: 'all',
   }]
 
-  if (selectedExplorerNode.value === 'unfiled') {
-    items.push({
-      id: 'unfiled',
-      label: 'Unfiled',
-      type: 'unfiled',
-    })
-    return items
-  }
-
   if (!selectedFolderId.value || !selectedFolder.value) {
     return items
   }
@@ -360,9 +337,6 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
 })
 
 const activeExplorerTitle = computed(() => {
-  if (selectedExplorerNode.value === 'unfiled') {
-    return 'Unfiled Dashboards'
-  }
   if (selectedFolder.value) {
     return selectedFolder.value.name
   }
@@ -370,9 +344,6 @@ const activeExplorerTitle = computed(() => {
 })
 
 const activeExplorerSubtitle = computed(() => {
-  if (selectedExplorerNode.value === 'unfiled') {
-    return 'Dashboards without a folder assignment'
-  }
   if (selectedFolder.value) {
     const directDashboardCount = dashboardsByFolder.value.get(selectedFolder.value.id)?.length ?? 0
     const childFolderCount = folderChildrenMap.value.get(selectedFolder.value.id)?.length ?? 0
@@ -387,14 +358,6 @@ const filteredSections = computed<DashboardSection[]>(() => {
   function sectionInScope(section: DashboardSection): boolean {
     if (selectedExplorerNode.value === 'all') {
       return true
-    }
-
-    if (selectedExplorerNode.value === 'unfiled') {
-      return section.isUnfiled
-    }
-
-    if (section.isUnfiled || !section.id) {
-      return false
     }
 
     return sectionScopeFolderIds.value.has(section.id)
@@ -593,7 +556,7 @@ function openDashboard(dashboard: Dashboard) {
 }
 
 function normalizeSectionId(sectionId: string | null): string {
-  return sectionId ?? 'unfiled'
+  return sectionId ?? 'root'
 }
 
 function onDashboardDragStart(dashboard: Dashboard) {
@@ -750,12 +713,6 @@ function selectExplorerAll() {
   selectedExplorerNode.value = 'all'
 }
 
-function selectExplorerUnfiled() {
-  selectedTreeDashboardId.value = null
-  hoveredDashboardId.value = null
-  selectedExplorerNode.value = 'unfiled'
-}
-
 function selectExplorerDashboard(dashboard: Dashboard) {
   selectedTreeDashboardId.value = dashboard.id
   hoveredDashboardId.value = dashboard.id
@@ -763,13 +720,11 @@ function selectExplorerDashboard(dashboard: Dashboard) {
 
 function expandAllFolders() {
   expandedFolderIds.value = folders.value.map((folder) => folder.id)
-  unfiledExpanded.value = true
 }
 
 function collapseTree() {
   if (!selectedFolder.value) {
     expandedFolderIds.value = []
-    unfiledExpanded.value = false
     return
   }
 
@@ -781,17 +736,11 @@ function collapseTree() {
   }
 
   expandedFolderIds.value = Array.from(expanded)
-  unfiledExpanded.value = false
 }
 
 function onBreadcrumbSelect(item: Breadcrumb) {
   if (item.type === 'all') {
     selectExplorerAll()
-    return
-  }
-
-  if (item.type === 'unfiled') {
-    selectExplorerUnfiled()
     return
   }
 
@@ -909,16 +858,27 @@ onMounted(() => {
         </div>
 
         <nav class="tree-nav" aria-label="Folder tree">
-          <button
-            class="tree-item tree-item-root"
-            :class="{ 'tree-item-active': selectedExplorerNode === 'all' }"
-            data-testid="tree-node-all"
-            @click="selectExplorerAll"
-          >
-            <LayoutDashboard :size="15" />
-            <span>All Dashboards</span>
-            <span class="tree-count">{{ dashboards.length }}</span>
-          </button>
+          <div class="tree-node-wrapper" :style="{ '--depth': '0' }">
+            <div
+              class="tree-item-row"
+              :class="{ 'tree-item-row-drop-active': dropTargetSectionId === normalizeSectionId(null) }"
+              data-testid="tree-row-root"
+              @dragover.prevent="onSectionDragOver(null)"
+              @drop.prevent="onSectionDrop(null)"
+            >
+              <span class="tree-toggle-placeholder"></span>
+              <button
+                class="tree-item tree-item-root"
+                :class="{ 'tree-item-active': selectedExplorerNode === 'all' }"
+                data-testid="tree-node-all"
+                @click="selectExplorerAll"
+              >
+                <LayoutDashboard :size="15" />
+                <span>All Dashboards</span>
+                <span class="tree-count">{{ dashboards.length }}</span>
+              </button>
+            </div>
+          </div>
 
           <div v-for="row in explorerTreeRows" :key="row.folder.id" class="tree-node-wrapper" :style="{ '--depth': `${row.depth}` }">
             <div
@@ -983,64 +943,32 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="tree-node-wrapper" :style="{ '--depth': '0' }">
+          <div
+            v-for="dashboard in unfiledTreeDashboards"
+            :key="dashboard.id"
+            class="tree-node-wrapper"
+            :style="{ '--depth': '0' }"
+          >
             <div
-              class="tree-item-row tree-item-row-unfiled"
-              :class="{ 'tree-item-row-drop-active': dropTargetSectionId === normalizeSectionId(null) }"
-              @dragover.prevent="onSectionDragOver(null)"
-              @drop.prevent="onSectionDrop(null)"
+              class="tree-item-row tree-item-row-dashboard"
+              :data-testid="`tree-dashboard-row-${dashboard.id}`"
+              @mouseenter="showDashboardPreview(dashboard.id)"
+              @mouseleave="clearDashboardPreview(dashboard.id)"
             >
+              <span class="tree-toggle-placeholder"></span>
               <button
-                v-if="unfiledTreeDashboards.length > 0"
-                class="tree-toggle"
-                data-testid="folder-toggle-unfiled"
-                @click.stop="unfiledExpanded = !unfiledExpanded"
+                class="tree-item tree-file-item"
+                :class="{ 'tree-item-active': selectedTreeDashboardId === dashboard.id }"
+                :data-testid="`tree-dashboard-${dashboard.id}`"
+                :draggable="canManageDashboards"
+                @dragstart="onDashboardDragStart(dashboard)"
+                @dragend="onDashboardDragEnd"
+                @click="selectExplorerDashboard(dashboard)"
+                @dblclick="openDashboard(dashboard)"
               >
-                <ChevronDown v-if="isUnfiledExpanded" :size="14" />
-                <ChevronRight v-else :size="14" />
+                <FileText :size="13" />
+                <span>{{ dashboard.title }}</span>
               </button>
-              <span v-else class="tree-toggle-placeholder"></span>
-
-              <button
-                class="tree-item tree-item-unfiled"
-                :class="{ 'tree-item-active': selectedExplorerNode === 'unfiled' }"
-                data-testid="tree-node-unfiled"
-                @click="selectExplorerUnfiled"
-              >
-                <Inbox :size="15" />
-                <span>Unfiled</span>
-                <span class="tree-count">{{ unfiledDashboardCount }}</span>
-              </button>
-            </div>
-
-            <div
-              v-for="dashboard in unfiledTreeDashboards"
-              v-show="isUnfiledExpanded"
-              :key="dashboard.id"
-              class="tree-node-wrapper"
-              :style="{ '--depth': '1' }"
-            >
-              <div
-                class="tree-item-row tree-item-row-dashboard"
-                :data-testid="`tree-dashboard-row-${dashboard.id}`"
-                @mouseenter="showDashboardPreview(dashboard.id)"
-                @mouseleave="clearDashboardPreview(dashboard.id)"
-              >
-                <span class="tree-toggle-placeholder"></span>
-                <button
-                  class="tree-item tree-file-item"
-                  :class="{ 'tree-item-active': selectedTreeDashboardId === dashboard.id }"
-                  :data-testid="`tree-dashboard-${dashboard.id}`"
-                  :draggable="canManageDashboards"
-                  @dragstart="onDashboardDragStart(dashboard)"
-                  @dragend="onDashboardDragEnd"
-                  @click="selectExplorerDashboard(dashboard)"
-                  @dblclick="openDashboard(dashboard)"
-                >
-                  <FileText :size="13" />
-                  <span>{{ dashboard.title }}</span>
-                </button>
-              </div>
             </div>
           </div>
         </nav>
@@ -1124,25 +1052,75 @@ onMounted(() => {
 
         <div class="folder-sections">
           <section
+            v-if="rootDashboardsForMain.length > 0"
+            class="folder-section"
+            :class="{
+              'folder-section-drop-active': dropTargetSectionId === normalizeSectionId(null),
+            }"
+            data-testid="folder-section-root"
+            @dragover.prevent="onSectionDragOver(null)"
+            @drop.prevent="onSectionDrop(null)"
+          >
+            <div class="dashboard-grid">
+              <div
+                v-for="dashboard in rootDashboardsForMain"
+                :key="dashboard.id"
+                class="dashboard-card"
+                :class="{
+                  'dashboard-card-dragging': draggingDashboardId === dashboard.id,
+                  'dashboard-card-draggable': canManageDashboards,
+                }"
+                :data-testid="`dashboard-card-${dashboard.id}`"
+                :draggable="canManageDashboards"
+                @dragstart="onDashboardDragStart(dashboard)"
+                @dragend="onDashboardDragEnd"
+                @mouseenter="showDashboardPreview(dashboard.id)"
+                @mouseleave="clearDashboardPreview(dashboard.id)"
+                @focusin="showDashboardPreview(dashboard.id)"
+                @focusout="clearDashboardPreview(dashboard.id)"
+                @click="openDashboard(dashboard)"
+              >
+                <div class="card-header">
+                  <h3>{{ dashboard.title }}</h3>
+                  <div class="card-actions" @click.stop>
+                    <button class="btn-icon" @click="openEditModal(dashboard)" title="Edit">
+                      <Pencil :size="16" />
+                    </button>
+                    <button class="btn-icon btn-icon-danger" @click="confirmDelete(dashboard)" title="Delete">
+                      <Trash2 :size="16" />
+                    </button>
+                  </div>
+                </div>
+                <p v-if="dashboard.description" class="card-description">
+                  {{ dashboard.description }}
+                </p>
+                <div class="card-meta">
+                  <span>Created {{ formatDate(dashboard.created_at) }}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
             v-for="section in filteredSections"
-            :key="section.id ?? 'unfiled'"
+            :key="section.id"
             class="folder-section"
             :class="{
               'folder-section-drop-active': dropTargetSectionId === normalizeSectionId(section.id),
             }"
-            :data-testid="`folder-section-${section.id ?? 'unfiled'}`"
+            :data-testid="`folder-section-${section.id}`"
             @dragover.prevent="onSectionDragOver(section.id)"
             @drop.prevent="onSectionDrop(section.id)"
           >
             <div class="folder-section-header">
               <div class="folder-section-title">
-                <component :is="section.isUnfiled ? Inbox : FolderIcon" :size="18" />
+                <FolderIcon :size="18" />
                 <h2>{{ section.name }}</h2>
               </div>
               <div class="folder-section-meta">
                 <span class="folder-count">{{ section.dashboards.length }}</span>
                 <button
-                  v-if="isOrgAdmin && !section.isUnfiled && section.folder"
+                  v-if="isOrgAdmin"
                   class="btn btn-secondary btn-sm"
                   :data-testid="`folder-permissions-${section.folder.id}`"
                   @click="openFolderPermissions(section.folder)"
@@ -1152,10 +1130,6 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-
-            <p v-if="section.isUnfiled" class="folder-description">
-              Dashboards without an assigned folder
-            </p>
 
             <p v-if="section.dashboards.length === 0" class="section-empty">
               No dashboards in this section yet.
@@ -1201,7 +1175,9 @@ onMounted(() => {
             </div>
           </section>
 
-          <p v-if="filteredSections.length === 0" class="section-empty">No folders or dashboards match your search.</p>
+          <p v-if="filteredSections.length === 0 && rootDashboardsForMain.length === 0" class="section-empty">
+            No folders or dashboards match your search.
+          </p>
         </div>
       </section>
 
