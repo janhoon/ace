@@ -1,3 +1,21 @@
+## Task README-BADGES-002: Add lint and security workflow badges to README - 2026-02-09T15:26:00Z
+- What was done:
+  - Added `Lint` and `Security` GitHub Actions badges alongside the existing CodeQL badge near the README title
+- Files changed:
+  - README.md
+  - progress.txt
+- Validation: not run locally (documentation-only change)
+- Browser validation: n/a (not run in this environment)
+
+## Task README-SECURITY-001: Add CodeQL status badge to project README - 2026-02-09T15:18:00Z
+- What was done:
+  - Added a CodeQL status badge near the README title that points to the repository security workflow status
+- Files changed:
+  - README.md
+  - progress.txt
+- Validation: not run locally (documentation-only change)
+- Browser validation: n/a (not run in this environment)
+
 ## Task SECURITY-LOCAL-002: Stabilize local security checks with patched Go runtime - 2026-02-09T14:52:00Z
 - What was done:
   - Investigated `make security-local` failure and found `govulncheck` was using host Go `1.25.1`, producing known stdlib CVE findings fixed in newer patch releases
@@ -131,34 +149,4 @@
   - progress.txt
 - Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/views/DashboardDetailView.spec.ts src/views/DashboardSettingsView.spec.ts src/components/DashboardPermissionsEditor.spec.ts`)
 - Dead-code lint: passing (`cd frontend && npm run lint:dead-code`)
-- Browser validation: n/a (not run in this environment)
-
-## Task DASHBOARD-SETTINGS-PERMISSIONS-002: Render dashboard permissions inline in settings view - 2026-02-09T13:51:39Z
-- What was done:
-  - Replaced the dashboard settings permissions modal launcher with an inline permissions editor embedded directly in the settings page
-  - Added a reusable `DashboardPermissionsEditor` component with existing ACL behaviors (load members/groups, add/remove principals, update levels, save)
-  - Updated dashboard settings tests to validate inline permissions rendering and added dedicated editor tests for ACL flows
-- Files changed:
-  - frontend/src/views/DashboardSettingsView.vue
-  - frontend/src/views/DashboardSettingsView.spec.ts
-  - frontend/src/components/DashboardPermissionsEditor.vue
-  - frontend/src/components/DashboardPermissionsEditor.spec.ts
-  - progress.txt
-- Tests: passing (`cd frontend && npm run type-check && npm run test -- src/views/DashboardSettingsView.spec.ts src/components/DashboardPermissionsEditor.spec.ts src/views/DashboardDetailView.spec.ts`)
-- Browser validation: n/a (not run in this environment)
-
-## Task DASHBOARD-SETTINGS-VIEW-001: Move dashboard settings to dedicated route view - 2026-02-09T13:40:05Z
-- What was done:
-  - Replaced dashboard settings modal launch with route navigation to `/dashboards/:id/settings/:section`
-  - Added a new `DashboardSettingsView` that uses the org-settings-style secondary sidebar with `General`, `YAML Editor`, and role-gated `Permissions` sections
-  - Preserved settings behaviors (save metadata/defaults, YAML edit/validate/save, Grafana replace, YAML export) and kept permissions editing flow via `DashboardPermissionsModal`
-  - Added a dedicated view test suite for section routing/redirects/role gating and updated dashboard detail tests to assert navigation instead of modal behavior
-- Files changed:
-  - frontend/src/router/index.ts
-  - frontend/src/views/DashboardDetailView.vue
-  - frontend/src/views/DashboardDetailView.spec.ts
-  - frontend/src/views/DashboardSettingsView.vue
-  - frontend/src/views/DashboardSettingsView.spec.ts
-  - progress.txt
-- Tests: passing (`cd frontend && npm run type-check && npm run test -- src/views/DashboardDetailView.spec.ts src/views/DashboardSettingsView.spec.ts`)
 - Browser validation: n/a (not run in this environment)

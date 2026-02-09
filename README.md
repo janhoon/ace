@@ -1,5 +1,9 @@
 # Dash - Monitoring Dashboard
 
+[![CodeQL](https://github.com/janhoon/dash/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/janhoon/dash/actions/workflows/security.yml)
+[![Lint](https://github.com/janhoon/dash/actions/workflows/lint.yml/badge.svg?branch=master)](https://github.com/janhoon/dash/actions/workflows/lint.yml)
+[![Security](https://github.com/janhoon/dash/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/janhoon/dash/actions/workflows/security.yml)
+
 A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
 
 ## Tech Stack
