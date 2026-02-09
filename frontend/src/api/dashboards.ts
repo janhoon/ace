@@ -94,3 +94,26 @@ export async function exportDashboardYaml(id: string): Promise<Blob> {
   const payload = await response.text()
   return new Blob([payload], { type: 'application/x-yaml' })
 }
+
+export async function importDashboardYaml(orgId: string, yamlContent: string): Promise<Dashboard> {
+  const response = await fetch(`${API_BASE}/api/orgs/${orgId}/dashboards/import?format=yaml`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/x-yaml',
+    },
+    body: yamlContent,
+  })
+
+  if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error('Not authorized to import dashboards in this organization')
+    }
+    if (response.status === 400) {
+      throw new Error('Invalid YAML dashboard document')
+    }
+    throw new Error('Failed to import dashboard')
+  }
+
+  return response.json()
+}

@@ -46,3 +46,9 @@ Working on UX improvements and bug fixes.
 - Files changed: `frontend/src/api/dashboards.ts`, `frontend/src/components/DashboardSettingsModal.vue`, `frontend/src/api/dashboards.export.spec.ts`, `frontend/src/components/DashboardSettingsModal.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/api/dashboards.export.spec.ts src/components/DashboardSettingsModal.spec.ts`, plus `npm run type-check`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)
+
+## Task DASHBOARD-IMPORT-YAML-001: Import dashboard YAML when creating new dashboard - 2026-02-09T01:18:46Z
+- What was done: Added an Import YAML mode to the create dashboard modal with `.yaml/.yml` file selection, client-side document validation/preview (title, description, panel count), and submit wiring to the backend dashboard import endpoint while preserving the existing manual create flow.
+- Files changed: `frontend/src/components/CreateDashboardModal.vue`, `frontend/src/components/CreateDashboardModal.spec.ts`, `frontend/src/api/dashboards.ts`, `frontend/src/api/dashboards.import.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/CreateDashboardModal.spec.ts src/api/dashboards.import.spec.ts`, plus `npm run type-check`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)

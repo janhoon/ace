@@ -4,6 +4,11 @@ import CreateDashboardModal from './CreateDashboardModal.vue'
 import * as api from '../api/dashboards'
 
 vi.mock('../api/dashboards')
+vi.mock('../composables/useOrganization', () => ({
+  useOrganization: () => ({
+    currentOrgId: { value: 'org-1' },
+  }),
+}))
 
 describe('CreateDashboardModal', () => {
   beforeEach(() => {
@@ -42,15 +47,15 @@ describe('CreateDashboardModal', () => {
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    expect(api.createDashboard).toHaveBeenCalledWith({
+    expect(api.createDashboard).toHaveBeenCalledWith('org-1', {
       title: 'New Dashboard',
-      description: 'Description'
+      description: 'Description',
     })
     expect(wrapper.emitted('created')).toBeTruthy()
   })
 
   it('shows error on API failure', async () => {
-    vi.mocked(api.createDashboard).mockRejectedValue(new Error('Network error'))
+    vi.mocked(api.createDashboard).mockRejectedValue(new Error('Failed to create dashboard'))
 
     const wrapper = mount(CreateDashboardModal)
     await wrapper.find('input#title').setValue('New Dashboard')
@@ -58,5 +63,53 @@ describe('CreateDashboardModal', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Failed to create dashboard')
+  })
+
+  it('imports dashboard from yaml file', async () => {
+    vi.mocked(api.importDashboardYaml).mockResolvedValue({
+      id: 'imported-1',
+      title: 'Imported Dashboard',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    })
+
+    const wrapper = mount(CreateDashboardModal)
+    await wrapper.findAll('button').find((button) => button.text() === 'Import YAML')?.trigger('click')
+
+    const input = wrapper.find('input#yaml-file')
+    const file = new File([
+      'schema_version: 1\ndashboard:\n  title: Imported Dashboard\n  panels:\n    - title: Requests\n      type: line_chart\n',
+    ], 'dashboard.yaml', { type: 'application/x-yaml' })
+
+    Object.defineProperty(input.element, 'files', {
+      value: [file],
+      writable: false,
+    })
+    await input.trigger('change')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="yaml-preview"]').exists()).toBe(true)
+
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(api.importDashboardYaml).toHaveBeenCalledWith('org-1', expect.stringContaining('dashboard:'))
+    expect(wrapper.emitted('created')).toBeTruthy()
+  })
+
+  it('rejects invalid file extension in import mode', async () => {
+    const wrapper = mount(CreateDashboardModal)
+    await wrapper.findAll('button').find((button) => button.text() === 'Import YAML')?.trigger('click')
+
+    const input = wrapper.find('input#yaml-file')
+    const file = new File(['{}'], 'dashboard.json', { type: 'application/json' })
+
+    Object.defineProperty(input.element, 'files', {
+      value: [file],
+      writable: false,
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Please upload a .yaml or .yml file')
   })
 })

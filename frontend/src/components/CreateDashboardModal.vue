@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { X } from 'lucide-vue-next'
-import { createDashboard } from '../api/dashboards'
+import { createDashboard, importDashboardYaml } from '../api/dashboards'
 import { useOrganization } from '../composables/useOrganization'
 
 const emit = defineEmits<{
@@ -13,17 +13,116 @@ const { currentOrgId } = useOrganization()
 
 const title = ref('')
 const description = ref('')
+const mode = ref<'create' | 'import'>('create')
 const loading = ref(false)
 const error = ref<string | null>(null)
+const yamlFileName = ref('')
+const yamlContent = ref('')
+
+interface ImportPreview {
+  title: string
+  description: string
+  panelCount: number
+}
+
+const importPreview = ref<ImportPreview | null>(null)
+const submitLabel = computed(() => {
+  if (loading.value) {
+    return mode.value === 'create' ? 'Creating...' : 'Importing...'
+  }
+  return mode.value === 'create' ? 'Create Dashboard' : 'Import Dashboard'
+})
+
+function normalizeYamlValue(value: string): string {
+  const trimmed = value.trim()
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim()
+  }
+  return trimmed
+}
+
+function buildYamlPreview(rawYaml: string): ImportPreview {
+  const dashboardSectionMatch = rawYaml.match(/(?:^|\n)dashboard:\s*\n([\s\S]*)/)
+  if (!dashboardSectionMatch) {
+    throw new Error('Missing dashboard section')
+  }
+
+  const dashboardSection = dashboardSectionMatch[1]
+  const titleMatch = dashboardSection.match(/(?:^|\n)\s{2}title:\s*(.+)/)
+  if (!titleMatch) {
+    throw new Error('Missing dashboard title')
+  }
+
+  const extractedTitle = normalizeYamlValue(titleMatch[1] ?? '')
+  if (!extractedTitle) {
+    throw new Error('Dashboard title is empty')
+  }
+
+  const descriptionMatch = dashboardSection.match(/(?:^|\n)\s{2}description:\s*(.+)/)
+  const panelCount = (dashboardSection.match(/(?:^|\n)\s{4}-\s+title:\s*/g) ?? []).length
+
+  return {
+    title: extractedTitle,
+    description: normalizeYamlValue(descriptionMatch?.[1] ?? ''),
+    panelCount,
+  }
+}
+
+function setMode(nextMode: 'create' | 'import') {
+  mode.value = nextMode
+  error.value = null
+}
+
+async function handleYamlFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  yamlContent.value = ''
+  yamlFileName.value = ''
+  importPreview.value = null
+  error.value = null
+
+  if (!file) {
+    return
+  }
+
+  const lowerName = file.name.toLowerCase()
+  if (!lowerName.endsWith('.yaml') && !lowerName.endsWith('.yml')) {
+    error.value = 'Please upload a .yaml or .yml file'
+    return
+  }
+
+  try {
+    const content = await file.text()
+    if (!content.trim()) {
+      error.value = 'YAML file is empty'
+      return
+    }
+
+    importPreview.value = buildYamlPreview(content)
+    yamlContent.value = content
+    yamlFileName.value = file.name
+  } catch {
+    error.value = 'Invalid YAML file. Expected dashboard document format.'
+  }
+}
 
 async function handleSubmit() {
-  if (!title.value.trim()) {
+  if (!currentOrgId.value) {
+    error.value = 'No organization selected'
+    return
+  }
+
+  if (mode.value === 'create' && !title.value.trim()) {
     error.value = 'Title is required'
     return
   }
 
-  if (!currentOrgId.value) {
-    error.value = 'No organization selected'
+  if (mode.value === 'import' && !importPreview.value) {
+    error.value = 'Upload a valid YAML file before importing'
     return
   }
 
@@ -31,10 +130,14 @@ async function handleSubmit() {
   error.value = null
 
   try {
-    await createDashboard(currentOrgId.value, {
-      title: title.value.trim(),
-      description: description.value.trim() || undefined
-    })
+    if (mode.value === 'create') {
+      await createDashboard(currentOrgId.value, {
+        title: title.value.trim(),
+        description: description.value.trim() || undefined,
+      })
+    } else {
+      await importDashboardYaml(currentOrgId.value, yamlContent.value)
+    }
     emit('created')
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to create dashboard'
@@ -55,27 +158,71 @@ async function handleSubmit() {
       </header>
 
       <form @submit.prevent="handleSubmit">
-        <div class="form-group">
-          <label for="title">Title <span class="required">*</span></label>
-          <input
-            id="title"
-            v-model="title"
-            type="text"
-            placeholder="My Dashboard"
+        <div class="mode-toggle" role="tablist" aria-label="Creation mode">
+          <button
+            type="button"
+            class="mode-option"
+            :class="{ active: mode === 'create' }"
             :disabled="loading"
-            autocomplete="off"
-          />
+            @click="setMode('create')"
+          >
+            Create New
+          </button>
+          <button
+            type="button"
+            class="mode-option"
+            :class="{ active: mode === 'import' }"
+            :disabled="loading"
+            @click="setMode('import')"
+          >
+            Import YAML
+          </button>
         </div>
 
-        <div class="form-group">
-          <label for="description">Description</label>
-          <textarea
-            id="description"
-            v-model="description"
-            placeholder="Dashboard description (optional)"
-            rows="3"
-            :disabled="loading"
-          ></textarea>
+        <div v-if="mode === 'create'">
+          <div class="form-group">
+            <label for="title">Title <span class="required">*</span></label>
+            <input
+              id="title"
+              v-model="title"
+              type="text"
+              placeholder="My Dashboard"
+              :disabled="loading"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="description">Description</label>
+            <textarea
+              id="description"
+              v-model="description"
+              placeholder="Dashboard description (optional)"
+              rows="3"
+              :disabled="loading"
+            ></textarea>
+          </div>
+        </div>
+
+        <div v-else>
+          <div class="form-group">
+            <label for="yaml-file">YAML file <span class="required">*</span></label>
+            <input
+              id="yaml-file"
+              type="file"
+              accept=".yaml,.yml"
+              :disabled="loading"
+              @change="handleYamlFileChange"
+            />
+            <p class="field-hint">Upload an exported dashboard YAML to import it into this organization.</p>
+          </div>
+
+          <div v-if="importPreview" class="import-preview" data-testid="yaml-preview">
+            <p><strong>Preview:</strong> {{ importPreview.title }}</p>
+            <p v-if="importPreview.description">{{ importPreview.description }}</p>
+            <p>{{ importPreview.panelCount }} panel{{ importPreview.panelCount === 1 ? '' : 's' }}</p>
+            <p v-if="yamlFileName" class="file-name">File: {{ yamlFileName }}</p>
+          </div>
         </div>
 
         <div v-if="error" class="error-message">{{ error }}</div>
@@ -85,7 +232,7 @@ async function handleSubmit() {
             Cancel
           </button>
           <button type="submit" class="btn btn-primary" :disabled="loading">
-            {{ loading ? 'Creating...' : 'Create Dashboard' }}
+            {{ submitLabel }}
           </button>
         </div>
       </form>
@@ -176,6 +323,36 @@ form {
   margin-bottom: 1.25rem;
 }
 
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.mode-option {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-option.active {
+  border-color: var(--accent-primary);
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--text-primary);
+}
+
+.mode-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
@@ -222,6 +399,34 @@ form {
 .form-group textarea {
   resize: vertical;
   min-height: 80px;
+}
+
+.field-hint {
+  margin-top: 0.5rem;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+}
+
+.import-preview {
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+}
+
+.import-preview p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.import-preview p + p {
+  margin-top: 0.35rem;
+}
+
+.file-name {
+  color: var(--text-tertiary);
 }
 
 .error-message {
