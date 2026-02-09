@@ -114,7 +114,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "FOLDER-FE-UI-004",

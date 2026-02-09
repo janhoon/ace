@@ -264,18 +264,26 @@ describe('OrganizationSettings', () => {
     expect(mockGetGoogleSSOConfig).toHaveBeenCalledWith('org-1')
     expect(mockGetMicrosoftSSOConfig).toHaveBeenCalledWith('org-1')
 
-    await wrapper.get('[data-testid="edit-sso-google"]').trigger('click')
+    await wrapper.get('[data-testid="configure-sso"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="sso-provider-picker-title"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="sso-provider-option-google"]').trigger('click')
     await flushPromises()
 
     expect((wrapper.get('[data-testid="google-client-id"]').element as HTMLInputElement).value).toBe(
       'google-client-id',
     )
 
-    await wrapper.get('[data-testid="edit-sso-microsoft"]').trigger('click')
+    await wrapper.get('[data-testid="back-sso-provider-picker"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="sso-provider-option-microsoft"]').trigger('click')
     await flushPromises()
     expect((wrapper.get('[data-testid="microsoft-tenant-id"]').element as HTMLInputElement).value).toBe('tenant-1')
 
-    await wrapper.get('[data-testid="edit-sso-google"]').trigger('click')
+    await wrapper.get('[data-testid="back-sso-provider-picker"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="sso-provider-option-google"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="google-client-id"]').setValue('google-client-id-updated')
     await wrapper.get('[data-testid="google-client-secret"]').setValue('google-secret')
@@ -289,7 +297,9 @@ describe('OrganizationSettings', () => {
       enabled: false,
     })
 
-    await wrapper.get('[data-testid="edit-sso-microsoft"]').trigger('click')
+    await wrapper.get('[data-testid="back-sso-provider-picker"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="sso-provider-option-microsoft"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="microsoft-tenant-id"]').setValue('tenant-2')
     await wrapper.get('[data-testid="microsoft-client-id"]').setValue('microsoft-client-id-updated')
@@ -304,6 +314,24 @@ describe('OrganizationSettings', () => {
       client_secret: 'microsoft-secret',
       enabled: true,
     })
+  })
+
+  it('starts add-provider flow from picker and only shows unconfigured providers', async () => {
+    mockGetMicrosoftSSOConfig.mockRejectedValueOnce(new Error('Microsoft SSO not configured'))
+
+    const wrapper = mount(OrganizationSettings)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="add-sso"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="sso-provider-option-google"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="sso-provider-option-microsoft"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="sso-provider-option-microsoft"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="microsoft-sso-card"]').exists()).toBe(true)
   })
 
   it('shows read-only SSO controls for non-admin members', async () => {
@@ -327,7 +355,9 @@ describe('OrganizationSettings', () => {
     await flushPromises()
 
     mockUpdateGoogleSSOConfig.mockRejectedValueOnce(new Error('Failed to save Google config'))
-    await wrapper.get('[data-testid="edit-sso-google"]').trigger('click')
+    await wrapper.get('[data-testid="configure-sso"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="sso-provider-option-google"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="google-client-id"]').setValue('google-client-id-updated')
     await wrapper.get('[data-testid="google-client-secret"]').setValue('google-secret')
@@ -337,7 +367,9 @@ describe('OrganizationSettings', () => {
     expect(wrapper.text()).toContain('Failed to save Google config')
 
     mockUpdateMicrosoftSSOConfig.mockRejectedValueOnce(new Error('Failed to save Microsoft config'))
-    await wrapper.get('[data-testid="edit-sso-microsoft"]').trigger('click')
+    await wrapper.get('[data-testid="back-sso-provider-picker"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="sso-provider-option-microsoft"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="microsoft-tenant-id"]').setValue('tenant-2')
     await wrapper.get('[data-testid="microsoft-client-id"]').setValue('microsoft-client-id-updated')

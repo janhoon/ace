@@ -104,8 +104,10 @@ const microsoftError = ref<string | null>(null)
 
 type SsoProviderKey = 'google' | 'microsoft'
 
-const ssoProviderOrder: SsoProviderKey[] = ['google', 'microsoft']
 const activeSsoProvider = ref<SsoProviderKey | null>(null)
+const ssoDialogOpen = ref(false)
+const ssoSelectionMode = ref<'configure' | 'add'>('configure')
+const ssoStep = ref<'picker' | 'form'>('picker')
 const ssoProviders = computed(() => [
   {
     key: 'google' as const,
@@ -159,13 +161,46 @@ function resetSSOMessages() {
 }
 
 function openSsoProvider(provider: SsoProviderKey) {
+  ssoDialogOpen.value = true
+  ssoStep.value = 'form'
   activeSsoProvider.value = provider
   resetSSOMessages()
 }
 
-function closeSsoProvider() {
+function openSsoPicker(mode: 'configure' | 'add') {
+  if (!isAdmin.value) {
+    return
+  }
+
+  if (mode === 'add' && ssoProviders.value.every((provider) => provider.configured)) {
+    ssoNotice.value = 'All supported providers are already configured'
+    return
+  }
+
+  ssoDialogOpen.value = true
+  ssoSelectionMode.value = mode
+  ssoStep.value = 'picker'
   activeSsoProvider.value = null
   resetSSOMessages()
+}
+
+function closeSsoDialog() {
+  ssoDialogOpen.value = false
+  ssoStep.value = 'picker'
+  activeSsoProvider.value = null
+  resetSSOMessages()
+}
+
+const selectableSsoProviders = computed(() => {
+  if (ssoSelectionMode.value === 'add') {
+    return ssoProviders.value.filter((provider) => !provider.configured)
+  }
+
+  return ssoProviders.value
+})
+
+function chooseSsoProvider(provider: SsoProviderKey) {
+  openSsoProvider(provider)
 }
 
 function ssoStatus(provider: { configured: boolean; enabled: boolean }) {
@@ -181,31 +216,11 @@ function ssoStatus(provider: { configured: boolean; enabled: boolean }) {
 }
 
 function handleConfigureSso() {
-  if (!isAdmin.value) {
-    return
-  }
-
-  const configured = ssoProviders.value.find((provider) => provider.configured)
-  if (configured) {
-    openSsoProvider(configured.key)
-    return
-  }
-
-  openSsoProvider(ssoProviderOrder[0])
+  openSsoPicker('configure')
 }
 
 function handleAddSso() {
-  if (!isAdmin.value) {
-    return
-  }
-
-  const available = ssoProviders.value.find((provider) => !provider.configured)
-  if (available) {
-    openSsoProvider(available.key)
-    return
-  }
-
-  ssoNotice.value = 'All supported providers are already configured'
+  openSsoPicker('add')
 }
 
 async function loadGoogleConfig() {
@@ -1070,118 +1085,6 @@ function goBack() {
             </article>
           </div>
 
-          <div v-if="activeSsoProvider" class="sso-config-panel" data-testid="sso-config-panel">
-            <div class="sso-panel-header">
-              <div>
-                <h3>{{ activeSsoLabel }} SSO Settings</h3>
-                <p class="section-description">Update credentials and enable status for this provider.</p>
-              </div>
-              <button class="btn btn-secondary btn-sm" data-testid="close-sso-config" @click="closeSsoProvider">
-                Close
-              </button>
-            </div>
-
-            <div v-if="activeSsoProvider === 'google'" data-testid="google-sso-card">
-              <div class="form-group">
-                <label>Client ID</label>
-                <input
-                  v-model="googleClientId"
-                  type="text"
-                  data-testid="google-client-id"
-                  :disabled="!isAdmin || googleSaving"
-                />
-              </div>
-              <div class="form-group">
-                <label>Client Secret</label>
-                <input
-                  v-model="googleClientSecret"
-                  type="password"
-                  data-testid="google-client-secret"
-                  placeholder="Enter to update"
-                  :disabled="!isAdmin || googleSaving"
-                />
-              </div>
-              <div class="form-group form-checkbox">
-                <label>
-                  <input
-                    v-model="googleEnabled"
-                    type="checkbox"
-                    data-testid="google-enabled"
-                    :disabled="!isAdmin || googleSaving"
-                  />
-                  Enable Google SSO
-                </label>
-              </div>
-
-              <div v-if="googleError" class="error-message">{{ googleError }}</div>
-
-              <div v-if="isAdmin" class="form-actions sso-actions">
-                <button
-                  class="btn btn-primary"
-                  data-testid="save-google-sso"
-                  :disabled="googleSaving"
-                  @click="handleSaveGoogleSSO"
-                >
-                  {{ googleSaving ? 'Saving...' : 'Save Google SSO' }}
-                </button>
-              </div>
-            </div>
-
-            <div v-else-if="activeSsoProvider === 'microsoft'" data-testid="microsoft-sso-card">
-              <div class="form-group">
-                <label>Tenant ID</label>
-                <input
-                  v-model="microsoftTenantId"
-                  type="text"
-                  data-testid="microsoft-tenant-id"
-                  :disabled="!isAdmin || microsoftSaving"
-                />
-              </div>
-              <div class="form-group">
-                <label>Client ID</label>
-                <input
-                  v-model="microsoftClientId"
-                  type="text"
-                  data-testid="microsoft-client-id"
-                  :disabled="!isAdmin || microsoftSaving"
-                />
-              </div>
-              <div class="form-group">
-                <label>Client Secret</label>
-                <input
-                  v-model="microsoftClientSecret"
-                  type="password"
-                  data-testid="microsoft-client-secret"
-                  placeholder="Enter to update"
-                  :disabled="!isAdmin || microsoftSaving"
-                />
-              </div>
-              <div class="form-group form-checkbox">
-                <label>
-                  <input
-                    v-model="microsoftEnabled"
-                    type="checkbox"
-                    data-testid="microsoft-enabled"
-                    :disabled="!isAdmin || microsoftSaving"
-                  />
-                  Enable Microsoft SSO
-                </label>
-              </div>
-
-              <div v-if="microsoftError" class="error-message">{{ microsoftError }}</div>
-
-              <div v-if="isAdmin" class="form-actions sso-actions">
-                <button
-                  class="btn btn-primary"
-                  data-testid="save-microsoft-sso"
-                  :disabled="microsoftSaving"
-                  @click="handleSaveMicrosoftSSO"
-                >
-                  {{ microsoftSaving ? 'Saving...' : 'Save Microsoft SSO' }}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div v-if="ssoNotice" class="success-message">{{ ssoNotice }}</div>
@@ -1219,6 +1122,149 @@ function goBack() {
           <button class="btn btn-danger" @click="handleDelete" :disabled="deleteLoading">
             {{ deleteLoading ? 'Deleting...' : 'Delete Organization' }}
           </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="ssoDialogOpen" class="modal-overlay" data-testid="sso-config-modal" @click.self="closeSsoDialog">
+      <div class="modal sso-modal">
+        <div class="sso-panel-header">
+          <div>
+            <h3 v-if="ssoStep === 'picker'" data-testid="sso-provider-picker-title">Choose SSO provider</h3>
+            <h3 v-else>{{ activeSsoLabel }} SSO Settings</h3>
+            <p class="section-description" v-if="ssoStep === 'picker'">
+              Select a provider to {{ ssoSelectionMode === 'add' ? 'add to this organization' : 'configure' }}.
+            </p>
+            <p class="section-description" v-else>Update credentials and enable status for this provider.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" data-testid="close-sso-config" @click="closeSsoDialog">
+            Close
+          </button>
+        </div>
+
+        <div v-if="ssoStep === 'picker'" class="sso-picker-list">
+          <button
+            v-for="provider in selectableSsoProviders"
+            :key="provider.key"
+            type="button"
+            class="sso-picker-option"
+            :data-testid="`sso-provider-option-${provider.key}`"
+            @click="chooseSsoProvider(provider.key)"
+          >
+            <span class="sso-picker-name">{{ provider.name }}</span>
+            <span class="sso-status" :class="{ enabled: provider.enabled, configured: provider.configured }">
+              {{ ssoStatus(provider) }}
+            </span>
+          </button>
+        </div>
+
+        <div v-else class="sso-config-panel" data-testid="sso-config-panel">
+          <div v-if="activeSsoProvider === 'google'" data-testid="google-sso-card">
+            <div class="form-group">
+              <label>Client ID</label>
+              <input
+                v-model="googleClientId"
+                type="text"
+                data-testid="google-client-id"
+                :disabled="!isAdmin || googleSaving"
+              />
+            </div>
+            <div class="form-group">
+              <label>Client Secret</label>
+              <input
+                v-model="googleClientSecret"
+                type="password"
+                data-testid="google-client-secret"
+                placeholder="Enter to update"
+                :disabled="!isAdmin || googleSaving"
+              />
+            </div>
+            <div class="form-group form-checkbox">
+              <label>
+                <input
+                  v-model="googleEnabled"
+                  type="checkbox"
+                  data-testid="google-enabled"
+                  :disabled="!isAdmin || googleSaving"
+                />
+                Enable Google SSO
+              </label>
+            </div>
+
+            <div v-if="googleError" class="error-message">{{ googleError }}</div>
+
+            <div v-if="isAdmin" class="form-actions sso-actions">
+              <button class="btn btn-secondary" data-testid="back-sso-provider-picker" @click="ssoStep = 'picker'">
+                Back
+              </button>
+              <button
+                class="btn btn-primary"
+                data-testid="save-google-sso"
+                :disabled="googleSaving"
+                @click="handleSaveGoogleSSO"
+              >
+                {{ googleSaving ? 'Saving...' : 'Save Google SSO' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="activeSsoProvider === 'microsoft'" data-testid="microsoft-sso-card">
+            <div class="form-group">
+              <label>Tenant ID</label>
+              <input
+                v-model="microsoftTenantId"
+                type="text"
+                data-testid="microsoft-tenant-id"
+                :disabled="!isAdmin || microsoftSaving"
+              />
+            </div>
+            <div class="form-group">
+              <label>Client ID</label>
+              <input
+                v-model="microsoftClientId"
+                type="text"
+                data-testid="microsoft-client-id"
+                :disabled="!isAdmin || microsoftSaving"
+              />
+            </div>
+            <div class="form-group">
+              <label>Client Secret</label>
+              <input
+                v-model="microsoftClientSecret"
+                type="password"
+                data-testid="microsoft-client-secret"
+                placeholder="Enter to update"
+                :disabled="!isAdmin || microsoftSaving"
+              />
+            </div>
+            <div class="form-group form-checkbox">
+              <label>
+                <input
+                  v-model="microsoftEnabled"
+                  type="checkbox"
+                  data-testid="microsoft-enabled"
+                  :disabled="!isAdmin || microsoftSaving"
+                />
+                Enable Microsoft SSO
+              </label>
+            </div>
+
+            <div v-if="microsoftError" class="error-message">{{ microsoftError }}</div>
+
+            <div v-if="isAdmin" class="form-actions sso-actions">
+              <button class="btn btn-secondary" data-testid="back-sso-provider-picker" @click="ssoStep = 'picker'">
+                Back
+              </button>
+              <button
+                class="btn btn-primary"
+                data-testid="save-microsoft-sso"
+                :disabled="microsoftSaving"
+                @click="handleSaveMicrosoftSSO"
+              >
+                {{ microsoftSaving ? 'Saving...' : 'Save Microsoft SSO' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1902,6 +1948,41 @@ select:focus {
   gap: 0.75rem;
 }
 
+.sso-modal {
+  width: min(640px, calc(100vw - 2rem));
+  max-width: 640px;
+}
+
+.sso-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sso-picker-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: rgba(20, 33, 52, 0.75);
+  color: var(--text-primary);
+  padding: 0.8rem 0.9rem;
+  cursor: pointer;
+}
+
+.sso-picker-option:hover {
+  border-color: var(--accent-primary);
+  background: rgba(20, 33, 52, 0.92);
+}
+
+.sso-picker-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 @media (max-width: 900px) {
   .org-settings {
     padding: 0.9rem;
@@ -1939,6 +2020,10 @@ select:focus {
 
   .group-header-actions {
     justify-content: flex-start;
+  }
+
+  .sso-modal {
+    width: calc(100vw - 1rem);
   }
 }
 </style>
