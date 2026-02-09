@@ -1,3 +1,14 @@
+## Task AGENTS-DOC-001: Refresh AGENTS.md for current repo tooling - 2026-02-09T15:07:35Z
+- What was done:
+  - Reworked `AGENTS.md` into a clearer operational playbook for agentic coding workflows in this monorepo
+  - Updated build/lint/test commands to match current Makefile, npm scripts, and CI configuration, including single-test execution examples for frontend and backend
+  - Tightened style guidance to reflect active Biome, TypeScript strictness, and backend golangci-lint/gofmt conventions
+- Files changed:
+  - AGENTS.md
+  - progress.txt
+- Validation: not run locally (documentation-only change)
+- Browser validation: n/a (not run in this environment)
+
 ## Task CI-CONCURRENCY-001: Cancel stale main-branch workflow runs - 2026-02-09T16:18:00Z
 - What was done:
   - Added workflow-level `concurrency` settings to lint, security, and coverage workflows so only the newest run continues on the default branch
@@ -100,14 +111,4 @@
   - SECURITY.md
   - progress.txt
 - Validation: not run locally (workflow/config changes only)
-- Browser validation: n/a (not run in this environment)
-
-## Task FRONTEND-LINT-003: Repair Biome config and revalidate frontend lint - 2026-02-09T15:05:00Z
-- What was done:
-  - Repaired `frontend/biome.jsonc` syntax so Biome actually loads repository lint overrides instead of silently falling back to defaults
-  - Re-ran frontend lint and type-check to confirm the lint pass and TS integrity
-- Files changed:
-  - frontend/biome.jsonc
-  - progress.txt
-- Validation: passing (`cd frontend && npm run lint`, `cd frontend && npm run type-check`)
 - Browser validation: n/a (not run in this environment)

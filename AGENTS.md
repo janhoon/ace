@@ -1,42 +1,49 @@
 # AGENTS.md
-Guidance for coding agents working in this repository.
-## 1) Repository layout
-- Monorepo with two primary apps:
-  - `backend/` (Go 1.25 API server)
-  - `frontend/` (Vue 3 + TypeScript + Vite + Vitest)
+Practical instructions for agentic coding workflows in this repository.
+
+## 1) Project overview
+- Monorepo with two main apps:
+  - `backend/` - Go 1.25 API server
+  - `frontend/` - Vue 3 + TypeScript + Vite + Vitest
 - Key root files:
-  - `Makefile` (dev and seeding tasks)
+  - `Makefile` (dev/lint/seed/security entrypoints)
   - `docker-compose.yml` (local infra)
   - `mise.toml` (`go = 1.25`)
+  - `backend/.golangci.yml` (backend lint policy)
+  - `frontend/biome.jsonc` (frontend lint/format policy)
+
 ## 2) Prerequisites
 - Node.js 18+
 - Go 1.25+
 - Docker + Docker Compose
 - Optional: `air` for backend hot reload
-## 3) Core development commands
+
+## 3) Core local commands
 Run from repo root unless noted.
-### Infra
+
+### Infra + dev servers
 ```bash
 docker-compose up -d
 docker-compose down
-```
-### Dev servers
-```bash
+
 make backend
 make frontend
 ```
+
 Notes:
-- Backend runs on `http://localhost:8080`.
-- Frontend runs on `http://localhost:5173`.
-- `make backend` uses `air` if installed, else `go run ./cmd/api`.
+- Backend default URL: `http://localhost:8080`
+- Frontend default URL: `http://localhost:5173`
+- `make backend` uses `air` if installed, else `go run ./cmd/api`
+
 ### Seed data
 ```bash
 make seed-admin
-make seed-admin EMAIL=admin@example.com PASSWORD='AdminPass123' ORG='my-org' NAME='First Admin'
+make seed-admin EMAIL=admin@example.com PASSWORD='AdminPass123' ORG='my-org' NAME='First Admin' SLUG='my-org'
 make seed-datasources
 make seed-datasources ORG=my-org
 ```
-## 4) Build, lint, and test
+
+## 4) Build/lint/test commands
 ### Frontend (`frontend/`)
 ```bash
 cd frontend
@@ -47,15 +54,11 @@ npm run preview
 npm run type-check
 npm run test
 npm run test:watch
-```
-Single test file:
-```bash
-cd frontend
+npm run test:coverage
+npm run lint
+npm run lint:dead-code
+npm run format:check
 npm run test -- src/api/datasources.spec.ts
-```
-Single test by name:
-```bash
-cd frontend
 npm run test -- src/api/datasources.spec.ts -t "throws on 403"
 ```
 ### Backend (`backend/`)
@@ -64,93 +67,83 @@ cd backend
 go run ./cmd/api
 go build ./cmd/api
 go test ./...
+go test ./internal/handlers
+go test ./internal/handlers -run '^TestDataSourceHandler_Query_InvalidUUID$' -count=1
+go test ./internal/auth -run '^TestVerifyPasswordIncorrect$' -count=1
+go test ./internal/handlers -list '^Test'
 ```
-Single package / test function:
+### Root quality/security tasks
 ```bash
-cd backend
-go test ./internal/handlers -run TestDataSourceHandler_Query_InvalidUUID
-go test ./internal/auth -run TestVerifyPasswordIncorrect -count=1
+make backend-lint
+make frontend-lint
+make lint
+make security-local
 ```
-### Lint / format reality in this repo
-- No committed ESLint/Prettier config.
-- Frontend quality gate: `npm run type-check` + Vitest.
-- Backend style gate: `gofmt` + `go test`.
-- Format changed Go files with:
-```bash
-cd backend
-gofmt -w <changed-files>
-```
-## 5) Style and coding conventions
-Follow existing file patterns first; use these defaults when unclear.
-### General
-- Keep diffs small and targeted.
-- Use descriptive names; avoid abbreviations unless already established.
-- Do not add comments unless the logic is non-obvious.
-- Preserve existing API contracts and payload shapes.
-### Imports
-#### Go
-- Group imports as stdlib, blank line, external/internal.
-- Let `gofmt` handle ordering/formatting.
-#### TypeScript / Vue
-- External imports first, then local imports.
-- Use `import type` for type-only imports.
-- Keep long import lists multiline and readable.
-### Formatting
-#### Go
-- Use standard `gofmt` output (tabs, canonical spacing).
-#### TypeScript / Vue
-- 2-space indentation.
-- Single quotes.
-- No semicolons.
-- Trailing commas for multiline objects/arrays/params.
-- Prefer wrapped, readable long expressions.
-### Typing discipline
-- Frontend TS is strict (`strict`, `noUnusedLocals`, `noUnusedParameters`).
-- Avoid `any`; prefer explicit interfaces/unions.
-- Backend optional update fields typically use pointers in request structs.
-- Use trailing underscore for reserved identifiers (example: `type_`).
-### Naming
-#### Go
-- Exported: `PascalCase`; unexported: `camelCase`.
-- Constructor pattern: `NewXxx(...)`.
-- Handler method verbs: `Create`, `List`, `Get`, `Update`, `Delete`, `Query`.
-#### Frontend
-- Composables: `useXxx`.
-- Vue component/view files: `PascalCase.vue`.
-- Tests: `*.spec.ts`.
-### Error handling
-#### Backend
-- Return early on auth/validation failures.
-- Use appropriate HTTP status codes.
-- Return JSON error payloads consistently in handlers.
-- Use `context.WithTimeout` for DB/external operations.
 
-#### Frontend
-- Normalize caught errors with:
-  - `e instanceof Error ? e.message : '<fallback>'`
-- Keep user-facing messages concise and actionable.
-## 6) Testing conventions
-### Go tests
-- Name tests `TestXxx`.
-- Prefer table-driven tests for validation/type behavior.
-- Assert expected vs actual clearly in failure messages.
-### Vitest tests
-- Use behavior-focused `describe` / `it` names.
-- Mock `fetch` via `vi.fn()`; reset mocks in `beforeEach`.
-- Assert request method/URL/headers for API-layer tests.
-## 7) Cursor/Copilot rules status
+## 5) Lint and formatting reality
+- Backend linting: `golangci-lint` with `govet`, `ineffassign`, `misspell`, `staticcheck`, `unconvert`
+- Backend formatters in CI: `gofmt` and `goimports`
+- Frontend linting: Biome (`npm run lint`) + Knip (`npm run lint:dead-code`)
+- Biome formatting rules: 2-space indent, single quotes, semicolons as needed, trailing commas, line width 100
+- Before finishing backend edits, run `gofmt -w` on touched Go files
+
+## 6) Code style guidelines
+Follow existing code patterns first. Use these defaults when unclear.
+
+### Imports
+- Go: stdlib imports first, then blank line, then external/internal imports
+- TypeScript/Vue: external imports before local imports
+- TypeScript: use `import type` for type-only imports
+
+### Formatting
+- Go: canonical `gofmt` output only
+- TypeScript/Vue: 2-space indentation, single quotes, trailing commas in multiline literals
+- Keep long expressions wrapped for readability
+
+### Types and data modeling
+- Frontend TS is strict (`strict`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`)
+- Avoid `any`; prefer explicit interfaces/unions and narrow unknown values
+- Backend optional update fields commonly use pointer fields in request structs
+- Keep JSON tags and payload field names stable across frontend/backend
+- Use `type_` if a variable name would collide with reserved words
+
+### Naming conventions
+- Go exported symbols: `PascalCase`; unexported symbols: `camelCase`
+- Go constructors: `NewXxx(...)`
+- Handler method verbs usually follow CRUD-ish names: `Create`, `List`, `Get`, `Update`, `Delete`, `Query`
+- Vue components and view files: `PascalCase.vue`
+- Composables: `useXxx`
+- Test files: frontend `*.spec.ts`, backend `*_test.go`
+
+### Error handling
+- Backend:
+  - Return early on auth/validation failures
+  - Use deliberate HTTP status codes (`400`, `401`, `403`, `404`, `409`, `500`)
+  - Return JSON error payloads consistently
+  - Use `context.WithTimeout` for DB/external calls
+- Frontend:
+  - Throw concise `Error` messages from API helpers
+  - Parse backend error JSON when available, with safe fallback messages
+  - Normalize caught values via `e instanceof Error ? e.message : '<fallback>'`
+
+## 7) Testing conventions
+- Go tests: use `TestXxx`, prefer table-driven cases, use `httptest.NewRequest` + `httptest.NewRecorder`, and include expected/actual in failures
+- Vitest tests: use behavior-focused `describe`/`it`, mock `fetch` with `vi.fn()` + `vi.stubGlobal`, reset mocks in `beforeEach`, and assert URL/method/headers/body for API calls
+
+## 8) Cursor/Copilot instruction files
 - `.cursorrules`: not present
 - `.cursor/rules/`: not present
 - `.github/copilot-instructions.md`: not present
-If any of these files are added later, treat them as higher-priority instructions and update this file.
-## 8) Agent workflow tips
-- Inspect nearby files before editing to mirror local patterns.
-- After frontend edits, run `npm run type-check` and relevant tests.
-- After backend edits, run targeted `go test` (or `go test ./...` when practical).
-- Avoid introducing new dependencies unless clearly necessary.
-- Keep commits scoped to one feature/fix area.
+- If any of these files are added later, treat them as higher-priority instructions and update this document
 
-## 9) Progress log policy
-- Maintain the root file `progress.txt` with recent implementation changes.
-- Keep only the 10 most recent change entries at all times.
-- When adding a new entry beyond 10, remove the oldest entry.
+## 9) Agent workflow expectations
+- Keep diffs minimal and scoped to the requested task
+- Inspect nearby code before editing to mirror local style and architecture
+- Preserve API contracts unless the task explicitly requires a contract change
+- Run relevant checks for touched areas before finishing
+- Avoid adding new dependencies unless clearly necessary
+
+## 10) Progress log policy
+- Maintain root `progress.txt` with recent implementation entries
+- Keep only the 10 most recent entries
+- When adding a new entry beyond 10, remove the oldest entry
