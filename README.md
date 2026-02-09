@@ -7,6 +7,39 @@
 
 A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
 
+## Versioning and Releases
+
+- **Versioning:** Semantic Versioning (`vMAJOR.MINOR.PATCH`) with Conventional Commits
+- **Release planning:** `release-please` opens and updates release PRs from changes on `master`
+- **Release output:** merge of the release PR creates a GitHub Release with generated notes and updates `CHANGELOG.md`
+- **Auto-published assets:** backend binaries, frontend artifact tarball, image SBOMs, and checksums
+- **Release guide:** see `RELEASE.md` for the maintainer workflow and versioning rules
+
+## Container Images
+
+Public multi-arch images are published to GHCR on every release:
+
+- `ghcr.io/janhoon/dash-backend`
+- `ghcr.io/janhoon/dash-frontend`
+
+Example pulls:
+
+```bash
+docker pull ghcr.io/janhoon/dash-backend:v0.1.0
+docker pull ghcr.io/janhoon/dash-frontend:v0.1.0
+```
+
+When building the frontend image yourself, set `VITE_API_URL` at build time:
+
+```bash
+docker build -f frontend/Dockerfile --build-arg VITE_API_URL=https://api.example.com -t dash-frontend:local .
+```
+
+Tag strategy:
+
+- Release tags: `vX.Y.Z`, `X.Y.Z`
+- Moving tags: `X.Y`, `X`, `latest`, `sha-<commit>`
+
 ## Tech Stack
 
 - **Frontend:** Vue.js 3 (Composition API + TypeScript)
