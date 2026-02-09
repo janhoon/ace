@@ -82,3 +82,9 @@ Working on UX improvements and bug fixes.
 - Files changed: `frontend/src/components/DashboardList.vue`, `frontend/src/components/DashboardList.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/DashboardList.spec.ts`, plus `npm run type-check`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; could not run required real-browser validation for drag/drop happy path and permission-restricted viewer behavior)
+
+## Task DASHBOARDS-FILE-EXPLORER-001: Redesign dashboards view as file explorer - 2026-02-09T09:26:49Z
+- What was done: Reworked dashboards into a file-explorer layout with a searchable/collapsible folder tree, breadcrumb navigation, scope-aware section filtering (all/unfiled/folder subtree), inline folder creation in the explorer pane, and hover preview details for dashboard cards while preserving drag/drop, edit/delete, and folder permissions flows.
+- Files changed: `frontend/src/components/DashboardList.vue`, `agent/prd.json`, `agent/progress.txt`
+- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/DashboardList.spec.ts`, plus `npm run type-check`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; skill load returned "not found", so required real-browser happy-path and failure-state validation could not be executed)

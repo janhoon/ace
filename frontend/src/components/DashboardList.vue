@@ -1,7 +1,20 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Plus, Pencil, Trash2, LayoutDashboard, AlertCircle, Folder as FolderIcon, Inbox, Shield } from 'lucide-vue-next'
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  LayoutDashboard,
+  AlertCircle,
+  Folder as FolderIcon,
+  Inbox,
+  Shield,
+  ChevronRight,
+  ChevronDown,
+  Search,
+  FileText,
+} from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import type { Folder } from '../types/folder'
 import { listDashboards, deleteDashboard, updateDashboard } from '../api/dashboards'
@@ -28,7 +41,6 @@ const deletingDashboard = ref<Dashboard | null>(null)
 const showFolderPermissionsModal = ref(false)
 const selectedFolderForPermissions = ref<Folder | null>(null)
 const folderPermissionsMessage = ref<string | null>(null)
-const showCreateFolderModal = ref(false)
 const creatingFolder = ref(false)
 const folderName = ref('')
 const folderError = ref<string | null>(null)
@@ -36,6 +48,12 @@ const moveError = ref<string | null>(null)
 const draggingDashboardId = ref<string | null>(null)
 const dropTargetSectionId = ref<string | null>(null)
 const movingDashboardId = ref<string | null>(null)
+const searchQuery = ref('')
+const expandedFolderIds = ref<string[]>([])
+const selectedExplorerNode = ref<'all' | 'unfiled' | `folder:${string}`>('all')
+const hoveredDashboardId = ref<string | null>(null)
+const showInlineFolderForm = ref(false)
+const inlineFolderParentId = ref<string | null>(null)
 
 interface DashboardSection {
   id: string | null
@@ -45,20 +63,92 @@ interface DashboardSection {
   folder: Folder | null
 }
 
+interface FolderTreeRow {
+  folder: Folder
+  depth: number
+  hasChildren: boolean
+  isExpanded: boolean
+}
+
+interface Breadcrumb {
+  id: string
+  label: string
+  type: 'all' | 'unfiled' | 'folder'
+}
+
 const isOrgAdmin = computed(() => currentOrg.value?.role === 'admin')
 const canCreateFolder = computed(() => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor')
 const canManageDashboards = computed(() => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor')
+const normalizedSearchQuery = computed(() => searchQuery.value.trim().toLowerCase())
+const hasSearchQuery = computed(() => normalizedSearchQuery.value.length > 0)
+
+const folderById = computed(() => {
+  const map = new Map<string, Folder>()
+  for (const folder of folders.value) {
+    map.set(folder.id, folder)
+  }
+  return map
+})
+
+const dashboardsByFolder = computed(() => {
+  const map = new Map<string | null, Dashboard[]>()
+  for (const dashboard of dashboards.value) {
+    const folderId = dashboard.folder_id ?? null
+    const list = map.get(folderId) ?? []
+    list.push(dashboard)
+    map.set(folderId, list)
+  }
+  return map
+})
+
+const folderChildrenMap = computed(() => {
+  const map = new Map<string | null, Folder[]>()
+  for (const folder of folders.value) {
+    const parentId = folder.parent_id && folderById.value.has(folder.parent_id) ? folder.parent_id : null
+    const children = map.get(parentId) ?? []
+    children.push(folder)
+    map.set(parentId, children)
+  }
+
+  for (const [key, children] of map.entries()) {
+    map.set(
+      key,
+      [...children].sort((a, b) => a.name.localeCompare(b.name)),
+    )
+  }
+
+  return map
+})
+
+const rootFolders = computed(() => folderChildrenMap.value.get(null) ?? [])
+
+const selectedFolderId = computed(() => {
+  if (!selectedExplorerNode.value.startsWith('folder:')) {
+    return null
+  }
+  return selectedExplorerNode.value.slice('folder:'.length)
+})
+
+const selectedFolder = computed(() => {
+  if (!selectedFolderId.value) {
+    return null
+  }
+  return folderById.value.get(selectedFolderId.value) ?? null
+})
 
 const groupedDashboardSections = computed<DashboardSection[]>(() => {
   const folderIds = new Set(folders.value.map((folder) => folder.id))
 
-  const folderSections = folders.value.map((folder) => ({
-    id: folder.id,
-    name: folder.name,
-    dashboards: dashboards.value.filter((dashboard) => dashboard.folder_id === folder.id),
-    isUnfiled: false,
-    folder,
-  }))
+  const folderSections = folders.value
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((folder) => ({
+      id: folder.id,
+      name: folder.name,
+      dashboards: dashboards.value.filter((dashboard) => dashboard.folder_id === folder.id),
+      isUnfiled: false,
+      folder,
+    }))
 
   const unfiledDashboards = dashboards.value.filter((dashboard) => !dashboard.folder_id || !folderIds.has(dashboard.folder_id))
 
@@ -76,6 +166,239 @@ const groupedDashboardSections = computed<DashboardSection[]>(() => {
 
 const isCompletelyEmpty = computed(() => dashboards.value.length === 0 && folders.value.length === 0)
 const hasNoFolders = computed(() => folders.value.length === 0)
+
+const unfiledDashboardCount = computed(() => {
+  const section = groupedDashboardSections.value.find((item) => item.isUnfiled)
+  return section?.dashboards.length ?? 0
+})
+
+const sectionScopeFolderIds = computed(() => {
+  if (!selectedFolderId.value) {
+    return new Set<string>()
+  }
+
+  const scoped = new Set<string>()
+  const queue: string[] = [selectedFolderId.value]
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (!current || scoped.has(current)) {
+      continue
+    }
+
+    scoped.add(current)
+    const children = folderChildrenMap.value.get(current) ?? []
+    for (const child of children) {
+      queue.push(child.id)
+    }
+  }
+
+  return scoped
+})
+
+const folderVisibilityForSearch = computed(() => {
+  const visibility = new Map<string, boolean>()
+
+  if (!hasSearchQuery.value) {
+    for (const folder of folders.value) {
+      visibility.set(folder.id, true)
+    }
+    return visibility
+  }
+
+  function folderMatches(folder: Folder): boolean {
+    return folder.name.toLowerCase().includes(normalizedSearchQuery.value)
+  }
+
+  function dashboardMatches(dashboard: Dashboard): boolean {
+    return [dashboard.title, dashboard.description ?? '']
+      .join(' ')
+      .toLowerCase()
+      .includes(normalizedSearchQuery.value)
+  }
+
+  function evaluate(folder: Folder): boolean {
+    const ownDashboards = dashboardsByFolder.value.get(folder.id) ?? []
+    const ownDashboardMatch = ownDashboards.some(dashboardMatches)
+    const childFolders = folderChildrenMap.value.get(folder.id) ?? []
+    const childMatch = childFolders.some(evaluate)
+    const visible = folderMatches(folder) || ownDashboardMatch || childMatch
+    visibility.set(folder.id, visible)
+    return visible
+  }
+
+  for (const folder of rootFolders.value) {
+    evaluate(folder)
+  }
+
+  return visibility
+})
+
+const explorerTreeRows = computed<FolderTreeRow[]>(() => {
+  const expanded = new Set(expandedFolderIds.value)
+  const rows: FolderTreeRow[] = []
+
+  function walk(parentId: string | null, depth: number) {
+    const children = folderChildrenMap.value.get(parentId) ?? []
+    for (const folder of children) {
+      if (!folderVisibilityForSearch.value.get(folder.id)) {
+        continue
+      }
+
+      const visibleChildren = (folderChildrenMap.value.get(folder.id) ?? []).filter((child) => folderVisibilityForSearch.value.get(child.id))
+      const isExpanded = hasSearchQuery.value || expanded.has(folder.id)
+
+      rows.push({
+        folder,
+        depth,
+        hasChildren: visibleChildren.length > 0,
+        isExpanded,
+      })
+
+      if (visibleChildren.length > 0 && isExpanded) {
+        walk(folder.id, depth + 1)
+      }
+    }
+  }
+
+  walk(null, 0)
+  return rows
+})
+
+const breadcrumbs = computed<Breadcrumb[]>(() => {
+  const items: Breadcrumb[] = [{
+    id: 'all',
+    label: 'Dashboards',
+    type: 'all',
+  }]
+
+  if (selectedExplorerNode.value === 'unfiled') {
+    items.push({
+      id: 'unfiled',
+      label: 'Unfiled',
+      type: 'unfiled',
+    })
+    return items
+  }
+
+  if (!selectedFolderId.value || !selectedFolder.value) {
+    return items
+  }
+
+  const path: Folder[] = []
+  let cursor: Folder | null = selectedFolder.value
+  while (cursor) {
+    path.unshift(cursor)
+    if (!cursor.parent_id) {
+      break
+    }
+    cursor = folderById.value.get(cursor.parent_id) ?? null
+  }
+
+  for (const folder of path) {
+    items.push({
+      id: folder.id,
+      label: folder.name,
+      type: 'folder',
+    })
+  }
+
+  return items
+})
+
+const activeExplorerTitle = computed(() => {
+  if (selectedExplorerNode.value === 'unfiled') {
+    return 'Unfiled Dashboards'
+  }
+  if (selectedFolder.value) {
+    return selectedFolder.value.name
+  }
+  return 'All Dashboards'
+})
+
+const activeExplorerSubtitle = computed(() => {
+  if (selectedExplorerNode.value === 'unfiled') {
+    return 'Dashboards without a folder assignment'
+  }
+  if (selectedFolder.value) {
+    return 'Folder contents and nested dashboards'
+  }
+  return 'Browse folders and dashboards in explorer layout'
+})
+
+const filteredSections = computed<DashboardSection[]>(() => {
+  function dashboardMatches(dashboard: Dashboard): boolean {
+    if (!hasSearchQuery.value) {
+      return true
+    }
+    return [dashboard.title, dashboard.description ?? '']
+      .join(' ')
+      .toLowerCase()
+      .includes(normalizedSearchQuery.value)
+  }
+
+  function sectionInScope(section: DashboardSection): boolean {
+    if (selectedExplorerNode.value === 'all') {
+      return true
+    }
+
+    if (selectedExplorerNode.value === 'unfiled') {
+      return section.isUnfiled
+    }
+
+    if (section.isUnfiled || !section.id) {
+      return false
+    }
+
+    return sectionScopeFolderIds.value.has(section.id)
+  }
+
+  return groupedDashboardSections.value
+    .filter(sectionInScope)
+    .map((section) => {
+      const dashboardsForSection = section.dashboards.filter(dashboardMatches)
+      return {
+        ...section,
+        dashboards: dashboardsForSection,
+      }
+    })
+    .filter((section) => {
+      if (!hasSearchQuery.value) {
+        return true
+      }
+
+      if (section.name.toLowerCase().includes(normalizedSearchQuery.value)) {
+        return true
+      }
+
+      if (section.folder && folderVisibilityForSearch.value.get(section.folder.id)) {
+        return true
+      }
+
+      return section.dashboards.length > 0
+    })
+})
+
+const hoveredDashboard = computed(() => {
+  if (!hoveredDashboardId.value) {
+    return null
+  }
+  return dashboards.value.find((dashboard) => dashboard.id === hoveredDashboardId.value) ?? null
+})
+
+const hoveredDashboardFolderName = computed(() => {
+  if (!hoveredDashboard.value?.folder_id) {
+    return 'Unfiled'
+  }
+  return folderById.value.get(hoveredDashboard.value.folder_id)?.name ?? 'Unfiled'
+})
+
+const activeCreateParent = computed(() => {
+  if (!inlineFolderParentId.value) {
+    return null
+  }
+  return folderById.value.get(inlineFolderParentId.value) ?? null
+})
 
 async function fetchDashboards() {
   if (!currentOrgId.value) {
@@ -101,9 +424,27 @@ async function fetchDashboards() {
   }
 }
 
-// Refetch dashboards when organization changes
+function ensureRootFoldersExpanded() {
+  const rootIds = rootFolders.value.map((folder) => folder.id)
+  const knownFolders = new Set(folders.value.map((folder) => folder.id))
+  const preserved = expandedFolderIds.value.filter((folderId) => knownFolders.has(folderId))
+  expandedFolderIds.value = Array.from(new Set([...rootIds, ...preserved]))
+
+  if (selectedFolderId.value && !knownFolders.has(selectedFolderId.value)) {
+    selectedExplorerNode.value = 'all'
+  }
+
+  if (hoveredDashboardId.value && !dashboards.value.some((dashboard) => dashboard.id === hoveredDashboardId.value)) {
+    hoveredDashboardId.value = null
+  }
+}
+
 watch(currentOrgId, () => {
   fetchDashboards()
+})
+
+watch([folders, dashboards], () => {
+  ensureRootFoldersExpanded()
 })
 
 function normalizeCreateMode(rawMode: unknown): 'create' | 'import' | 'grafana' | null {
@@ -123,15 +464,21 @@ function openCreateModal() {
 }
 
 function openCreateFolderModal() {
+  if (!canCreateFolder.value) {
+    return
+  }
+
   folderName.value = ''
   folderError.value = null
-  showCreateFolderModal.value = true
+  showInlineFolderForm.value = true
+  inlineFolderParentId.value = selectedFolderId.value
 }
 
 function closeCreateFolderModal() {
-  showCreateFolderModal.value = false
+  showInlineFolderForm.value = false
   folderName.value = ''
   folderError.value = null
+  inlineFolderParentId.value = null
 }
 
 function closeCreateModal() {
@@ -175,7 +522,7 @@ async function handleDelete() {
     await deleteDashboard(deletingDashboard.value.id)
     cancelDelete()
     fetchDashboards()
-  } catch (e) {
+  } catch {
     error.value = 'Failed to delete dashboard'
   }
 }
@@ -186,7 +533,7 @@ function formatDate(dateStr: string): string {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
@@ -287,10 +634,9 @@ async function onFolderPermissionsSaved() {
     return
   }
 
-  const folderName = selectedFolderForPermissions.value.name
-
+  const folderDisplayName = selectedFolderForPermissions.value.name
   closeFolderPermissionsModal()
-  folderPermissionsMessage.value = `Updated permissions for "${folderName}"`
+  folderPermissionsMessage.value = `Updated permissions for "${folderDisplayName}"`
   await fetchDashboards()
 }
 
@@ -311,6 +657,7 @@ async function handleCreateFolder() {
   try {
     await createFolder(currentOrgId.value, {
       name: folderName.value.trim(),
+      ...(inlineFolderParentId.value ? { parent_id: inlineFolderParentId.value } : {}),
     })
     closeCreateFolderModal()
     await fetchDashboards()
@@ -318,6 +665,61 @@ async function handleCreateFolder() {
     folderError.value = e instanceof Error ? e.message : 'Failed to create folder'
   } finally {
     creatingFolder.value = false
+  }
+}
+
+function toggleFolderExpanded(folderId: string) {
+  const set = new Set(expandedFolderIds.value)
+  if (set.has(folderId)) {
+    set.delete(folderId)
+  } else {
+    set.add(folderId)
+  }
+  expandedFolderIds.value = Array.from(set)
+}
+
+function selectExplorerFolder(folderId: string) {
+  selectedExplorerNode.value = `folder:${folderId}`
+  const set = new Set(expandedFolderIds.value)
+  let cursor = folderById.value.get(folderId) ?? null
+
+  while (cursor?.parent_id) {
+    set.add(cursor.parent_id)
+    cursor = folderById.value.get(cursor.parent_id) ?? null
+  }
+
+  expandedFolderIds.value = Array.from(set)
+}
+
+function selectExplorerAll() {
+  selectedExplorerNode.value = 'all'
+}
+
+function selectExplorerUnfiled() {
+  selectedExplorerNode.value = 'unfiled'
+}
+
+function onBreadcrumbSelect(item: Breadcrumb) {
+  if (item.type === 'all') {
+    selectExplorerAll()
+    return
+  }
+
+  if (item.type === 'unfiled') {
+    selectExplorerUnfiled()
+    return
+  }
+
+  selectExplorerFolder(item.id)
+}
+
+function showDashboardPreview(dashboardId: string) {
+  hoveredDashboardId.value = dashboardId
+}
+
+function clearDashboardPreview(dashboardId: string) {
+  if (hoveredDashboardId.value === dashboardId) {
+    hoveredDashboardId.value = null
   }
 }
 
@@ -342,7 +744,7 @@ onMounted(() => {
     <header class="page-header">
       <div class="header-content">
         <h1>Dashboards</h1>
-        <p class="header-subtitle">Monitor your metrics and visualize data</p>
+        <p class="header-subtitle">File explorer for folders and monitoring dashboards</p>
       </div>
       <div class="header-actions">
         <button v-if="canCreateFolder" class="btn btn-secondary" data-testid="new-folder-header" @click="openCreateFolderModal">
@@ -350,8 +752,8 @@ onMounted(() => {
           <span>New Folder</span>
         </button>
         <button class="btn btn-primary" @click="openCreateModal">
-        <Plus :size="18" />
-        <span>New Dashboard</span>
+          <Plus :size="18" />
+          <span>New Dashboard</span>
         </button>
       </div>
     </header>
@@ -385,92 +787,242 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-else class="folder-sections">
-      <p v-if="folderPermissionsMessage" class="success-message">{{ folderPermissionsMessage }}</p>
-      <p v-if="moveError" class="section-error">{{ moveError }}</p>
-      <div v-if="hasNoFolders" class="folder-cta" data-testid="folder-empty-cta">
-        <div>
-          <h2>No folders yet</h2>
-          <p>Use folders to organize dashboards by team, service, or environment.</p>
+    <div v-else class="explorer-shell">
+      <aside class="explorer-sidebar">
+        <div class="explorer-search">
+          <Search :size="16" />
+          <input
+            v-model="searchQuery"
+            type="search"
+            placeholder="Search folders and dashboards"
+            data-testid="explorer-search"
+          />
         </div>
-        <button v-if="canCreateFolder" class="btn btn-secondary" data-testid="new-folder-cta" @click="openCreateFolderModal">
-          <FolderIcon :size="16" />
-          <span>New Folder</span>
-        </button>
-      </div>
 
-      <section
-        v-for="section in groupedDashboardSections"
-        :key="section.id ?? 'unfiled'"
-        class="folder-section"
-        :class="{
-          'folder-section-drop-active': dropTargetSectionId === normalizeSectionId(section.id),
-        }"
-        :data-testid="`folder-section-${section.id ?? 'unfiled'}`"
-        @dragover.prevent="onSectionDragOver(section.id)"
-        @drop.prevent="onSectionDrop(section.id)"
-      >
-        <div class="folder-section-header">
-          <div class="folder-section-title">
-            <component :is="section.isUnfiled ? Inbox : FolderIcon" :size="18" />
-            <h2>{{ section.name }}</h2>
-          </div>
-          <div class="folder-section-meta">
-            <span class="folder-count">{{ section.dashboards.length }}</span>
-            <button
-              v-if="isOrgAdmin && !section.isUnfiled && section.folder"
-              class="btn btn-secondary btn-sm"
-              :data-testid="`folder-permissions-${section.folder.id}`"
-              @click="openFolderPermissions(section.folder)"
-            >
-              <Shield :size="14" />
-              Permissions
-            </button>
-          </div>
-        </div>
-        <p v-if="section.isUnfiled" class="folder-description">
-          Dashboards without an assigned folder
-        </p>
-
-        <p v-if="section.dashboards.length === 0" class="section-empty">
-          No dashboards in this section yet.
-        </p>
-
-        <div v-else class="dashboard-grid">
-          <div
-            v-for="dashboard in section.dashboards"
-            :key="dashboard.id"
-            class="dashboard-card"
-            :class="{
-              'dashboard-card-dragging': draggingDashboardId === dashboard.id,
-              'dashboard-card-draggable': canManageDashboards,
-            }"
-            :data-testid="`dashboard-card-${dashboard.id}`"
-            :draggable="canManageDashboards"
-            @dragstart="onDashboardDragStart(dashboard)"
-            @dragend="onDashboardDragEnd"
-            @click="openDashboard(dashboard)"
+        <nav class="tree-nav" aria-label="Folder tree">
+          <button
+            class="tree-item tree-item-root"
+            :class="{ 'tree-item-active': selectedExplorerNode === 'all' }"
+            data-testid="tree-node-all"
+            @click="selectExplorerAll"
           >
-            <div class="card-header">
-              <h3>{{ dashboard.title }}</h3>
-              <div class="card-actions" @click.stop>
-                <button class="btn-icon" @click="openEditModal(dashboard)" title="Edit">
-                  <Pencil :size="16" />
-                </button>
-                <button class="btn-icon btn-icon-danger" @click="confirmDelete(dashboard)" title="Delete">
-                  <Trash2 :size="16" />
+            <LayoutDashboard :size="15" />
+            <span>All Dashboards</span>
+            <span class="tree-count">{{ dashboards.length }}</span>
+          </button>
+
+          <div v-for="row in explorerTreeRows" :key="row.folder.id" class="tree-node-wrapper" :style="{ '--depth': `${row.depth}` }">
+            <div class="tree-item-row" :data-testid="`tree-row-${row.folder.id}`" @dragover.prevent="onSectionDragOver(row.folder.id)" @drop.prevent="onSectionDrop(row.folder.id)">
+              <button
+                v-if="row.hasChildren"
+                class="tree-toggle"
+                :data-testid="`folder-toggle-${row.folder.id}`"
+                @click.stop="toggleFolderExpanded(row.folder.id)"
+              >
+                <ChevronDown v-if="row.isExpanded" :size="14" />
+                <ChevronRight v-else :size="14" />
+              </button>
+              <span v-else class="tree-toggle-placeholder"></span>
+
+              <button
+                class="tree-item"
+                :class="{ 'tree-item-active': selectedExplorerNode === `folder:${row.folder.id}` }"
+                :data-testid="`tree-node-${row.folder.id}`"
+                @click="selectExplorerFolder(row.folder.id)"
+              >
+                <FolderIcon :size="14" />
+                <span>{{ row.folder.name }}</span>
+                <span class="tree-count">{{ dashboardsByFolder.get(row.folder.id)?.length ?? 0 }}</span>
+              </button>
+            </div>
+          </div>
+
+          <button
+            class="tree-item tree-item-unfiled"
+            :class="{ 'tree-item-active': selectedExplorerNode === 'unfiled' }"
+            data-testid="tree-node-unfiled"
+            @click="selectExplorerUnfiled"
+            @dragover.prevent="onSectionDragOver(null)"
+            @drop.prevent="onSectionDrop(null)"
+          >
+            <Inbox :size="15" />
+            <span>Unfiled</span>
+            <span class="tree-count">{{ unfiledDashboardCount }}</span>
+          </button>
+        </nav>
+
+        <div v-if="showInlineFolderForm" class="inline-folder-create" data-testid="inline-folder-create">
+          <p v-if="activeCreateParent" class="inline-parent">Parent: {{ activeCreateParent.name }}</p>
+          <form @submit.prevent="handleCreateFolder">
+            <div class="form-group">
+              <label for="folder-name">Folder Name</label>
+              <input
+                id="folder-name"
+                v-model="folderName"
+                type="text"
+                placeholder="Operations"
+                :disabled="creatingFolder"
+                autocomplete="off"
+              />
+            </div>
+            <p v-if="folderError" class="error-message">{{ folderError }}</p>
+            <div class="inline-actions">
+              <button type="button" class="btn btn-secondary" :disabled="creatingFolder" @click="closeCreateFolderModal">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary" :disabled="creatingFolder">
+                {{ creatingFolder ? 'Creating...' : 'Create' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </aside>
+
+      <section class="explorer-main">
+        <div class="breadcrumbs" aria-label="Current folder path">
+          <template v-for="(item, index) in breadcrumbs" :key="item.type === 'folder' ? `folder-${item.id}` : item.type">
+            <button
+              class="breadcrumb-item"
+              :class="{ 'breadcrumb-item-active': index === breadcrumbs.length - 1 }"
+              @click="onBreadcrumbSelect(item)"
+            >
+              {{ item.label }}
+            </button>
+            <ChevronRight v-if="index < breadcrumbs.length - 1" :size="14" class="breadcrumb-separator" />
+          </template>
+        </div>
+
+        <p v-if="folderPermissionsMessage" class="success-message">{{ folderPermissionsMessage }}</p>
+        <p v-if="moveError" class="section-error">{{ moveError }}</p>
+
+        <div class="main-heading">
+          <h2>{{ activeExplorerTitle }}</h2>
+          <p>{{ activeExplorerSubtitle }}</p>
+        </div>
+
+        <div v-if="hasNoFolders" class="folder-cta" data-testid="folder-empty-cta">
+          <div>
+            <h2>No folders yet</h2>
+            <p>Use folders to organize dashboards by team, service, or environment.</p>
+          </div>
+          <button v-if="canCreateFolder" class="btn btn-secondary" data-testid="new-folder-cta" @click="openCreateFolderModal">
+            <FolderIcon :size="16" />
+            <span>New Folder</span>
+          </button>
+        </div>
+
+        <div class="folder-sections">
+          <section
+            v-for="section in filteredSections"
+            :key="section.id ?? 'unfiled'"
+            class="folder-section"
+            :class="{
+              'folder-section-drop-active': dropTargetSectionId === normalizeSectionId(section.id),
+            }"
+            :data-testid="`folder-section-${section.id ?? 'unfiled'}`"
+            @dragover.prevent="onSectionDragOver(section.id)"
+            @drop.prevent="onSectionDrop(section.id)"
+          >
+            <div class="folder-section-header">
+              <div class="folder-section-title">
+                <component :is="section.isUnfiled ? Inbox : FolderIcon" :size="18" />
+                <h2>{{ section.name }}</h2>
+              </div>
+              <div class="folder-section-meta">
+                <span class="folder-count">{{ section.dashboards.length }}</span>
+                <button
+                  v-if="isOrgAdmin && !section.isUnfiled && section.folder"
+                  class="btn btn-secondary btn-sm"
+                  :data-testid="`folder-permissions-${section.folder.id}`"
+                  @click="openFolderPermissions(section.folder)"
+                >
+                  <Shield :size="14" />
+                  Permissions
                 </button>
               </div>
             </div>
-            <p v-if="dashboard.description" class="card-description">
-              {{ dashboard.description }}
+
+            <p v-if="section.isUnfiled" class="folder-description">
+              Dashboards without an assigned folder
             </p>
-            <div class="card-meta">
-              <span>Created {{ formatDate(dashboard.created_at) }}</span>
+
+            <p v-if="section.dashboards.length === 0" class="section-empty">
+              No dashboards in this section yet.
+            </p>
+
+            <div v-else class="dashboard-grid">
+              <div
+                v-for="dashboard in section.dashboards"
+                :key="dashboard.id"
+                class="dashboard-card"
+                :class="{
+                  'dashboard-card-dragging': draggingDashboardId === dashboard.id,
+                  'dashboard-card-draggable': canManageDashboards,
+                }"
+                :data-testid="`dashboard-card-${dashboard.id}`"
+                :draggable="canManageDashboards"
+                @dragstart="onDashboardDragStart(dashboard)"
+                @dragend="onDashboardDragEnd"
+                @mouseenter="showDashboardPreview(dashboard.id)"
+                @mouseleave="clearDashboardPreview(dashboard.id)"
+                @focusin="showDashboardPreview(dashboard.id)"
+                @focusout="clearDashboardPreview(dashboard.id)"
+                @click="openDashboard(dashboard)"
+              >
+                <div class="card-header">
+                  <h3>{{ dashboard.title }}</h3>
+                  <div class="card-actions" @click.stop>
+                    <button class="btn-icon" @click="openEditModal(dashboard)" title="Edit">
+                      <Pencil :size="16" />
+                    </button>
+                    <button class="btn-icon btn-icon-danger" @click="confirmDelete(dashboard)" title="Delete">
+                      <Trash2 :size="16" />
+                    </button>
+                  </div>
+                </div>
+                <p v-if="dashboard.description" class="card-description">
+                  {{ dashboard.description }}
+                </p>
+                <div class="card-meta">
+                  <span>Created {{ formatDate(dashboard.created_at) }}</span>
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
+
+          <p v-if="filteredSections.length === 0" class="section-empty">No folders or dashboards match your search.</p>
         </div>
       </section>
+
+      <aside class="preview-pane" data-testid="dashboard-preview">
+        <h3>Dashboard Preview</h3>
+        <div v-if="hoveredDashboard" class="preview-card">
+          <div class="preview-title-row">
+            <FileText :size="16" />
+            <h4>{{ hoveredDashboard.title }}</h4>
+          </div>
+          <p class="preview-description">
+            {{ hoveredDashboard.description || 'No description provided.' }}
+          </p>
+          <dl class="preview-meta">
+            <div>
+              <dt>Folder</dt>
+              <dd>{{ hoveredDashboardFolderName }}</dd>
+            </div>
+            <div>
+              <dt>Created</dt>
+              <dd>{{ formatDate(hoveredDashboard.created_at) }}</dd>
+            </div>
+            <div>
+              <dt>Updated</dt>
+              <dd>{{ formatDate(hoveredDashboard.updated_at) }}</dd>
+            </div>
+          </dl>
+        </div>
+        <div v-else class="preview-empty">
+          <p>Hover over a dashboard card to preview details.</p>
+        </div>
+      </aside>
     </div>
 
     <CreateDashboardModal
@@ -496,37 +1048,6 @@ onMounted(() => {
       @saved="onFolderPermissionsSaved"
     />
 
-    <div v-if="showCreateFolderModal" class="modal-overlay" @click.self="closeCreateFolderModal">
-      <div class="modal" role="dialog" aria-modal="true" aria-label="Create folder dialog">
-        <h2>Create Folder</h2>
-        <p class="modal-description">Organize dashboards into shared sections.</p>
-        <form @submit.prevent="handleCreateFolder">
-          <div class="form-group">
-            <label for="folder-name">Folder Name</label>
-            <input
-              id="folder-name"
-              v-model="folderName"
-              type="text"
-              placeholder="Operations"
-              :disabled="creatingFolder"
-              autocomplete="off"
-            />
-          </div>
-
-          <p v-if="folderError" class="error-message">{{ folderError }}</p>
-
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" :disabled="creatingFolder" @click="closeCreateFolderModal">
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="creatingFolder">
-              {{ creatingFolder ? 'Creating...' : 'Create Folder' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">
       <div class="modal delete-modal">
         <div class="modal-icon">
@@ -546,8 +1067,8 @@ onMounted(() => {
 
 <style scoped>
 .dashboard-list {
-  padding: 2rem 2.25rem;
-  max-width: 1400px;
+  padding: 1.5rem 1.75rem 2rem;
+  max-width: 1560px;
   margin: 0 auto;
 }
 
@@ -556,42 +1077,41 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1.1rem 1.25rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
   border: 1px solid var(--border-primary);
   border-radius: 14px;
   background: var(--surface-1);
-  backdrop-filter: blur(10px);
   box-shadow: var(--shadow-sm);
+}
+
+.header-content h1 {
+  margin-bottom: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 1.08rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.header-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
 }
 
 .header-actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-}
-
-.header-content h1 {
-  margin-bottom: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 1.12rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.header-subtitle {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  gap: 0.6rem;
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.62rem 1.05rem;
+  gap: 0.45rem;
+  padding: 0.58rem 1rem;
   border: 1px solid transparent;
   border-radius: 10px;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -601,12 +1121,12 @@ onMounted(() => {
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   border-color: rgba(125, 211, 252, 0.4);
   color: white;
-  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.24);
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.24);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(14, 165, 233, 0.28);
+  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.28);
 }
 
 .btn-secondary {
@@ -616,13 +1136,13 @@ onMounted(() => {
 }
 
 .btn-secondary:hover {
-  background: var(--bg-hover);
   border-color: var(--border-secondary);
+  background: var(--bg-hover);
 }
 
 .btn-sm {
-  padding: 0.38rem 0.72rem;
-  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.74rem;
 }
 
 .btn-danger {
@@ -635,18 +1155,18 @@ onMounted(() => {
 }
 
 .btn-icon {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
   padding: 0;
-  background: transparent;
   border: none;
   border-radius: 6px;
+  background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .btn-icon:hover {
@@ -655,11 +1175,10 @@ onMounted(() => {
 }
 
 .btn-icon-danger:hover {
-  background: rgba(255, 107, 107, 0.15);
+  background: rgba(251, 113, 133, 0.15);
   color: var(--accent-danger);
 }
 
-/* State Containers */
 .state-container {
   display: flex;
   flex-direction: column;
@@ -684,7 +1203,7 @@ onMounted(() => {
 }
 
 .state-container p {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .loading-spinner {
@@ -698,7 +1217,9 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-icon {
@@ -707,9 +1228,9 @@ onMounted(() => {
   justify-content: center;
   width: 120px;
   height: 120px;
-  background: linear-gradient(160deg, rgba(56, 189, 248, 0.14), rgba(52, 211, 153, 0.08));
   border: 1px solid var(--border-primary);
   border-radius: 20px;
+  background: linear-gradient(160deg, rgba(56, 189, 248, 0.14), rgba(52, 211, 153, 0.08));
   color: var(--text-tertiary);
   margin-bottom: 1rem;
 }
@@ -719,10 +1240,228 @@ onMounted(() => {
   gap: 0.75rem;
 }
 
-.folder-sections {
+.explorer-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 300px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.explorer-sidebar,
+.explorer-main,
+.preview-pane {
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+}
+
+.explorer-sidebar {
+  position: sticky;
+  top: 1rem;
+  padding: 0.85rem;
+}
+
+.explorer-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  padding: 0.55rem 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.explorer-search input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.explorer-search input:focus {
+  outline: none;
+}
+
+.tree-nav {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.35rem;
+}
+
+.tree-node-wrapper {
+  --depth: 0;
+}
+
+.tree-item-row {
+  display: flex;
+  align-items: center;
+  padding-left: calc(var(--depth) * 14px);
+}
+
+.tree-toggle,
+.tree-toggle-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.tree-toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tree-toggle:hover {
+  background: var(--bg-hover);
+}
+
+.tree-item {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.81rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.tree-item:hover {
+  border-color: var(--border-primary);
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.tree-item-active {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--text-primary);
+}
+
+.tree-count {
+  margin-left: auto;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-primary);
+  background: var(--surface-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+}
+
+.inline-folder-create {
+  margin-top: 0.75rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 0.65rem;
+}
+
+.inline-parent {
+  margin: 0 0 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group label {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.form-group input {
+  padding: 0.58rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.error-message {
+  margin: 0.4rem 0 0;
+  color: var(--accent-danger);
+  font-size: 0.8rem;
+}
+
+.explorer-main {
+  padding: 0.95rem;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-bottom: 0.75rem;
+}
+
+.breadcrumb-item {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 0.1rem 0.2rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.breadcrumb-item-active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.breadcrumb-separator {
+  color: var(--text-tertiary);
+}
+
+.main-heading {
+  margin-bottom: 0.8rem;
+}
+
+.main-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.main-heading p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
 }
 
 .folder-cta {
@@ -734,32 +1473,39 @@ onMounted(() => {
   border-radius: 12px;
   padding: 0.95rem 1rem;
   background: var(--surface-2);
+  margin-bottom: 0.85rem;
 }
 
 .folder-cta h2 {
   margin: 0;
-  font-size: 0.94rem;
+  font-size: 0.92rem;
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
 .folder-cta p {
-  margin: 0.3rem 0 0;
+  margin: 0.25rem 0 0;
   color: var(--text-secondary);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+}
+
+.folder-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .folder-section {
-  background: var(--surface-1);
   border: 1px solid var(--border-primary);
-  border-radius: 14px;
-  padding: 1rem;
+  border-radius: 12px;
+  background: var(--surface-2);
+  padding: 0.9rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .folder-section-drop-active {
-  border-color: rgba(56, 189, 248, 0.8);
+  border-color: rgba(56, 189, 248, 0.85);
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
 }
 
@@ -767,70 +1513,70 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.6rem;
   margin-bottom: 0.25rem;
-}
-
-.folder-section-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .folder-section-title {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  color: var(--text-primary);
+  gap: 0.5rem;
 }
 
 .folder-section-title h2 {
-  font-size: 0.95rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-size: 0.9rem;
   font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.folder-section-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .folder-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.8rem;
-  height: 1.8rem;
+  min-width: 1.7rem;
+  height: 1.7rem;
   border-radius: 999px;
   border: 1px solid var(--border-primary);
-  background: var(--surface-2);
+  background: var(--surface-1);
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-family: var(--font-mono);
 }
 
 .folder-description {
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.75rem;
   color: var(--text-secondary);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .section-empty {
-  margin-top: 0.8rem;
+  margin: 0.65rem 0 0;
   color: var(--text-tertiary);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
 }
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+  gap: 0.85rem;
 }
 
 .dashboard-card {
-  background: linear-gradient(180deg, rgba(16, 27, 42, 0.92), rgba(14, 24, 38, 0.9));
-  border: 1px solid var(--border-primary);
-  border-radius: 14px;
-  padding: 1.5rem;
-  cursor: pointer;
-  transition: all 0.22s ease;
-  box-shadow: var(--shadow-sm);
   position: relative;
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(16, 27, 42, 0.92), rgba(14, 24, 38, 0.9));
+  padding: 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -846,42 +1592,41 @@ onMounted(() => {
 }
 
 .dashboard-card:hover {
-  border-color: rgba(56, 189, 248, 0.5);
+  border-color: rgba(56, 189, 248, 0.55);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  transform: translateY(-4px);
 }
 
 .dashboard-card-draggable {
   cursor: grab;
 }
 
-.dashboard-card-dragging {
-  opacity: 0.5;
-  transform: scale(0.99);
-}
-
 .dashboard-card-draggable:active {
   cursor: grabbing;
+}
+
+.dashboard-card-dragging {
+  opacity: 0.55;
+  transform: scale(0.99);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
 }
 
 .card-header h3 {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.95rem;
   color: var(--text-primary);
-  max-width: 70%;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .card-actions {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.2rem;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -891,10 +1636,10 @@ onMounted(() => {
 }
 
 .card-description {
+  margin-bottom: 0.8rem;
   color: var(--text-secondary);
-  font-size: 0.84rem;
-  margin-bottom: 1rem;
-  line-height: 1.5;
+  font-size: 0.82rem;
+  line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -902,89 +1647,127 @@ onMounted(() => {
 }
 
 .card-meta {
-  font-size: 0.72rem;
   color: var(--text-tertiary);
+  font-size: 0.7rem;
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(3, 10, 18, 0.76);
-  backdrop-filter: blur(8px);
+.preview-pane {
+  position: sticky;
+  top: 1rem;
+  padding: 0.9rem;
+}
+
+.preview-pane h3 {
+  margin: 0 0 0.7rem;
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.preview-card {
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 0.75rem;
+}
+
+.preview-title-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 100;
-  animation: fadeIn 0.2s ease-out;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.preview-title-row h4 {
+  font-size: 0.93rem;
+  color: var(--text-primary);
 }
 
-.modal {
-  background: var(--surface-1);
-  border: 1px solid var(--border-primary);
-  border-radius: 14px;
-  padding: 2rem;
-  width: 100%;
-  max-width: 400px;
-  animation: slideUp 0.3s ease-out;
-}
-
-.modal-description {
+.preview-description {
+  margin: 0 0 0.75rem;
   color: var(--text-secondary);
-  margin: 0.5rem 0 1rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
-.form-group {
+.preview-meta {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.preview-meta div {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  margin-bottom: 1rem;
+  gap: 0.15rem;
 }
 
-.form-group label {
-  color: var(--text-primary);
-  font-size: 0.84rem;
+.preview-meta dt {
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
 }
 
-.form-group input {
-  padding: 0.65rem 0.75rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-primary);
-  background: var(--surface-2);
-  color: var(--text-primary);
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: var(--focus-ring);
-}
-
-.error-message {
+.preview-meta dd {
   margin: 0;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+}
+
+.preview-empty {
+  border: 1px dashed var(--border-primary);
+  border-radius: 10px;
+  padding: 1rem 0.8rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.success-message {
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  background: rgba(78, 205, 196, 0.1);
+  color: var(--accent-success);
+  font-size: 0.82rem;
+}
+
+.section-error {
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.12);
   color: var(--accent-danger);
   font-size: 0.82rem;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  background: rgba(3, 10, 18, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.modal {
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--surface-1);
+  padding: 2rem;
 }
 
 .delete-modal {
@@ -997,57 +1780,47 @@ onMounted(() => {
   justify-content: center;
   width: 48px;
   height: 48px;
-  background: rgba(251, 113, 133, 0.15);
   border-radius: 50%;
-  color: var(--accent-danger);
   margin-bottom: 1rem;
+  background: rgba(251, 113, 133, 0.15);
+  color: var(--accent-danger);
 }
 
 .delete-modal h2 {
-  margin-bottom: 0.5rem;
-  color: var(--text-primary);
+  margin-bottom: 0.4rem;
 }
 
 .delete-modal p {
+  margin-bottom: 0.45rem;
   color: var(--text-secondary);
-  margin-bottom: 0.5rem;
 }
 
 .warning {
   color: var(--accent-danger);
-  font-size: 0.875rem;
-}
-
-.success-message {
-  margin: 0;
-  padding: 0.65rem 0.85rem;
-  border-radius: 8px;
-  border: 1px solid rgba(78, 205, 196, 0.3);
-  background: rgba(78, 205, 196, 0.1);
-  color: var(--accent-success);
-  font-size: 0.82rem;
-}
-
-.section-error {
-  margin: 0;
-  padding: 0.65rem 0.85rem;
-  border-radius: 8px;
-  border: 1px solid rgba(251, 113, 133, 0.35);
-  background: rgba(251, 113, 133, 0.12);
-  color: var(--accent-danger);
-  font-size: 0.82rem;
+  font-size: 0.86rem;
 }
 
 .modal-actions {
   display: flex;
   justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
+  gap: 0.7rem;
+  margin-top: 1.2rem;
+}
+
+@media (max-width: 1280px) {
+  .explorer-shell {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .preview-pane {
+    grid-column: 1 / -1;
+    position: static;
+  }
 }
 
 @media (max-width: 900px) {
   .dashboard-list {
-    padding: 1.1rem;
+    padding: 1rem;
   }
 
   .page-header {
@@ -1062,6 +1835,15 @@ onMounted(() => {
   .header-actions .btn {
     flex: 1;
     justify-content: center;
+  }
+
+  .explorer-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .explorer-sidebar,
+  .preview-pane {
+    position: static;
   }
 
   .dashboard-grid {
