@@ -1,3 +1,52 @@
+## Task CI-CONCURRENCY-001: Cancel stale main-branch workflow runs - 2026-02-09T16:18:00Z
+- What was done:
+  - Added workflow-level `concurrency` settings to lint, security, and coverage workflows so only the newest run continues on the default branch
+  - Configured `cancel-in-progress` for `master`/`main` refs to prevent parallel overlap during rapid pushes
+- Files changed:
+  - .github/workflows/lint.yml
+  - .github/workflows/security.yml
+  - .github/workflows/coverage.yml
+  - progress.txt
+- Validation: not run locally (workflow-config change)
+- Browser validation: n/a (not run in this environment)
+
+## Task COVERAGE-PIPELINE-001: Drive README coverage badge from CI output - 2026-02-09T16:05:00Z
+- What was done:
+  - Added a dedicated `Coverage` GitHub Actions workflow that runs backend/frontend coverage, emits artifacts, and writes a Shields endpoint JSON payload
+  - Added `.github/badges/coverage-summary.json` as the workflow-updated badge source and enabled auto-commit of refreshed coverage values on `master`
+  - Updated README coverage badge to consume pipeline-generated JSON instead of hard-coded percentages
+- Files changed:
+  - .github/workflows/coverage.yml
+  - .github/badges/coverage-summary.json
+  - README.md
+  - progress.txt
+- Validation: not run locally (CI workflow + docs changes)
+- Browser validation: n/a (not run in this environment)
+
+## Task README-COVERAGE-002: Replace coverage table with README badge - 2026-02-09T15:42:00Z
+- What was done:
+  - Replaced the markdown coverage table in README with a compact coverage badge that shows frontend/backend snapshot values
+  - Kept local regeneration commands so coverage can still be refreshed and re-published in docs
+- Files changed:
+  - README.md
+  - progress.txt
+- Validation: not run locally (documentation-only change)
+- Browser validation: n/a (not run in this environment)
+
+## Task README-COVERAGE-001: Add code coverage report snapshot to README - 2026-02-09T15:32:00Z
+- What was done:
+  - Added a dedicated README coverage section with latest backend and frontend coverage metrics plus commands to regenerate locally
+  - Added frontend `test:coverage` script and installed Vitest V8 coverage provider to make coverage reporting first-class
+  - Updated stale dashboard API tests to match current org-scoped endpoint signatures so frontend coverage runs complete successfully
+- Files changed:
+  - README.md
+  - frontend/package.json
+  - frontend/package-lock.json
+  - frontend/src/api/dashboards.spec.ts
+  - progress.txt
+- Validation: passing (`cd backend && go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out`, `cd frontend && npm run test:coverage`)
+- Browser validation: n/a (not run in this environment)
+
 ## Task README-BADGES-002: Add lint and security workflow badges to README - 2026-02-09T15:26:00Z
 - What was done:
   - Added `Lint` and `Security` GitHub Actions badges alongside the existing CodeQL badge near the README title
@@ -61,92 +110,4 @@
   - frontend/biome.jsonc
   - progress.txt
 - Validation: passing (`cd frontend && npm run lint`, `cd frontend && npm run type-check`)
-- Browser validation: n/a (not run in this environment)
-
-## Task FRONTEND-LINT-002: Reduce Biome frontend warnings in core chart/query paths - 2026-02-09T14:33:09Z
-- What was done:
-  - Fixed a broad set of Biome findings across frontend charting/query code and tests (template string concatenations, literal-key access, optional chaining, and explicit `any` reductions)
-  - Tightened lint signal by scoping Biome scripts to source/config files and avoiding generated artifact lint noise
-  - Updated test assertions/types to preserve behavior after lint cleanups and revalidated touched specs
-- Files changed:
-  - frontend/src/components/GaugeChart.vue
-  - frontend/src/components/Panel.vue
-  - frontend/src/components/PieChart.vue
-  - frontend/src/components/StatPanel.vue
-  - frontend/src/components/BarChart.vue
-  - frontend/src/components/LineChart.vue
-  - frontend/src/components/Panel.spec.ts
-  - frontend/src/components/QueryEditor.spec.ts
-  - frontend/src/components/TimeRangePicker.spec.ts
-  - frontend/src/composables/useProm.ts
-  - frontend/src/composables/useProm.spec.ts
-  - frontend/src/composables/useTimeRange.spec.ts
-  - frontend/src/logquery/language.ts
-  - frontend/src/promql/completionProvider.ts
-  - frontend/src/promql/hoverProvider.ts
-  - frontend/src/promql/language.ts
-  - frontend/src/utils/formatting.ts
-  - frontend/src/utils/formatting.spec.ts
-  - frontend/src/components/StatPanel.spec.ts
-  - frontend/vite.config.ts
-  - frontend/package.json
-  - frontend/biome.jsonc
-  - progress.txt
-- Validation: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/Panel.spec.ts src/components/QueryEditor.spec.ts src/components/TimeRangePicker.spec.ts src/composables/useProm.spec.ts src/utils/formatting.spec.ts`)
-- Browser validation: n/a (not run in this environment)
-
-## Task LINT-INFRA-001: Add backend golangci-lint and CI lint workflows - 2026-02-09T14:20:08Z
-- What was done:
-  - Added backend golangci-lint setup with a scoped v2 config and root Make targets for `backend-lint`, `frontend-lint`, and combined `lint`
-  - Added GitHub Actions lint workflow running backend golangci-lint and frontend Biome/Knip on push and pull requests
-  - Updated README with backend/frontend lint commands and fixed minor backend lint blockers surfaced by initial run
-- Files changed:
-  - backend/.golangci.yml
-  - .github/workflows/lint.yml
-  - Makefile
-  - README.md
-  - backend/internal/auth/middleware.go
-  - backend/internal/datasource/victorialogs.go
-  - backend/internal/handlers/organization.go
-  - backend/pkg/prometheus/client.go
-  - progress.txt
-- Validation: passing (`make backend-lint`, `make frontend-lint`, `make lint`)
-- Browser validation: n/a (not run in this environment)
-
-## Task FRONTEND-BIOME-001: Add Biome linting defaults for Vue frontend - 2026-02-09T14:10:07Z
-- What was done:
-  - Added Biome configuration for the frontend with Vue-friendly defaults (2-space indentation, single quotes, trailing commas, 100-column width)
-  - Added frontend lint and formatting scripts (`lint`, `lint:fix`, `format`, `format:check`) while keeping `lint:dead-code`
-  - Tuned rules for current Vue SFC ergonomics by disabling Biome unused-variable/import checks (covered by TS) and keeping `useImportType` as a warning to guide gradual cleanup
-- Files changed:
-  - frontend/biome.jsonc
-  - frontend/package.json
-  - frontend/package-lock.json
-  - progress.txt
-- Validation: passing (`cd frontend && npm run lint`, `cd frontend && npm run lint:dead-code`, `cd frontend && npm run type-check`)
-- Browser validation: n/a (not run in this environment)
-
-## Task DASHBOARD-DEADCODE-004: Clear knip dead-code findings after modal removal - 2026-02-09T14:05:17Z
-- What was done:
-  - Removed dead exported API surfaces and types flagged by knip (auth/org APIs, promql helpers, and type-only exports)
-  - Converted internal-only exported types to module-local types across affected Vue/composable/utility files
-  - Kept dead-code lint enabled via `npm run lint:dead-code` and validated it now runs clean with no findings
-- Files changed:
-  - frontend/src/api/auth.ts
-  - frontend/src/api/organizations.ts
-  - frontend/src/api/datasources.ts
-  - frontend/src/components/BarChart.vue
-  - frontend/src/components/StatPanel.vue
-  - frontend/src/components/TablePanel.vue
-  - frontend/src/composables/useProm.ts
-  - frontend/src/composables/useQueryBuilder.ts
-  - frontend/src/composables/useTimeRange.ts
-  - frontend/src/promql/completionProvider.ts
-  - frontend/src/promql/hoverProvider.ts
-  - frontend/src/promql/language.ts
-  - frontend/src/types/converter.ts
-  - frontend/src/utils/formatting.ts
-  - progress.txt
-- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/views/DashboardDetailView.spec.ts src/views/DashboardSettingsView.spec.ts src/components/DashboardPermissionsEditor.spec.ts`)
-- Dead-code lint: passing (`cd frontend && npm run lint:dead-code`)
 - Browser validation: n/a (not run in this environment)

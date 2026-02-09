@@ -3,6 +3,7 @@
 [![CodeQL](https://github.com/janhoon/dash/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/janhoon/dash/actions/workflows/security.yml)
 [![Lint](https://github.com/janhoon/dash/actions/workflows/lint.yml/badge.svg?branch=master)](https://github.com/janhoon/dash/actions/workflows/lint.yml)
 [![Security](https://github.com/janhoon/dash/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/janhoon/dash/actions/workflows/security.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/janhoon/dash/master/.github/badges/coverage-summary.json)](https://github.com/janhoon/dash/actions/workflows/coverage.yml)
 
 A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
 
@@ -102,6 +103,23 @@ Backend:
 ```bash
 cd backend
 go test ./...
+```
+
+### Code Coverage
+
+Coverage badge is generated from the CI pipeline output (`Coverage` workflow on `master`).
+
+Refresh locally:
+
+```bash
+# Backend
+cd backend
+go test ./... -coverprofile=coverage.out
+go tool cover -func=coverage.out
+
+# Frontend
+cd ../frontend
+npm run test:coverage
 ```
 
 ### Running Linting

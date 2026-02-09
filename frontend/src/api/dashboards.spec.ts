@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { listDashboards, getDashboard, createDashboard, updateDashboard, deleteDashboard } from './dashboards'
 
 describe('Dashboard API', () => {
+  const orgId = 'org-1'
   const mockFetch = vi.fn()
   const originalFetch = global.fetch
 
@@ -22,14 +23,19 @@ describe('Dashboard API', () => {
         json: () => Promise.resolve(mockData)
       })
 
-      const result = await listDashboards()
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/api/dashboards')
+      const result = await listDashboards(orgId)
+      expect(mockFetch).toHaveBeenCalledWith(
+        `http://localhost:8080/api/orgs/${orgId}/dashboards`,
+        expect.objectContaining({
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
       expect(result).toEqual(mockData)
     })
 
     it('throws error on failure', async () => {
       mockFetch.mockResolvedValue({ ok: false })
-      await expect(listDashboards()).rejects.toThrow('Failed to fetch dashboards')
+      await expect(listDashboards(orgId)).rejects.toThrow('Failed to fetch dashboards')
     })
   })
 
@@ -42,7 +48,12 @@ describe('Dashboard API', () => {
       })
 
       const result = await getDashboard('1')
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/api/dashboards/1')
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/api/dashboards/1',
+        expect.objectContaining({
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
       expect(result).toEqual(mockData)
     })
 
@@ -60,9 +71,9 @@ describe('Dashboard API', () => {
         json: () => Promise.resolve(mockData)
       })
 
-      const result = await createDashboard({ title: 'New Dashboard' })
+      const result = await createDashboard(orgId, { title: 'New Dashboard' })
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/api/dashboards',
+        `http://localhost:8080/api/orgs/${orgId}/dashboards`,
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -74,7 +85,7 @@ describe('Dashboard API', () => {
 
     it('throws error on failure', async () => {
       mockFetch.mockResolvedValue({ ok: false })
-      await expect(createDashboard({ title: 'Test' })).rejects.toThrow('Failed to create dashboard')
+      await expect(createDashboard(orgId, { title: 'Test' })).rejects.toThrow('Failed to create dashboard')
     })
   })
 
