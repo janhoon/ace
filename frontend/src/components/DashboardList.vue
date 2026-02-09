@@ -343,17 +343,6 @@ const activeExplorerTitle = computed(() => {
   return 'All Dashboards'
 })
 
-const activeExplorerSubtitle = computed(() => {
-  if (selectedFolder.value) {
-    const directDashboardCount = dashboardsByFolder.value.get(selectedFolder.value.id)?.length ?? 0
-    const childFolderCount = folderChildrenMap.value.get(selectedFolder.value.id)?.length ?? 0
-    const dashboardLabel = directDashboardCount === 1 ? 'dashboard' : 'dashboards'
-    const childLabel = childFolderCount === 1 ? 'subfolder' : 'subfolders'
-    return `${directDashboardCount} ${dashboardLabel} in this folder - ${childFolderCount} ${childLabel}`
-  }
-  return 'Browse folders and dashboards in explorer layout'
-})
-
 const filteredSections = computed<DashboardSection[]>(() => {
   function sectionInScope(section: DashboardSection): boolean {
     if (selectedExplorerNode.value === 'all') {
@@ -846,7 +835,6 @@ onMounted(() => {
               <ChevronRight v-if="index < breadcrumbs.length - 1" :size="14" class="breadcrumb-separator" />
             </template>
           </div>
-          <p>{{ activeExplorerSubtitle }}</p>
         </div>
 
         <div class="tree-toolbar">
@@ -1019,7 +1007,6 @@ onMounted(() => {
 
         <div class="main-heading">
           <h2>{{ activeExplorerTitle }}</h2>
-          <p>{{ activeExplorerSubtitle }}</p>
         </div>
 
         <div v-if="selectedFolderChildren.length > 0" class="subfolder-strip">
@@ -1463,13 +1450,7 @@ onMounted(() => {
 }
 
 .finder-header .breadcrumbs {
-  margin-bottom: 0.35rem;
-}
-
-.finder-header p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.78rem;
+  margin-bottom: 0;
 }
 
 .explorer-search {
@@ -1816,12 +1797,6 @@ onMounted(() => {
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.03em;
-}
-
-.main-heading p {
-  margin: 0.35rem 0 0;
-  color: var(--text-secondary);
-  font-size: 0.82rem;
 }
 
 .folder-cta {

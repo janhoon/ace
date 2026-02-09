@@ -129,6 +129,20 @@ describe('DashboardList', () => {
     expect(wrapper.find('[data-testid="tree-node-unfiled"]').exists()).toBe(false)
   })
 
+  it('shows breadcrumbs without dashboard count subtext', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="tree-node-folder-a"]').trigger('click')
+
+    expect(wrapper.find('.breadcrumbs').text()).toContain('Dashboards')
+    expect(wrapper.find('.breadcrumbs').text()).toContain('Operations')
+    expect(wrapper.text()).not.toContain('in this folder')
+  })
+
   it('displays empty state when no dashboards and no folders', async () => {
     vi.mocked(dashboardApi.listDashboards).mockResolvedValue([])
     vi.mocked(folderApi.listFolders).mockResolvedValue([])

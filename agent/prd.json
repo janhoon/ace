@@ -520,7 +520,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/components/Breadcrumbs"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "SINGLE-CLICK-001",

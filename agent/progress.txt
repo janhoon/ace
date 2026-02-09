@@ -29,3 +29,9 @@ Last updated: 2026-02-09 10:06 UTC
 - Files changed: `frontend/src/components/DashboardList.vue`, `frontend/src/components/DashboardList.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`), passing (targeted touched-area test `src/components/DashboardList.spec.ts`)
 - Browser validation: failing (required `dev-browser` skill is unavailable in this environment; skill lookup returned "not found")
+
+## Task BREADCRUMBS-CLEANUP-001: Remove dashboard count subtext from breadcrumbs - 2026-02-09 10:14 UTC
+- What was done: Removed the dashboard-count subtitle from both explorer breadcrumb headers so breadcrumbs now show path labels only, and added a focused test to ensure the old "in this folder" count subtext is no longer rendered.
+- Files changed: `frontend/src/components/DashboardList.vue`, `frontend/src/components/DashboardList.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`), passing (targeted touched-area test `src/components/DashboardList.spec.ts`; `npm run type-check` passing)
+- Browser validation: failing (required `dev-browser` skill is unavailable in this environment; skill lookup returned "not found")
