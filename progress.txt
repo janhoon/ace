@@ -1,0 +1,13 @@
+## Task SSO-FE-UI-002: Restructure SSO settings into configure flow - 2026-02-09T00:20:30Z
+- What was done:
+  - Reworked the SSO section to present a single configure entry point plus a provider list with status and edit/add actions
+  - Added provider-specific configuration panels that preserve existing load/save behavior and error messaging
+  - Updated SSO view tests to drive the new configure/edit flow
+- Files changed:
+  - frontend/src/views/OrganizationSettings.vue
+  - frontend/src/views/OrganizationSettings.spec.ts
+  - agent/prd.json
+  - agent/progress.txt
+  - progress.txt
+- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/Panel.spec.ts`, `src/components/CreateDashboardModal.spec.ts`); passing (`cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts`)
+- Browser validation: failing (dev-browser skill unavailable in this environment)
