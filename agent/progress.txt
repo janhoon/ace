@@ -466,3 +466,21 @@
   - agent/progress.txt
 - Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
 - Browser validation: failing (could not run; `dev-browser` skill is unavailable in this environment)
+
+## Task CAC-001: Configuration as Code (CaC) for Dashboards - 2026-02-09T00:33:49Z
+- What was done:
+  - Added backend dashboard configuration-as-code conversion package with schema-versioned dashboard document parsing/encoding for JSON and YAML formats
+  - Implemented dashboard export endpoint (`GET /api/dashboards/{id}/export?format=json|yaml`) with org membership + RBAC view checks and panel serialization
+  - Implemented dashboard import endpoint (`POST /api/orgs/{orgId}/dashboards/import?format=json|yaml`) with schema validation, role checks, transactional dashboard/panel creation, and datasource preservation
+  - Added converter unit tests for JSON/YAML decode/encode and validation failures plus handler tests for import/export format validation
+  - Marked this task as passing in `agent/prd.json`
+- Files changed:
+  - backend/internal/converter/dashboard_cac.go
+  - backend/internal/converter/dashboard_cac_test.go
+  - backend/internal/handlers/dashboard_cac.go
+  - backend/internal/handlers/dashboard_cac_test.go
+  - backend/cmd/api/main.go
+  - agent/prd.json
+  - agent/progress.txt
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: n/a (no frontend changes)
