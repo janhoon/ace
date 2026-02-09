@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
 import { createOrganization } from '../api/organizations'
 
@@ -13,6 +13,8 @@ const slug = ref('')
 const autoSlug = ref(true)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const modalRef = ref<HTMLDivElement | null>(null)
+const firstInputRef = ref<HTMLInputElement | null>(null)
 
 const slugPreview = computed(() => {
   if (!autoSlug.value) return slug.value
@@ -32,6 +34,64 @@ watch(name, () => {
 function handleSlugInput() {
   autoSlug.value = false
 }
+
+function focusFirstInput() {
+  nextTick(() => {
+    firstInputRef.value?.focus()
+  })
+}
+
+function closeModal() {
+  emit('close')
+}
+
+function trapFocus(event: KeyboardEvent) {
+  if (event.key !== 'Tab' || !modalRef.value) {
+    return
+  }
+
+  const focusableElements = modalRef.value.querySelectorAll<HTMLElement>(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+  )
+
+  if (focusableElements.length === 0) {
+    return
+  }
+
+  const first = focusableElements[0]
+  const last = focusableElements[focusableElements.length - 1]
+  const active = document.activeElement
+
+  if (event.shiftKey && active === first) {
+    event.preventDefault()
+    last.focus()
+    return
+  }
+
+  if (!event.shiftKey && active === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeModal()
+    return
+  }
+
+  trapFocus(event)
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown)
+  focusFirstInput()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
 
 async function handleSubmit() {
   if (!name.value.trim()) {
@@ -72,58 +132,67 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal">
-      <header class="modal-header">
-        <h2>Create Organization</h2>
-        <button class="btn-close" @click="emit('close')">
-          <X :size="20" />
-        </button>
-      </header>
+  <Teleport to="body">
+    <div class="modal-overlay" @click.self="closeModal">
+      <div
+        ref="modalRef"
+        class="modal modal--centered"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-org-modal-title"
+      >
+        <header class="modal-header">
+          <h2 id="create-org-modal-title">Create Organization</h2>
+          <button class="btn-close" @click="closeModal">
+            <X :size="20" />
+          </button>
+        </header>
 
-      <form @submit.prevent="handleSubmit">
-        <div class="form-group">
-          <label for="name">Organization Name <span class="required">*</span></label>
-          <input
-            id="name"
-            v-model="name"
-            type="text"
-            placeholder="My Organization"
-            :disabled="loading"
-            autocomplete="off"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="slug">URL Slug <span class="required">*</span></label>
-          <div class="slug-input-wrapper">
-            <span class="slug-prefix">org/</span>
+        <form @submit.prevent="handleSubmit">
+          <div class="form-group">
+            <label for="name">Organization Name <span class="required">*</span></label>
             <input
-              id="slug"
-              v-model="slug"
+              id="name"
+              ref="firstInputRef"
+              v-model="name"
               type="text"
-              placeholder="my-organization"
+              placeholder="My Organization"
               :disabled="loading"
               autocomplete="off"
-              @input="handleSlugInput"
             />
           </div>
-          <span class="form-hint">Used in URLs and for SSO login</span>
-        </div>
 
-        <div v-if="error" class="error-message">{{ error }}</div>
+          <div class="form-group">
+            <label for="slug">URL Slug <span class="required">*</span></label>
+            <div class="slug-input-wrapper">
+              <span class="slug-prefix">org/</span>
+              <input
+                id="slug"
+                v-model="slug"
+                type="text"
+                placeholder="my-organization"
+                :disabled="loading"
+                autocomplete="off"
+                @input="handleSlugInput"
+              />
+            </div>
+            <span class="form-hint">Used in URLs and for SSO login</span>
+          </div>
 
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" @click="emit('close')" :disabled="loading">
-            Cancel
-          </button>
-          <button type="submit" class="btn btn-primary" :disabled="loading">
-            {{ loading ? 'Creating...' : 'Create Organization' }}
-          </button>
-        </div>
-      </form>
+          <div v-if="error" class="error-message">{{ error }}</div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="loading">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="loading">
+              {{ loading ? 'Creating...' : 'Create Organization' }}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -158,6 +227,10 @@ async function handleSubmit() {
   width: 100%;
   max-width: 480px;
   animation: slideUp 0.3s ease-out;
+}
+
+.modal--centered {
+  margin: 1rem;
 }
 
 @keyframes slideUp {
@@ -344,5 +417,19 @@ form {
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-primary-hover);
+}
+
+@media (max-width: 640px) {
+  .modal {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  form {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
 }
 </style>
