@@ -148,7 +148,7 @@ describe('transformToChartData', () => {
     const chartData = transformToChartData(result)
 
     expect(chartData.series[0].data).toEqual([
-      { timestamp: 1704067200, value: 3.14159 },
+      { timestamp: 1704067200, value: Number('3.14159') },
       { timestamp: 1704067215, value: -42.5 },
       { timestamp: 1704067230, value: 0 }
     ])
@@ -258,8 +258,8 @@ describe('useProm', () => {
   })
 
   it('sets loading state during fetch', async () => {
-    let resolvePromise: (value: any) => void
-    const pendingPromise = new Promise((resolve) => {
+    let resolvePromise: ((value: PrometheusQueryResult) => void) | undefined
+    const pendingPromise = new Promise<PrometheusQueryResult>((resolve) => {
       resolvePromise = resolve
     })
 
@@ -281,7 +281,7 @@ describe('useProm', () => {
 
     expect(loading.value).toBe(true)
 
-    resolvePromise!({ status: 'success', data: { resultType: 'matrix', result: [] } })
+    resolvePromise?.({ status: 'success', data: { resultType: 'matrix', result: [] } })
     await fetchPromise
     await nextTick()
 

@@ -77,7 +77,7 @@ export function formatValue(
 ): string {
   const { unit = 'none', decimals = 2, nullValue = '-' } = options
 
-  if (value === null || value === undefined || isNaN(value)) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
     return nullValue
   }
 
@@ -89,10 +89,10 @@ export function formatValue(
       return formatShort(value, decimals)
 
     case 'percent':
-      return formatNumber(value, decimals) + '%'
+      return `${formatNumber(value, decimals)}%`
 
     case 'percentunit':
-      return formatNumber(value * 100, decimals) + '%'
+      return `${formatNumber(value * 100, decimals)}%`
 
     case 'bytes':
       return formatBinaryBytes(value, decimals)
@@ -122,23 +122,23 @@ export function formatValue(
       return formatDataRate(value, decimals)
 
     case 'temperature_c':
-      return formatNumber(value, decimals) + '°C'
+      return `${formatNumber(value, decimals)}°C`
 
     case 'temperature_f':
-      return formatNumber(value, decimals) + '°F'
+      return `${formatNumber(value, decimals)}°F`
 
     case 'currency_usd':
-      return '$' + formatNumber(value, decimals)
+      return `$${formatNumber(value, decimals)}`
 
     case 'currency_eur':
-      return '€' + formatNumber(value, decimals)
+      return `€${formatNumber(value, decimals)}`
 
     case 'currency_gbp':
-      return '£' + formatNumber(value, decimals)
+      return `£${formatNumber(value, decimals)}`
 
     default:
       // Custom unit - append as suffix
-      return formatNumber(value, decimals) + (unit ? unit : '')
+      return `${formatNumber(value, decimals)}${unit ? unit : ''}`
   }
 }
 
@@ -157,18 +157,18 @@ export function formatShort(value: number, decimals: number): string {
   const sign = value < 0 ? '-' : ''
 
   if (absValue >= 1e12) {
-    return sign + (absValue / 1e12).toFixed(decimals) + 'T'
+    return `${sign}${(absValue / 1e12).toFixed(decimals)}T`
   }
   if (absValue >= 1e9) {
-    return sign + (absValue / 1e9).toFixed(decimals) + 'B'
+    return `${sign}${(absValue / 1e9).toFixed(decimals)}B`
   }
   if (absValue >= 1e6) {
-    return sign + (absValue / 1e6).toFixed(decimals) + 'M'
+    return `${sign}${(absValue / 1e6).toFixed(decimals)}M`
   }
   if (absValue >= 1e3) {
-    return sign + (absValue / 1e3).toFixed(decimals) + 'K'
+    return `${sign}${(absValue / 1e3).toFixed(decimals)}K`
   }
-  return sign + absValue.toFixed(decimals)
+  return `${sign}${absValue.toFixed(decimals)}`
 }
 
 /**
@@ -216,12 +216,12 @@ export function formatDuration(seconds: number, decimals: number): string {
   // Find the best unit
   for (const { unit, factor } of TIME_UNITS) {
     if (absSeconds >= factor) {
-      return sign + (absSeconds / factor).toFixed(decimals) + unit
+      return `${sign}${(absSeconds / factor).toFixed(decimals)}${unit}`
     }
   }
 
   // Very small values - use nanoseconds
-  return sign + (absSeconds / 0.000000001).toFixed(decimals) + 'ns'
+  return `${sign}${(absSeconds / 0.000000001).toFixed(decimals)}ns`
 }
 
 /**
@@ -237,7 +237,7 @@ function formatWithUnits(
   const sign = value < 0 ? '-' : ''
 
   if (absValue === 0) {
-    return '0' + units[0]
+    return `0${units[0]}`
   }
 
   let unitIndex = 0
@@ -248,7 +248,7 @@ function formatWithUnits(
     unitIndex++
   }
 
-  return sign + scaledValue.toFixed(decimals) + units[unitIndex]
+  return `${sign}${scaledValue.toFixed(decimals)}${units[unitIndex]}`
 }
 
 /**
@@ -320,7 +320,7 @@ export function formatDisplayValue(
 ): { text: string; mapped: boolean } {
   const { unit, decimals, nullValue, mappings } = options
 
-  if (value === null || value === undefined || isNaN(value)) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
     return { text: nullValue || '-', mapped: false }
   }
 

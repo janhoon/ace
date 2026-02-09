@@ -17,9 +17,9 @@ type Client struct {
 
 // QueryResult represents the result of a Prometheus query
 type QueryResult struct {
-	Status string      `json:"status"`
-	Data   *QueryData  `json:"data,omitempty"`
-	Error  string      `json:"error,omitempty"`
+	Status string     `json:"status"`
+	Data   *QueryData `json:"data,omitempty"`
+	Error  string     `json:"error,omitempty"`
 }
 
 // QueryData contains the result type and values

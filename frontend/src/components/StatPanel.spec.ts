@@ -79,7 +79,7 @@ describe('StatPanel', () => {
 
   it('respects decimals setting', () => {
     const wrapper = mount(StatPanel, {
-      props: { value: 3.14159, decimals: 1 },
+      props: { value: Math.PI, decimals: 1 },
     })
     expect(wrapper.find('.stat-value').text()).toBe('3.1')
   })

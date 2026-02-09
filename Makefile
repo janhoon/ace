@@ -1,4 +1,4 @@
-.PHONY: help backend seed-admin seed-datasources frontend
+.PHONY: help backend seed-admin seed-datasources frontend backend-lint frontend-lint lint
 
 EMAIL ?= admin@admin.com
 PASSWORD ?= Admin1234
@@ -18,11 +18,14 @@ endif
 help:
 	@printf "Available targets:\n"
 	@printf "  make backend   Start Go backend (hot reload with air if installed)\n"
+	@printf "  make backend-lint Run backend lint checks with golangci-lint\n"
 	@printf "  make seed-admin [EMAIL=...] [PASSWORD=...] [ORG=...] [NAME=...] [SLUG=...]\n"
 	@printf "                 Defaults: EMAIL=admin@admin.com PASSWORD=Admin1234 ORG=default\n"
 	@printf "  make seed-datasources [ORG=...]\n"
 	@printf "                 Seeds default connectors into existing ORG (default=default)\n"
 	@printf "  make frontend  Start Vite frontend dev server\n"
+	@printf "  make frontend-lint Run frontend lint checks (Biome + Knip)\n"
+	@printf "  make lint      Run backend and frontend lint checks\n"
 
 backend:
 	@set -e; \
@@ -104,3 +107,17 @@ seed-datasources:
 
 frontend:
 	@cd frontend && npm run dev
+
+backend-lint:
+	@set -e; \
+	if ! command -v golangci-lint >/dev/null 2>&1; then \
+		printf "golangci-lint is not installed.\n"; \
+		printf "Install it from https://golangci-lint.run/welcome/install/ and retry make backend-lint.\n"; \
+		exit 1; \
+	fi; \
+	cd backend && golangci-lint run ./...
+
+frontend-lint:
+	@cd frontend && npm run lint && npm run lint:dead-code
+
+lint: backend-lint frontend-lint

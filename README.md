@@ -100,6 +100,38 @@ cd backend
 go test ./...
 ```
 
+### Running Linting
+
+From repo root:
+```bash
+make lint
+```
+
+Run backend lint only:
+```bash
+make backend-lint
+```
+
+Run frontend lint only:
+```bash
+make frontend-lint
+```
+
+Or run commands directly:
+
+Backend:
+```bash
+cd backend
+golangci-lint run ./...
+```
+
+Frontend:
+```bash
+cd frontend
+npm run lint
+npm run lint:dead-code
+```
+
 ### API Endpoints
 
 - `GET /api/health` - Health check endpoint

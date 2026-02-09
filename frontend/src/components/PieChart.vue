@@ -35,6 +35,12 @@ const props = withDefaults(
 
 const chartRef = ref<typeof VChart | null>(null)
 
+interface PieFormatterParam {
+  name: string
+  value: number
+  color?: string
+}
+
 // Color palette matching the dashboard theme
 const pieColors = [
   '#38bdf8',
@@ -55,7 +61,7 @@ const total = computed(() => props.data.reduce((sum, item) => sum + item.value, 
 // Calculate percentage for a value
 function getPercentage(value: number): string {
   if (total.value === 0) return '0%'
-  return ((value / total.value) * 100).toFixed(1) + '%'
+  return `${((value / total.value) * 100).toFixed(1)}%`
 }
 
 const chartOption = computed<EChartsOption>(() => {
@@ -83,10 +89,10 @@ const chartOption = computed<EChartsOption>(() => {
         color: '#f5f5f5',
         fontSize: 12,
       },
-      formatter: (params: any) => {
+      formatter: (params: PieFormatterParam) => {
         const percent = getPercentage(params.value)
         return `<div style="display: flex; align-items: center; gap: 8px;">
-          <span style="display: inline-block; width: 10px; height: 10px; background: ${params.color}; border-radius: 50%;"></span>
+          <span style="display: inline-block; width: 10px; height: 10px; background: ${params.color || '#38bdf8'}; border-radius: 50%;"></span>
           <span style="color: #a0a0a0;">${params.name}</span>
         </div>
         <div style="margin-top: 4px; font-weight: 600;">
@@ -121,7 +127,7 @@ const chartOption = computed<EChartsOption>(() => {
           position: 'outside',
           color: '#a0a0a0',
           fontSize: 11,
-          formatter: (params: any) => {
+          formatter: (params: PieFormatterParam) => {
             const percent = getPercentage(params.value)
             return `${params.name}\n${percent}`
           },

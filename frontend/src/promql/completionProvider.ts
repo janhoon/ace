@@ -11,7 +11,7 @@ interface MetadataCache {
 }
 
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-let cache: MetadataCache = {
+const cache: MetadataCache = {
   metrics: [],
   labels: [],
   labelValues: new Map(),
@@ -106,7 +106,7 @@ function getCompletionContext(
 
     // Check if we just typed an operator (=, !=, =~, !~)
     const labelValueMatch = textAfterBrace.match(/(\w+)\s*(!?=~?)\s*["']?([^"',}]*)$/)
-    if (labelValueMatch && labelValueMatch[2]) {
+    if (labelValueMatch?.[2]) {
       const operator = labelValueMatch[2]
       const afterOperator = textAfterBrace.slice(textAfterBrace.lastIndexOf(operator) + operator.length).trim()
       // If we have an operator and cursor is after it
@@ -180,7 +180,7 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
             suggestions.push({
               label: name,
               kind: monaco.languages.CompletionItemKind.Function,
-              insertText: name + '($0)',
+              insertText: `${name}($0)`,
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               range,
               detail: info.signature,

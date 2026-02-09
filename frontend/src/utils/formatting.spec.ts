@@ -16,14 +16,14 @@ import {
 
 describe('formatNumber', () => {
   it('formats numbers with specified decimals', () => {
-    expect(formatNumber(3.14159, 2)).toBe('3.14')
-    expect(formatNumber(3.14159, 4)).toBe('3.1416')
+    expect(formatNumber(Math.PI, 2)).toBe('3.14')
+    expect(formatNumber(Math.PI, 4)).toBe('3.1416')
     expect(formatNumber(100, 0)).toBe('100')
     expect(formatNumber(100, 2)).toBe('100.00')
   })
 
   it('handles negative numbers', () => {
-    expect(formatNumber(-3.14159, 2)).toBe('-3.14')
+    expect(formatNumber(-Math.PI, 2)).toBe('-3.14')
   })
 
   it('handles zero', () => {

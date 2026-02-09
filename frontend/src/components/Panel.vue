@@ -86,7 +86,7 @@ async function fetchDatasourceData() {
           for (const [key, value] of Object.entries(r.metric)) {
             if (key !== '__name__') labelParts.push(`${key}="${value}"`)
           }
-          const metricName = r.metric['__name__'] || 'value'
+          const metricName = r.metric.__name__ || 'value'
           const name = labelParts.length > 0 ? `${metricName}{${labelParts.join(',')}}` : metricName
           return {
             name,

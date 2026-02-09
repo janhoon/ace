@@ -27,15 +27,6 @@ func NewVictoriaLogsClient(baseURL string) (*VictoriaLogsClient, error) {
 	}, nil
 }
 
-// Victoria Logs returns JSONL (JSON Lines) format
-type vlLogEntry struct {
-	Message     string                 `json:"_msg"`
-	Time        string                 `json:"_time"`
-	Stream      string                 `json:"_stream"`
-	StreamID    string                 `json:"_stream_id"`
-	ExtraFields map[string]interface{} `json:"-"`
-}
-
 type victoriaLogsFieldNamesResponse struct {
 	Values []struct {
 		Value string `json:"value"`

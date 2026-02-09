@@ -49,7 +49,7 @@ describe('useTimeRange', () => {
 
     it('should have correct intervals in milliseconds', () => {
       const intervalMap = Object.fromEntries(REFRESH_INTERVALS.map(r => [r.value, r.interval]))
-      expect(intervalMap['off']).toBe(0)
+      expect(intervalMap.off).toBe(0)
       expect(intervalMap['5s']).toBe(5000)
       expect(intervalMap['15s']).toBe(15000)
       expect(intervalMap['30s']).toBe(30000)

@@ -1,3 +1,63 @@
+## Task FRONTEND-LINT-003: Repair Biome config and revalidate frontend lint - 2026-02-09T15:05:00Z
+- What was done:
+  - Repaired `frontend/biome.jsonc` syntax so Biome actually loads repository lint overrides instead of silently falling back to defaults
+  - Re-ran frontend lint and type-check to confirm the lint pass and TS integrity
+- Files changed:
+  - frontend/biome.jsonc
+  - progress.txt
+- Validation: passing (`cd frontend && npm run lint`, `cd frontend && npm run type-check`)
+- Browser validation: n/a (not run in this environment)
+
+## Task FRONTEND-LINT-002: Reduce Biome frontend warnings in core chart/query paths - 2026-02-09T14:33:09Z
+- What was done:
+  - Fixed a broad set of Biome findings across frontend charting/query code and tests (template string concatenations, literal-key access, optional chaining, and explicit `any` reductions)
+  - Tightened lint signal by scoping Biome scripts to source/config files and avoiding generated artifact lint noise
+  - Updated test assertions/types to preserve behavior after lint cleanups and revalidated touched specs
+- Files changed:
+  - frontend/src/components/GaugeChart.vue
+  - frontend/src/components/Panel.vue
+  - frontend/src/components/PieChart.vue
+  - frontend/src/components/StatPanel.vue
+  - frontend/src/components/BarChart.vue
+  - frontend/src/components/LineChart.vue
+  - frontend/src/components/Panel.spec.ts
+  - frontend/src/components/QueryEditor.spec.ts
+  - frontend/src/components/TimeRangePicker.spec.ts
+  - frontend/src/composables/useProm.ts
+  - frontend/src/composables/useProm.spec.ts
+  - frontend/src/composables/useTimeRange.spec.ts
+  - frontend/src/logquery/language.ts
+  - frontend/src/promql/completionProvider.ts
+  - frontend/src/promql/hoverProvider.ts
+  - frontend/src/promql/language.ts
+  - frontend/src/utils/formatting.ts
+  - frontend/src/utils/formatting.spec.ts
+  - frontend/src/components/StatPanel.spec.ts
+  - frontend/vite.config.ts
+  - frontend/package.json
+  - frontend/biome.jsonc
+  - progress.txt
+- Validation: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/Panel.spec.ts src/components/QueryEditor.spec.ts src/components/TimeRangePicker.spec.ts src/composables/useProm.spec.ts src/utils/formatting.spec.ts`)
+- Browser validation: n/a (not run in this environment)
+
+## Task LINT-INFRA-001: Add backend golangci-lint and CI lint workflows - 2026-02-09T14:20:08Z
+- What was done:
+  - Added backend golangci-lint setup with a scoped v2 config and root Make targets for `backend-lint`, `frontend-lint`, and combined `lint`
+  - Added GitHub Actions lint workflow running backend golangci-lint and frontend Biome/Knip on push and pull requests
+  - Updated README with backend/frontend lint commands and fixed minor backend lint blockers surfaced by initial run
+- Files changed:
+  - backend/.golangci.yml
+  - .github/workflows/lint.yml
+  - Makefile
+  - README.md
+  - backend/internal/auth/middleware.go
+  - backend/internal/datasource/victorialogs.go
+  - backend/internal/handlers/organization.go
+  - backend/pkg/prometheus/client.go
+  - progress.txt
+- Validation: passing (`make backend-lint`, `make frontend-lint`, `make lint`)
+- Browser validation: n/a (not run in this environment)
+
 ## Task FRONTEND-BIOME-001: Add Biome linting defaults for Vue frontend - 2026-02-09T14:10:07Z
 - What was done:
   - Added Biome configuration for the frontend with Vue-friendly defaults (2-space indentation, single quotes, trailing commas, 100-column width)
@@ -101,37 +161,3 @@
   - progress.txt
 - Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
 - Browser validation: passing (verified dragging `Scratchpad` from Unfiled to `Platform` in dev-browser)
-
-## Task UX-EXPLORER-003: Remove duplicate explorer panes for Finder-only list - 2026-02-09T09:51:00Z
-- What was done:
-  - Consolidated dashboard navigation to a single visible Finder-style explorer pane
-  - Added active path and context subtitle directly above the list so navigation context remains visible without a second content panel
-  - Hid the duplicate center and preview panes to remove repeated folder/dashboard content and keep one navigation surface
-- Files changed:
-  - frontend/src/components/DashboardList.vue
-  - progress.txt
-- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
-- Browser validation: passing (validated single visible pane with dev-browser on `http://localhost:5173/dashboards`)
-
-## Task UX-EXPLORER-002: Unify folders and dashboards into OS-style tree - 2026-02-09T09:48:35Z
-- What was done:
-  - Reworked the explorer tree so folders and dashboards are shown together in one hierarchy like a desktop file browser
-  - Added nested dashboard rows under expanded folders (and under Unfiled), with single-click preview and double-click open
-  - Kept folder-first navigation while improving scanability with mixed folder/file row styling and persistent subtree counts
-- Files changed:
-  - frontend/src/components/DashboardList.vue
-  - progress.txt
-- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
-- Browser validation: passing (validated unified tree interactions with dev-browser on `http://localhost:5173/dashboards`)
-
-## Task UX-EXPLORER-001: Simplify dashboard folder explorer navigation - 2026-02-09T09:44:10Z
-- What was done:
-  - Audited the existing dashboard explorer behavior with dev-browser against seeded nested folder data
-  - Updated tree navigation to be easier to scan with explicit folder controls (expand all/collapse), stronger row states, and double-click expand behavior
-  - Changed folder counts in the tree to reflect subtree totals so parent folders show meaningful numbers
-  - Added selected-folder subfolder chips and clearer subtitle context to make folder traversal more intuitive
-- Files changed:
-  - frontend/src/components/DashboardList.vue
-  - progress.txt
-- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
-- Browser validation: passing (validated before/after explorer behavior with dev-browser on `http://localhost:5173/dashboards`)

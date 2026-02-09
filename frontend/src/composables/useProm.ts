@@ -46,7 +46,7 @@ export function transformToChartData(result: PrometheusQueryResult): ChartData {
         labelParts.push(`${key}="${value}"`)
       }
     }
-    const metricName = metricResult.metric['__name__'] || 'value'
+    const metricName = metricResult.metric.__name__ || 'value'
     const name = labelParts.length > 0
       ? `${metricName}{${labelParts.join(',')}}`
       : metricName

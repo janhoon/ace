@@ -53,15 +53,15 @@ const chartRef = ref<typeof VChart | null>(null)
 // Format value with decimals and unit, with human-readable suffixes
 function formatValue(value: number): string {
   if (Math.abs(value) >= 1000000000) {
-    return (value / 1000000000).toFixed(props.decimals) + 'B' + props.unit
+    return `${(value / 1000000000).toFixed(props.decimals)}B${props.unit}`
   }
   if (Math.abs(value) >= 1000000) {
-    return (value / 1000000).toFixed(props.decimals) + 'M' + props.unit
+    return `${(value / 1000000).toFixed(props.decimals)}M${props.unit}`
   }
   if (Math.abs(value) >= 1000) {
-    return (value / 1000).toFixed(props.decimals) + 'K' + props.unit
+    return `${(value / 1000).toFixed(props.decimals)}K${props.unit}`
   }
-  return value.toFixed(props.decimals) + props.unit
+  return `${value.toFixed(props.decimals)}${props.unit}`
 }
 
 // Get the color based on thresholds
@@ -166,8 +166,8 @@ const sparklineOption = computed<EChartsOption>(() => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: valueColor + '40' },
-              { offset: 1, color: valueColor + '05' },
+              { offset: 0, color: `${valueColor}40` },
+              { offset: 1, color: `${valueColor}05` },
             ],
           },
         },

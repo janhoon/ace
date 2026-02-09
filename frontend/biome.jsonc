@@ -7,7 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!!**/dist", "!!**/coverage"]
+		"includes": ["**", "!!**/dist/**", "!!**/coverage/**"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -45,5 +45,21 @@
 				"organizeImports": "on"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.vue"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedImports": "off",
+						"noUnusedVariables": "off"
+					},
+					"style": {
+						"useImportType": "off"
+					}
+				}
+			}
+		}
+	]
 }

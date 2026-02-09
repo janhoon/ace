@@ -32,6 +32,12 @@ export interface ChartSeries {
   data: DataPoint[]
 }
 
+interface TooltipParam {
+  data: [number, number | string]
+  color: string
+  seriesName: string
+}
+
 const props = withDefaults(
   defineProps<{
     series: ChartSeries[]
@@ -128,7 +134,7 @@ const chartOption = computed<EChartsOption>(() => {
         color: '#f5f5f5',
         fontSize: 12,
       },
-      formatter: (params: any) => {
+      formatter: (params: TooltipParam[]) => {
         if (!Array.isArray(params) || params.length === 0) return ''
         const timestamp = params[0].data[0]
         const timeStr = formatFullDateTime(timestamp / 1000)

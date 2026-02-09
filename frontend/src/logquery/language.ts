@@ -155,7 +155,7 @@ function registerLogQLLanguage(monaco: typeof Monaco) {
         [/\d+(\.\d+)?([eE][+-]?\d+)?/, 'number'],
         [/\d+[smhdwy]/, 'number.duration'],
         [/\|=|\|~|!=|!~|=~|[=><!]=?|[|+\-*/%^]/, 'operator'],
-        [/[{}()\[\]]/, '@brackets'],
+        [/[{}()[\]]/, '@brackets'],
         [/[a-zA-Z_][a-zA-Z0-9_]*(?=\s*(=|!=|=~|!~))/, 'label'],
         [/[a-zA-Z_][a-zA-Z0-9_]*/, {
           cases: {
@@ -303,7 +303,7 @@ function registerLogQLCompletionProvider(monaco: typeof Monaco) {
         {
           label: 'stream selector',
           kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: '{${1:label}="${2:value}"}',
+          insertText: `{\${1:label}="\${2:value}"}`,
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           detail: 'Selector snippet',
           range,

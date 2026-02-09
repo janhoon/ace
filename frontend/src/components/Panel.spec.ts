@@ -6,7 +6,14 @@ import Panel from './Panel.vue'
 // Mock state that can be controlled per test
 let mockLoading = false
 let mockError: string | null = null
-let mockChartSeries: any[] = []
+
+interface MockChartSeries {
+  name: string
+  data: Array<{ timestamp: number; value: number }>
+  labels: Record<string, string>
+}
+
+let mockChartSeries: MockChartSeries[] = []
 
 // Mock the composables
 vi.mock('../composables/useTimeRange', () => ({
@@ -73,11 +80,14 @@ describe('Panel', () => {
       props: { panel: mockPanel },
     })
     // Find button by title attribute since we use icons now
-    const editBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'Edit')
+    const editBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'Edit panel')
     expect(editBtn).toBeDefined()
-    await editBtn!.trigger('click')
+    if (!editBtn) {
+      throw new Error('Expected edit button to be present')
+    }
+    await editBtn.trigger('click')
     expect(wrapper.emitted('edit')).toBeTruthy()
-    expect(wrapper.emitted('edit')![0]).toEqual([mockPanel])
+    expect(wrapper.emitted('edit')?.[0]).toEqual([mockPanel])
   })
 
   it('emits delete event when delete button is clicked', async () => {
@@ -85,11 +95,14 @@ describe('Panel', () => {
       props: { panel: mockPanel },
     })
     // Find button by title attribute since we use icons now
-    const deleteBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'Delete')
+    const deleteBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'Delete panel')
     expect(deleteBtn).toBeDefined()
-    await deleteBtn!.trigger('click')
+    if (!deleteBtn) {
+      throw new Error('Expected delete button to be present')
+    }
+    await deleteBtn.trigger('click')
     expect(wrapper.emitted('delete')).toBeTruthy()
-    expect(wrapper.emitted('delete')![0]).toEqual([mockPanel])
+    expect(wrapper.emitted('delete')?.[0]).toEqual([mockPanel])
   })
 
   it('shows loading state when fetching data', async () => {

@@ -34,7 +34,7 @@ type InvitationResponse struct {
 
 // CreateInvitationRequest represents invitation request body
 type CreateInvitationRequest struct {
-	Email string             `json:"email"`
+	Email string                `json:"email"`
 	Role  models.MembershipRole `json:"role"`
 }
 

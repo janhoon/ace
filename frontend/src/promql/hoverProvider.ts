@@ -25,7 +25,7 @@ function createHoverProvider(_monaco: typeof Monaco): Monaco.languages.HoverProv
           },
           contents: [
             { value: `**${wordText}**` },
-            { value: '```\n' + funcInfo.signature + '\n```' },
+            { value: `\`\`\`\n${funcInfo.signature}\n\`\`\`` },
             { value: funcInfo.description }
           ]
         }

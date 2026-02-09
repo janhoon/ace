@@ -280,7 +280,7 @@ export function registerPromQLLanguage(monaco: typeof Monaco) {
         [/[=!<>]=?|[+\-*/%^]|=~|!~/, 'operator'],
 
         // Brackets
-        [/[{}()\[\]]/, '@brackets'],
+        [/[{}()[\]]/, '@brackets'],
 
         // Labels
         [/[a-zA-Z_][a-zA-Z0-9_]*(?=\s*[=!~])/, 'label'],

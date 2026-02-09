@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import QueryEditor from './QueryEditor.vue'
 import * as useProm from '../composables/useProm'
+import type { PrometheusQueryResult } from '../composables/useProm'
 
 // Mock the useProm module
 vi.mock('../composables/useProm', () => ({
@@ -44,7 +45,7 @@ describe('QueryEditor', () => {
 
     await wrapper.find('textarea#promql-query').setValue('process_cpu')
     expect(wrapper.emitted('update:modelValue')).toBeTruthy()
-    expect(wrapper.emitted('update:modelValue')![0]).toEqual(['process_cpu'])
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['process_cpu'])
   })
 
   it('disables inputs when disabled prop is true', () => {
@@ -97,12 +98,12 @@ describe('QueryEditor', () => {
   })
 
   it('shows loading state during query execution', async () => {
-    let resolveQuery: (value: any) => void
-    const pendingPromise = new Promise((resolve) => {
+    let resolveQuery: ((value: PrometheusQueryResult) => void) | undefined
+    const pendingPromise = new Promise<PrometheusQueryResult>((resolve) => {
       resolveQuery = resolve
     })
 
-    vi.mocked(useProm.queryPrometheus).mockReturnValueOnce(pendingPromise as any)
+    vi.mocked(useProm.queryPrometheus).mockReturnValueOnce(pendingPromise)
 
     const wrapper = mount(QueryEditor, {
       props: {
@@ -115,7 +116,7 @@ describe('QueryEditor', () => {
 
     expect(wrapper.find('button.btn-run').text()).toBe('Running...')
 
-    resolveQuery!({ status: 'success', data: { resultType: 'matrix', result: [] } })
+    resolveQuery?.({ status: 'success', data: { resultType: 'matrix', result: [] } })
     await flushPromises()
 
     expect(wrapper.find('button.btn-run').text()).toBe('Run Query')

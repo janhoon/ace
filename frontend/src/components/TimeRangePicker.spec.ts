@@ -81,8 +81,11 @@ describe('TimeRangePicker', () => {
     const presetButtons = wrapper.findAll('.preset-item')
     const fiveMinButton = presetButtons.find(btn => btn.text() === 'Last 5 minutes')
     expect(fiveMinButton).toBeDefined()
+    if (!fiveMinButton) {
+      throw new Error('Expected Last 5 minutes button to be present')
+    }
 
-    await fiveMinButton!.trigger('click')
+    await fiveMinButton.trigger('click')
 
     // Dropdown should close
     expect(wrapper.find('.dropdown').exists()).toBe(false)

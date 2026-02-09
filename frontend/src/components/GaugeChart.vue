@@ -43,12 +43,12 @@ const chartRef = ref<typeof VChart | null>(null)
 function formatValue(value: number): string {
   // Handle very large numbers
   if (Math.abs(value) >= 1000000) {
-    return (value / 1000000).toFixed(props.decimals) + 'M' + props.unit
+    return `${(value / 1000000).toFixed(props.decimals)}M${props.unit}`
   }
   if (Math.abs(value) >= 1000) {
-    return (value / 1000).toFixed(props.decimals) + 'K' + props.unit
+    return `${(value / 1000).toFixed(props.decimals)}K${props.unit}`
   }
-  return value.toFixed(props.decimals) + props.unit
+  return `${value.toFixed(props.decimals)}${props.unit}`
 }
 
 // Build color stops for gauge based on thresholds
@@ -147,7 +147,7 @@ const chartOption = computed<EChartsOption>(() => {
         axisLine: {
           lineStyle: {
             width: 20,
-            color: buildAxisLineColors().map(([stop, color]) => [stop, color + '30']), // Add transparency
+            color: buildAxisLineColors().map(([stop, color]) => [stop, `${color}30`]), // Add transparency
           },
         },
         axisTick: {
@@ -174,7 +174,7 @@ const chartOption = computed<EChartsOption>(() => {
           fontSize: 10,
           formatter: (value: number) => {
             if (Math.abs(value) >= 1000) {
-              return Math.round(value / 1000) + 'K'
+              return `${Math.round(value / 1000)}K`
             }
             return Math.round(value).toString()
           },

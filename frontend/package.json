@@ -10,10 +10,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "vue-tsc --noEmit",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write .",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
+    "lint": "biome lint src vite.config.ts",
+    "lint:fix": "biome lint --write src vite.config.ts",
+    "format": "biome format --write src vite.config.ts",
+    "format:check": "biome format src vite.config.ts",
     "lint:dead-code": "knip"
   },
   "dependencies": {

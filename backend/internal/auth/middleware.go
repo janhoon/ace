@@ -79,6 +79,6 @@ func GetUserName(ctx context.Context) (string, bool) {
 func RequireAuth(jwtManager *JWTManager, handler http.HandlerFunc) http.HandlerFunc {
 	middleware := AuthMiddleware(jwtManager)
 	return func(w http.ResponseWriter, r *http.Request) {
-		middleware(http.HandlerFunc(handler)).ServeHTTP(w, r)
+		middleware(handler).ServeHTTP(w, r)
 	}
 }
