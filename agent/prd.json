@@ -191,7 +191,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/views/OrganizationSettings"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "DASHBOARD-SETTINGS-001",

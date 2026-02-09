@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, UserPlus, Trash2, Shield, Edit2, Users } from 'lucide-vue-next'
 import type { Organization, Member, MembershipRole } from '../types/organization'
@@ -133,6 +133,46 @@ const activeSsoLabel = computed(() => {
 })
 
 const isAdmin = computed(() => org.value?.role === 'admin')
+
+type SettingsSection = 'general' | 'members' | 'groups'
+
+const settingsSections: Array<{ key: SettingsSection; label: string }> = [
+  { key: 'general', label: 'General' },
+  { key: 'members', label: 'Members' },
+  { key: 'groups', label: 'Groups' },
+]
+
+function isSettingsSection(value: string | undefined): value is SettingsSection {
+  return value === 'general' || value === 'members' || value === 'groups'
+}
+
+const activeSection = computed<SettingsSection>(() => {
+  const section = route.params.section as string | undefined
+  return isSettingsSection(section) ? section : 'general'
+})
+
+function sectionPath(section: SettingsSection): string {
+  return `/settings/org/${orgId.value}/${section}`
+}
+
+function navigateToSection(section: SettingsSection) {
+  if (section === activeSection.value) {
+    return
+  }
+
+  router.push(sectionPath(section))
+}
+
+watch(
+  () => route.params.section,
+  (section) => {
+    const sectionValue = section as string | undefined
+    if (!isSettingsSection(sectionValue)) {
+      router.replace(sectionPath('general'))
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(async () => {
   await loadData()
@@ -728,9 +768,23 @@ function goBack() {
 
     <div v-if="loading" class="loading">Loading...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
-    <div v-else-if="org" class="settings-content">
+    <div v-else-if="org" class="settings-layout">
+      <aside class="settings-sidebar" data-testid="org-settings-sidebar">
+        <button
+          v-for="section in settingsSections"
+          :key="section.key"
+          class="settings-sidebar-link"
+          :class="{ active: activeSection === section.key }"
+          :data-testid="`settings-section-${section.key}`"
+          @click="navigateToSection(section.key)"
+        >
+          {{ section.label }}
+        </button>
+      </aside>
+
+      <div class="settings-content">
       <!-- General Settings -->
-      <section class="settings-section">
+      <section v-if="activeSection === 'general'" class="settings-section">
         <div class="section-header">
           <h2>General</h2>
           <button v-if="isAdmin && !editMode" class="btn btn-secondary btn-sm" @click="startEdit">
@@ -777,7 +831,7 @@ function goBack() {
       </section>
 
       <!-- Members Section -->
-      <section class="settings-section">
+      <section v-if="activeSection === 'members'" class="settings-section">
         <div class="section-header">
           <h2><Users :size="20" /> Members ({{ members.length }})</h2>
           <button v-if="isAdmin" class="btn btn-primary btn-sm" @click="showInviteForm = !showInviteForm">
@@ -844,7 +898,7 @@ function goBack() {
       </section>
 
       <!-- Groups Section -->
-      <section class="settings-section">
+      <section v-if="activeSection === 'groups'" class="settings-section">
         <div class="section-header">
           <h2><Users :size="20" /> Groups ({{ groups.length }})</h2>
           <button
@@ -1018,7 +1072,7 @@ function goBack() {
       </section>
 
       <!-- SSO Section -->
-      <section class="settings-section">
+      <section v-if="activeSection === 'general'" class="settings-section">
         <div class="section-header">
           <h2><Shield :size="20" /> Single Sign-On</h2>
           <div v-if="isAdmin" class="section-actions">
@@ -1106,7 +1160,7 @@ function goBack() {
       </section>
 
       <!-- Danger Zone -->
-      <section v-if="isAdmin" class="settings-section danger-zone">
+      <section v-if="activeSection === 'general' && isAdmin" class="settings-section danger-zone">
         <div class="section-header">
           <h2><Shield :size="20" /> Danger Zone</h2>
         </div>
@@ -1120,6 +1174,7 @@ function goBack() {
           </div>
         </div>
       </section>
+      </div>
     </div>
 
     <!-- Delete Confirmation Modal -->
@@ -1349,6 +1404,52 @@ function goBack() {
 
 .error {
   color: var(--accent-danger);
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.settings-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  padding: 0.75rem;
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 1rem;
+}
+
+.settings-sidebar-link {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  padding: 0.65rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-sidebar-link:hover {
+  color: var(--text-primary);
+  border-color: rgba(125, 211, 252, 0.22);
+  background: rgba(31, 49, 73, 0.64);
+}
+
+.settings-sidebar-link.active {
+  color: #bde9ff;
+  border-color: rgba(56, 189, 248, 0.34);
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.18), rgba(52, 211, 153, 0.1));
 }
 
 .settings-content {
@@ -2001,6 +2102,25 @@ select:focus {
 @media (max-width: 900px) {
   .org-settings {
     padding: 0.9rem;
+  }
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-sidebar {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0.5rem;
+    gap: 0.35rem;
+  }
+
+  .settings-sidebar-link {
+    width: auto;
+    min-width: 110px;
+    text-align: center;
+    white-space: nowrap;
   }
 
   .page-header {

@@ -51,7 +51,7 @@ const openNavGroups = ref<Record<string, boolean>>({
 // Settings path is dynamic based on current organization
 const settingsPath = computed(() => {
   if (currentOrg.value) {
-    return `/settings/org/${currentOrg.value.id}`
+    return `/settings/org/${currentOrg.value.id}/general`
   }
   return null
 })

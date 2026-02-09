@@ -52,3 +52,9 @@ Working on UX improvements and bug fixes.
 - Files changed: `frontend/src/components/CreateDashboardModal.vue`, `frontend/src/components/CreateDashboardModal.spec.ts`, `frontend/src/api/dashboards.ts`, `frontend/src/api/dashboards.import.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/CreateDashboardModal.spec.ts src/api/dashboards.import.spec.ts`, plus `npm run type-check`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)
+
+## Task ORG-SETTINGS-SIDEBAR-001: Add secondary sidebar to organization settings - 2026-02-09T01:21:51Z
+- What was done: Added section-based organization settings navigation with a secondary sidebar for General/Members/Groups, URL-driven section routing (`/settings/org/:id/:section`) with invalid-section redirect to `general`, and responsive mobile sidebar behavior that collapses into a horizontal section rail.
+- Files changed: `frontend/src/views/OrganizationSettings.vue`, `frontend/src/views/OrganizationSettings.spec.ts`, `frontend/src/router/index.ts`, `frontend/src/components/Sidebar.vue`, `agent/prd.json`, `agent/progress.txt`
+- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/views/OrganizationSettings.spec.ts src/components/Sidebar.spec.ts`, plus `npm run type-check`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation for section switching and role-gated settings views)

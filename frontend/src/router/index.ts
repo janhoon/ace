@@ -49,6 +49,10 @@ const router = createRouter({
     },
     {
       path: '/settings/org/:id',
+      redirect: to => `/settings/org/${to.params.id}/general`
+    },
+    {
+      path: '/settings/org/:id/:section',
       name: 'org-settings',
       component: OrganizationSettings
     },

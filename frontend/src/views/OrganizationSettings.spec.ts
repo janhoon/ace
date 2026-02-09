@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import OrganizationSettings from './OrganizationSettings.vue'
 
-const mockRouteParams = { id: 'org-1' }
+const mockRouteParams = { id: 'org-1', section: 'general' }
 const mockPush = vi.fn()
+const mockReplace = vi.fn()
 const mockBack = vi.fn()
 
 const mockFetchOrganizations = vi.hoisted(() => vi.fn())
@@ -31,7 +32,7 @@ const mockUpdateMicrosoftSSOConfig = vi.hoisted(() => vi.fn())
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: mockRouteParams }),
-  useRouter: () => ({ push: mockPush, back: mockBack }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace, back: mockBack }),
 }))
 
 vi.mock('../composables/useOrganization', () => ({
@@ -108,6 +109,7 @@ const baseGroup = {
 describe('OrganizationSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockRouteParams.section = 'general'
 
     mockGetOrganization.mockResolvedValue({ ...baseOrg })
     mockUpdateOrganization.mockResolvedValue({ ...baseOrg })
@@ -173,6 +175,8 @@ describe('OrganizationSettings', () => {
   })
 
   it('lets admins create, rename, delete groups and manage memberships', async () => {
+    mockRouteParams.section = 'groups'
+
     const wrapper = mount(OrganizationSettings)
     await flushPromises()
 
@@ -223,6 +227,8 @@ describe('OrganizationSettings', () => {
   })
 
   it('shows read-only groups UI for non-admin members', async () => {
+    mockRouteParams.section = 'groups'
+
     mockGetOrganization.mockResolvedValueOnce({
       ...baseOrg,
       role: 'viewer',
@@ -243,6 +249,8 @@ describe('OrganizationSettings', () => {
   })
 
   it('shows empty and error states for groups section', async () => {
+    mockRouteParams.section = 'groups'
+
     mockListGroups.mockResolvedValueOnce([])
 
     const emptyWrapper = mount(OrganizationSettings)
@@ -255,6 +263,34 @@ describe('OrganizationSettings', () => {
     await flushPromises()
 
     expect(errorWrapper.text()).toContain('Failed to fetch groups')
+  })
+
+  it('navigates between settings sections with active sidebar state', async () => {
+    const wrapper = mount(OrganizationSettings)
+    await flushPromises()
+
+    const generalLink = wrapper.get('[data-testid="settings-section-general"]')
+    const membersLink = wrapper.get('[data-testid="settings-section-members"]')
+    const groupsLink = wrapper.get('[data-testid="settings-section-groups"]')
+
+    expect(generalLink.classes()).toContain('active')
+    expect(wrapper.text()).toContain('Single Sign-On')
+
+    await membersLink.trigger('click')
+    expect(mockPush).toHaveBeenCalledWith('/settings/org/org-1/members')
+
+    await groupsLink.trigger('click')
+    expect(mockPush).toHaveBeenCalledWith('/settings/org/org-1/groups')
+  })
+
+  it('redirects invalid sections to general', async () => {
+    mockRouteParams.section = 'invalid-section'
+
+    const wrapper = mount(OrganizationSettings)
+    await flushPromises()
+
+    expect(mockReplace).toHaveBeenCalledWith('/settings/org/org-1/general')
+    expect(wrapper.text()).toContain('Single Sign-On')
   })
 
   it('loads and saves Google and Microsoft SSO settings for admins', async () => {
