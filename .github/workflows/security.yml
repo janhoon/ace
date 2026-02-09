@@ -48,6 +48,8 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
+          check-latest: true
+          cache-dependency-path: backend/go.sum
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -99,6 +101,8 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
+          check-latest: true
+          cache-dependency-path: backend/go.sum
 
       - name: Run govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
@@ -110,6 +114,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@v2
