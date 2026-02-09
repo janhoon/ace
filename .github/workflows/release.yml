@@ -4,6 +4,12 @@ on:
   release:
     types:
       - published
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to publish (for example, v0.1.0)
+        required: true
+        type: string
 
 concurrency:
   group: release-${{ github.event.release.tag_name }}
@@ -16,7 +22,7 @@ permissions:
   attestations: write
 
 env:
-  RELEASE_TAG: ${{ github.event.release.tag_name }}
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
 
 jobs:
   backend-verify:
@@ -32,6 +38,8 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
+          check-latest: true
+          cache-dependency-path: backend/go.sum
 
       - name: Run backend tests
         run: go test ./...
@@ -94,9 +102,8 @@ jobs:
           fetch-depth: 0
 
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/gitleaks/gitleaks:latest detect --source . --redact --no-banner
 
   build-backend-binaries:
     name: Build Backend Binary (${{ matrix.goos }}/${{ matrix.goarch }})
@@ -139,6 +146,8 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
+          check-latest: true
+          cache-dependency-path: backend/go.sum
 
       - name: Build and package binary
         env:
