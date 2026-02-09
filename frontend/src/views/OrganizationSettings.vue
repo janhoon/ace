@@ -123,6 +123,10 @@ const ssoProviders = computed(() => [
   },
 ])
 
+const configuredSsoProviders = computed(() =>
+  ssoProviders.value.filter((provider) => provider.configured),
+)
+
 const activeSsoLabel = computed(() => {
   const provider = ssoProviders.value.find((item) => item.key === activeSsoProvider.value)
   return provider?.name ?? ''
@@ -213,10 +217,6 @@ function ssoStatus(provider: { configured: boolean; enabled: boolean }) {
   }
 
   return 'Not configured'
-}
-
-function handleConfigureSso() {
-  openSsoPicker('configure')
 }
 
 function handleAddSso() {
@@ -1022,14 +1022,9 @@ function goBack() {
         <div class="section-header">
           <h2><Shield :size="20" /> Single Sign-On</h2>
           <div v-if="isAdmin" class="section-actions">
-            <button
-              class="btn btn-primary btn-sm"
-              data-testid="configure-sso"
-              @click="handleConfigureSso"
-            >
-              Configure SSO
+            <button class="btn btn-primary btn-sm" data-testid="add-authentication" @click="handleAddSso">
+              Add Authentication
             </button>
-            <button class="btn btn-secondary btn-sm" data-testid="add-sso" @click="handleAddSso">Add SSO</button>
           </div>
         </div>
         <p class="section-description">Manage identity provider connections for this organization.</p>
@@ -1038,12 +1033,19 @@ function goBack() {
 
         <div v-if="ssoLoading" class="inline-state">Loading SSO settings...</div>
         <div v-else class="sso-list">
-          <div v-if="ssoProviders.every((provider) => !provider.configured)" class="inline-state">
-            No providers configured yet.
-          </div>
           <div class="sso-provider-list">
+            <article class="sso-provider-row" data-testid="sso-provider-password">
+              <div class="sso-provider-info">
+                <h3>Email/Password</h3>
+                <p class="sso-provider-meta">Built-in authentication method available for all organizations.</p>
+              </div>
+              <div class="sso-provider-actions">
+                <span class="sso-status enabled">Enabled</span>
+              </div>
+            </article>
+
             <article
-              v-for="provider in ssoProviders"
+              v-for="provider in configuredSsoProviders"
               :key="provider.key"
               class="sso-provider-row"
               :data-testid="`sso-provider-${provider.key}`"
@@ -1064,10 +1066,11 @@ function goBack() {
                 <button
                   v-if="isAdmin"
                   class="btn btn-secondary btn-sm"
-                  :data-testid="provider.configured ? `edit-sso-${provider.key}` : `add-sso-${provider.key}`"
+                  :data-testid="`edit-sso-${provider.key}`"
                   @click="openSsoProvider(provider.key)"
                 >
-                  {{ provider.configured ? 'Edit' : 'Add' }}
+                  <Edit2 :size="14" />
+                  Settings
                 </button>
               </div>
               <div
@@ -1083,6 +1086,18 @@ function goBack() {
                 {{ microsoftError }}
               </div>
             </article>
+
+            <div v-if="configuredSsoProviders.length === 0" class="inline-state">
+              No external authentication methods configured yet.
+            </div>
+
+            <div v-if="googleError && activeSsoProvider !== 'google'" class="error-message">
+              {{ googleError }}
+            </div>
+
+            <div v-if="microsoftError && activeSsoProvider !== 'microsoft'" class="error-message">
+              {{ microsoftError }}
+            </div>
           </div>
 
         </div>

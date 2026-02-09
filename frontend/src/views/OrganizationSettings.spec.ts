@@ -263,12 +263,9 @@ describe('OrganizationSettings', () => {
 
     expect(mockGetGoogleSSOConfig).toHaveBeenCalledWith('org-1')
     expect(mockGetMicrosoftSSOConfig).toHaveBeenCalledWith('org-1')
+    expect(wrapper.find('[data-testid="sso-provider-password"]').exists()).toBe(true)
 
-    await wrapper.get('[data-testid="configure-sso"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="sso-provider-picker-title"]').exists()).toBe(true)
-
-    await wrapper.get('[data-testid="sso-provider-option-google"]').trigger('click')
+    await wrapper.get('[data-testid="edit-sso-google"]').trigger('click')
     await flushPromises()
 
     expect((wrapper.get('[data-testid="google-client-id"]').element as HTMLInputElement).value).toBe(
@@ -322,7 +319,11 @@ describe('OrganizationSettings', () => {
     const wrapper = mount(OrganizationSettings)
     await flushPromises()
 
-    await wrapper.get('[data-testid="add-sso"]').trigger('click')
+    expect(wrapper.find('[data-testid="sso-provider-password"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sso-provider-google"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sso-provider-microsoft"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="add-authentication"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('[data-testid="sso-provider-option-google"]').exists()).toBe(false)
@@ -344,8 +345,7 @@ describe('OrganizationSettings', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Only organization admins can update SSO settings.')
-    expect(wrapper.find('[data-testid="configure-sso"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="add-sso"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="add-authentication"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="edit-sso-google"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="edit-sso-microsoft"]').exists()).toBe(false)
   })
@@ -355,9 +355,7 @@ describe('OrganizationSettings', () => {
     await flushPromises()
 
     mockUpdateGoogleSSOConfig.mockRejectedValueOnce(new Error('Failed to save Google config'))
-    await wrapper.get('[data-testid="configure-sso"]').trigger('click')
-    await flushPromises()
-    await wrapper.get('[data-testid="sso-provider-option-google"]').trigger('click')
+    await wrapper.get('[data-testid="edit-sso-google"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="google-client-id"]').setValue('google-client-id-updated')
     await wrapper.get('[data-testid="google-client-secret"]').setValue('google-secret')
