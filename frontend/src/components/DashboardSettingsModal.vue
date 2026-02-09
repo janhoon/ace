@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Settings, X } from 'lucide-vue-next'
-import { updateDashboard } from '../api/dashboards'
+import { Download, Settings, X } from 'lucide-vue-next'
+import { exportDashboardYaml, updateDashboard } from '../api/dashboards'
 import type { Dashboard } from '../types/dashboard'
 
 interface DashboardViewSettings {
@@ -52,6 +52,7 @@ const timeRangePreset = ref(props.defaultSettings.timeRangePreset)
 const refreshInterval = ref(props.defaultSettings.refreshInterval)
 const variablesInput = ref(props.defaultSettings.variables.join(', '))
 const isSaving = ref(false)
+const isExporting = ref(false)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
@@ -97,6 +98,45 @@ async function saveSettings() {
     error.value = e instanceof Error ? e.message : 'Failed to save dashboard settings'
   } finally {
     isSaving.value = false
+  }
+}
+
+function fileNameFromTitle(titleValue: string): string {
+  const normalized = titleValue
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return `${normalized || 'dashboard'}.yaml`
+}
+
+async function exportSettings() {
+  if (isExporting.value) {
+    return
+  }
+
+  isExporting.value = true
+  error.value = null
+  successMessage.value = null
+
+  try {
+    const fileBlob = await exportDashboardYaml(props.dashboard.id)
+    const objectUrl = URL.createObjectURL(fileBlob)
+    const link = document.createElement('a')
+
+    link.href = objectUrl
+    link.download = fileNameFromTitle(props.dashboard.title)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(objectUrl)
+
+    successMessage.value = 'Dashboard export downloaded'
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to export dashboard'
+  } finally {
+    isExporting.value = false
   }
 }
 </script>
@@ -173,6 +213,10 @@ async function saveSettings() {
         <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
 
         <div class="modal-actions">
+          <button type="button" class="btn btn-secondary btn-export" :disabled="isExporting" @click="exportSettings">
+            <Download :size="14" />
+            <span>{{ isExporting ? 'Exporting...' : 'Export YAML' }}</span>
+          </button>
           <button type="button" class="btn btn-secondary" @click="emit('close')">Close</button>
           <button v-if="canEdit" type="submit" class="btn btn-primary" :disabled="isSaving">
             {{ isSaving ? 'Saving...' : 'Save settings' }}
@@ -321,8 +365,13 @@ select:disabled {
 
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 0.7rem;
+}
+
+.btn-export {
+  gap: 0.4rem;
 }
 
 .btn {

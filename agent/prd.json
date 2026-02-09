@@ -262,7 +262,7 @@
         "cd frontend && npm run type-check",
         "cd backend && go test ./internal/handlers/..."
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "DASHBOARD-IMPORT-YAML-001",

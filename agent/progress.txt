@@ -40,3 +40,9 @@ Working on UX improvements and bug fixes.
 - Files changed: `frontend/src/views/OrganizationSettings.vue`, `frontend/src/views/OrganizationSettings.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/views/OrganizationSettings.spec.ts`, plus `npm run type-check`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)
+
+## Task DASHBOARD-EXPORT-001: Export dashboard as YAML from dashboard settings - 2026-02-09T01:15:33Z
+- What was done: Added YAML export capability in dashboard settings with an Export YAML action that calls the dashboard export API, downloads a `.yaml` file named from the dashboard title, and shows success/error feedback for both happy-path and permission/failure responses.
+- Files changed: `frontend/src/api/dashboards.ts`, `frontend/src/components/DashboardSettingsModal.vue`, `frontend/src/api/dashboards.export.spec.ts`, `frontend/src/components/DashboardSettingsModal.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/api/dashboards.export.spec.ts src/components/DashboardSettingsModal.spec.ts`, plus `npm run type-check`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)

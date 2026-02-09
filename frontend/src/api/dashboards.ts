@@ -78,3 +78,19 @@ export async function deleteDashboard(id: string): Promise<void> {
     throw new Error('Failed to delete dashboard')
   }
 }
+
+export async function exportDashboardYaml(id: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE}/api/dashboards/${id}/export?format=yaml`, {
+    headers: getAuthHeaders(),
+  })
+
+  if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error('Not authorized to export this dashboard')
+    }
+    throw new Error('Failed to export dashboard')
+  }
+
+  const payload = await response.text()
+  return new Blob([payload], { type: 'application/x-yaml' })
+}
