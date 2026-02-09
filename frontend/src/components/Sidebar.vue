@@ -112,7 +112,7 @@ defineExpose({ isExpanded })
 
 <template>
   <aside class="sidebar" :class="{ expanded: isExpanded }">
-    <div class="sidebar-header">
+    <div class="sidebar-header" :class="{ collapsed: !isExpanded }">
       <div class="sidebar-logo">
         <Activity class="logo-icon" :size="24" />
         <div v-if="isExpanded" class="logo-copy">
@@ -243,6 +243,18 @@ defineExpose({ isExpanded })
   justify-content: space-between;
   padding: 0 0.75rem;
   border-bottom: 1px solid var(--border-primary);
+}
+
+.sidebar-header.collapsed {
+  height: 88px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0;
+}
+
+.sidebar-header.collapsed .sidebar-logo {
+  padding-left: 0;
 }
 
 .sidebar-logo {

@@ -80,7 +80,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/components/Sidebar"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "SIDEBAR-HOVER-001",

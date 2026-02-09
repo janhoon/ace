@@ -28,3 +28,9 @@ Working on UX improvements and bug fixes.
 - What was done: Updated dashboard creation to run in a transaction and seed default dashboard ACL entries for all org members (view) with creator elevated to admin; added coverage verifying creator gets admin, org members get view, and default ACL entries are persisted.
 - Files changed: `backend/internal/handlers/dashboards.go`, `backend/internal/handlers/permissions_test.go`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd backend && go test ./...`)
+
+## Task SIDEBAR-OVERFLOW-001: Fix sidebar expand button overflow when collapsed - 2026-02-09T01:10:39Z
+- What was done: Updated collapsed sidebar header layout to stack logo and toggle button vertically so the expand control stays contained within the 64px collapsed rail; added a Sidebar component test that verifies collapsed header state and expand toggle behavior.
+- Files changed: `frontend/src/components/Sidebar.vue`, `frontend/src/components/Sidebar.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/Sidebar.spec.ts`, plus `npm run type-check`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; unable to run required real-browser flow validation)
