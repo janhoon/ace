@@ -1,4 +1,4 @@
-.PHONY: help backend seed-admin seed-datasources frontend backend-lint frontend-lint lint
+.PHONY: help backend seed-admin seed-datasources frontend backend-lint frontend-lint lint security-local
 
 EMAIL ?= admin@admin.com
 PASSWORD ?= Admin1234
@@ -26,6 +26,7 @@ help:
 	@printf "  make frontend  Start Vite frontend dev server\n"
 	@printf "  make frontend-lint Run frontend lint checks (Biome + Knip)\n"
 	@printf "  make lint      Run backend and frontend lint checks\n"
+	@printf "  make security-local Run local security checks (govulncheck + gitleaks)\n"
 
 backend:
 	@set -e; \
@@ -121,3 +122,15 @@ frontend-lint:
 	@cd frontend && npm run lint && npm run lint:dead-code
 
 lint: backend-lint frontend-lint
+
+security-local:
+	@set -e; \
+	if ! command -v docker >/dev/null 2>&1; then \
+		printf "Docker is not installed.\n"; \
+		printf "Install Docker to run gitleaks and retry make security-local.\n"; \
+		exit 1; \
+	fi; \
+	printf "Running govulncheck (backend, Go 1.25.7 container)...\n"; \
+	docker run --rm -v "$$PWD:/repo" -w /repo/backend golang:1.25.7 /bin/sh -c 'go run golang.org/x/vuln/cmd/govulncheck@latest ./...'; \
+	printf "Running gitleaks (repo)...\n"; \
+	docker run --rm -v "$$PWD:/repo" -w /repo ghcr.io/gitleaks/gitleaks:latest detect --source . --redact --no-banner

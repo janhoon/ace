@@ -132,6 +132,19 @@ npm run lint
 npm run lint:dead-code
 ```
 
+### Running Security Scans Locally
+
+From repo root:
+
+```bash
+make security-local
+```
+
+This runs:
+
+- `govulncheck` against `backend/` in a Go `1.25.7` Docker container
+- `gitleaks` against the full repository via Docker
+
 ### API Endpoints
 
 - `GET /api/health` - Health check endpoint

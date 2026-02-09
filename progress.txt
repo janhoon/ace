@@ -1,3 +1,40 @@
+## Task SECURITY-LOCAL-002: Stabilize local security checks with patched Go runtime - 2026-02-09T14:52:00Z
+- What was done:
+  - Investigated `make security-local` failure and found `govulncheck` was using host Go `1.25.1`, producing known stdlib CVE findings fixed in newer patch releases
+  - Updated `make security-local` to run `govulncheck` in a pinned Go `1.25.7` Docker container for deterministic patched-runtime scanning
+  - Re-ran local security checks and verified both `govulncheck` and `gitleaks` pass
+- Files changed:
+  - Makefile
+  - README.md
+  - progress.txt
+- Validation: passing (`make security-local`)
+- Browser validation: n/a (not run in this environment)
+
+## Task SECURITY-LOCAL-001: Add local security scan make target - 2026-02-09T16:45:00Z
+- What was done:
+  - Added `make security-local` to run local security checks aligned with CI security workflow intent
+  - Wired the target to run backend `govulncheck` and repository-wide `gitleaks` via Docker with prerequisite checks for Go and Docker
+  - Updated README with local security scan usage and what each check covers
+- Files changed:
+  - Makefile
+  - README.md
+  - progress.txt
+- Validation: passing (`make help`)
+- Browser validation: n/a (not run in this environment)
+
+## Task SECURITY-CI-001: Add security scanning and dependency monitoring - 2026-02-09T16:30:00Z
+- What was done:
+  - Added a dedicated GitHub Actions security workflow with dependency review, CodeQL scans (Go and JS/TS), Go `govulncheck`, and secret scanning via gitleaks
+  - Added Dependabot configuration for Go modules, npm packages, and GitHub Actions updates on weekly cadence
+  - Added a repository `SECURITY.md` with private vulnerability reporting instructions and response expectations
+- Files changed:
+  - .github/workflows/security.yml
+  - .github/dependabot.yml
+  - SECURITY.md
+  - progress.txt
+- Validation: not run locally (workflow/config changes only)
+- Browser validation: n/a (not run in this environment)
+
 ## Task FRONTEND-LINT-003: Repair Biome config and revalidate frontend lint - 2026-02-09T15:05:00Z
 - What was done:
   - Repaired `frontend/biome.jsonc` syntax so Biome actually loads repository lint overrides instead of silently falling back to defaults
@@ -125,39 +162,3 @@
   - progress.txt
 - Tests: passing (`cd frontend && npm run type-check && npm run test -- src/views/DashboardDetailView.spec.ts src/views/DashboardSettingsView.spec.ts`)
 - Browser validation: n/a (not run in this environment)
-
-## Task DASHBOARD-SETTINGS-ACL-001: Move dashboard permissions into settings tab - 2026-02-09T13:27:43Z
-- What was done:
-  - Removed the dashboard header-level Permissions button and routed permissions access through Dashboard Settings
-  - Added a new Permissions tab in the dashboard settings modal with an action to open the existing dashboard permissions editor
-  - Wired settings-to-permissions modal flow and updated view/settings tests to validate role-gated visibility and launch behavior
-- Files changed:
-  - frontend/src/views/DashboardDetailView.vue
-  - frontend/src/components/DashboardSettingsModal.vue
-  - frontend/src/views/DashboardDetailView.spec.ts
-  - frontend/src/components/DashboardSettingsModal.spec.ts
-  - progress.txt
-- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/views/DashboardDetailView.spec.ts src/components/DashboardSettingsModal.spec.ts`)
-- Browser validation: n/a (not run in this environment)
-
-## Task DASHBOARD-UI-TIMERANGE-001: Fix dashboard time range dropdown layering - 2026-02-09T13:17:57Z
-- What was done:
-  - Fixed dashboard header layering so the time range dropdown renders above panel content instead of behind it
-  - Added an explicit stacking order on the dashboard header and grid container to avoid backdrop-filter stacking-context overlap
-- Files changed:
-  - frontend/src/views/DashboardDetailView.vue
-  - progress.txt
-- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/views/DashboardDetailView.spec.ts`)
-- Browser validation: n/a (not run in this environment)
-
-## Task UX-EXPLORER-004: Restore drag-and-drop moves in Finder tree - 2026-02-09T09:55:10Z
-- What was done:
-  - Re-enabled dashboard drag sources directly in the unified tree list rows
-  - Wired tree folder/unfiled rows as active drop targets with visible drop-highlight feedback
-  - Added a component test that verifies moving dashboards through tree drag-and-drop updates folder assignment
-- Files changed:
-  - frontend/src/components/DashboardList.vue
-  - frontend/src/components/DashboardList.spec.ts
-  - progress.txt
-- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
-- Browser validation: passing (verified dragging `Scratchpad` from Unfiled to `Platform` in dev-browser)

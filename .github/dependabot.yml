@@ -1,0 +1,37 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '04:30'
+      timezone: UTC
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - backend
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '04:45'
+      timezone: UTC
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - frontend
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '05:00'
+      timezone: UTC
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - ci
