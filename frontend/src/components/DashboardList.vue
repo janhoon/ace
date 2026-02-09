@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Plus, Pencil, Trash2, LayoutDashboard, AlertCircle, Folder as FolderIcon, Inbox, Shield } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import type { Folder } from '../types/folder'
-import { listDashboards, deleteDashboard } from '../api/dashboards'
+import { listDashboards, deleteDashboard, updateDashboard } from '../api/dashboards'
 import { listFolders, createFolder } from '../api/folders'
 import { useOrganization } from '../composables/useOrganization'
 import CreateDashboardModal from './CreateDashboardModal.vue'
@@ -32,6 +32,10 @@ const showCreateFolderModal = ref(false)
 const creatingFolder = ref(false)
 const folderName = ref('')
 const folderError = ref<string | null>(null)
+const moveError = ref<string | null>(null)
+const draggingDashboardId = ref<string | null>(null)
+const dropTargetSectionId = ref<string | null>(null)
+const movingDashboardId = ref<string | null>(null)
 
 interface DashboardSection {
   id: string | null
@@ -43,6 +47,7 @@ interface DashboardSection {
 
 const isOrgAdmin = computed(() => currentOrg.value?.role === 'admin')
 const canCreateFolder = computed(() => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor')
+const canManageDashboards = computed(() => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor')
 
 const groupedDashboardSections = computed<DashboardSection[]>(() => {
   const folderIds = new Set(folders.value.map((folder) => folder.id))
@@ -189,6 +194,83 @@ function openDashboard(dashboard: Dashboard) {
   router.push(`/dashboards/${dashboard.id}`)
 }
 
+function normalizeSectionId(sectionId: string | null): string {
+  return sectionId ?? 'unfiled'
+}
+
+function onDashboardDragStart(dashboard: Dashboard) {
+  if (!canManageDashboards.value) {
+    return
+  }
+
+  moveError.value = null
+  draggingDashboardId.value = dashboard.id
+}
+
+function onDashboardDragEnd() {
+  draggingDashboardId.value = null
+  dropTargetSectionId.value = null
+}
+
+function onSectionDragOver(sectionId: string | null) {
+  if (!canManageDashboards.value || !draggingDashboardId.value) {
+    return
+  }
+
+  dropTargetSectionId.value = normalizeSectionId(sectionId)
+}
+
+async function onSectionDrop(sectionId: string | null) {
+  if (!canManageDashboards.value || !draggingDashboardId.value || movingDashboardId.value) {
+    return
+  }
+
+  const dashboardId = draggingDashboardId.value
+  const targetFolderId = sectionId
+  const dashboard = dashboards.value.find((item) => item.id === dashboardId)
+
+  if (!dashboard) {
+    onDashboardDragEnd()
+    return
+  }
+
+  const currentFolderId = dashboard.folder_id ?? null
+  if (currentFolderId === targetFolderId) {
+    onDashboardDragEnd()
+    return
+  }
+
+  moveError.value = null
+  movingDashboardId.value = dashboardId
+  dashboards.value = dashboards.value.map((item) =>
+    item.id === dashboardId
+      ? {
+          ...item,
+          folder_id: targetFolderId,
+        }
+      : item,
+  )
+
+  try {
+    await updateDashboard(dashboardId, {
+      folder_id: targetFolderId,
+    })
+  } catch (e) {
+    dashboards.value = dashboards.value.map((item) =>
+      item.id === dashboardId
+        ? {
+            ...item,
+            folder_id: currentFolderId,
+          }
+        : item,
+    )
+    moveError.value = e instanceof Error ? e.message : 'Failed to move dashboard'
+  } finally {
+    movingDashboardId.value = null
+    onDashboardDragEnd()
+  }
+}
+
 function openFolderPermissions(folder: Folder) {
   selectedFolderForPermissions.value = folder
   folderPermissionsMessage.value = null
@@ -305,6 +387,7 @@ onMounted(() => {
 
     <div v-else class="folder-sections">
       <p v-if="folderPermissionsMessage" class="success-message">{{ folderPermissionsMessage }}</p>
+      <p v-if="moveError" class="section-error">{{ moveError }}</p>
       <div v-if="hasNoFolders" class="folder-cta" data-testid="folder-empty-cta">
         <div>
           <h2>No folders yet</h2>
@@ -320,7 +403,12 @@ onMounted(() => {
         v-for="section in groupedDashboardSections"
         :key="section.id ?? 'unfiled'"
         class="folder-section"
+        :class="{
+          'folder-section-drop-active': dropTargetSectionId === normalizeSectionId(section.id),
+        }"
         :data-testid="`folder-section-${section.id ?? 'unfiled'}`"
+        @dragover.prevent="onSectionDragOver(section.id)"
+        @drop.prevent="onSectionDrop(section.id)"
       >
         <div class="folder-section-header">
           <div class="folder-section-title">
@@ -353,6 +441,14 @@ onMounted(() => {
             v-for="dashboard in section.dashboards"
             :key="dashboard.id"
             class="dashboard-card"
+            :class="{
+              'dashboard-card-dragging': draggingDashboardId === dashboard.id,
+              'dashboard-card-draggable': canManageDashboards,
+            }"
+            :data-testid="`dashboard-card-${dashboard.id}`"
+            :draggable="canManageDashboards"
+            @dragstart="onDashboardDragStart(dashboard)"
+            @dragend="onDashboardDragEnd"
             @click="openDashboard(dashboard)"
           >
             <div class="card-header">
@@ -659,6 +755,12 @@ onMounted(() => {
   border: 1px solid var(--border-primary);
   border-radius: 14px;
   padding: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.folder-section-drop-active {
+  border-color: rgba(56, 189, 248, 0.8);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3);
 }
 
 .folder-section-header {
@@ -747,6 +849,19 @@ onMounted(() => {
   border-color: rgba(56, 189, 248, 0.5);
   box-shadow: var(--shadow-md);
   transform: translateY(-4px);
+}
+
+.dashboard-card-draggable {
+  cursor: grab;
+}
+
+.dashboard-card-dragging {
+  opacity: 0.5;
+  transform: scale(0.99);
+}
+
+.dashboard-card-draggable:active {
+  cursor: grabbing;
 }
 
 .card-header {
@@ -910,6 +1025,16 @@ onMounted(() => {
   border: 1px solid rgba(78, 205, 196, 0.3);
   background: rgba(78, 205, 196, 0.1);
   color: var(--accent-success);
+  font-size: 0.82rem;
+}
+
+.section-error {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.12);
+  color: var(--accent-danger);
   font-size: 0.82rem;
 }
 

@@ -413,7 +413,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/components/DashboardList"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "DASHBOARDS-FILE-EXPLORER-001",

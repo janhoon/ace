@@ -273,6 +273,66 @@ describe('DashboardList', () => {
     expect(viewerWrapper.find('[data-testid="folder-permissions-folder-a"]').exists()).toBe(false)
   })
 
+  it('moves dashboard to a different folder via drag and drop', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+    vi.mocked(dashboardApi.updateDashboard).mockImplementation(async (id, data) => {
+      const source = mockDashboards.find((dashboard) => dashboard.id === id)
+      if (!source) {
+        throw new Error('Dashboard not found')
+      }
+
+      return {
+        ...source,
+        folder_id: data.folder_id ?? null,
+      }
+    })
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="dashboard-card-123e4567-e89b-12d3-a456-426614174000"]').trigger('dragstart')
+    await wrapper.get('[data-testid="folder-section-folder-b"]').trigger('dragover')
+    await wrapper.get('[data-testid="folder-section-folder-b"]').trigger('drop')
+    await flushPromises()
+
+    expect(vi.mocked(dashboardApi.updateDashboard)).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174000', {
+      folder_id: 'folder-b',
+    })
+    expect(wrapper.get('[data-testid="folder-section-folder-b"]').text()).toContain('Test Dashboard')
+  })
+
+  it('rolls back dashboard move on drag-and-drop API failure', async () => {
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+    vi.mocked(dashboardApi.updateDashboard).mockRejectedValue(new Error('Not authorized to update this dashboard'))
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="dashboard-card-123e4567-e89b-12d3-a456-426614174000"]').trigger('dragstart')
+    await wrapper.get('[data-testid="folder-section-folder-b"]').trigger('dragover')
+    await wrapper.get('[data-testid="folder-section-folder-b"]').trigger('drop')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="folder-section-folder-a"]').text()).toContain('Test Dashboard')
+    expect(wrapper.text()).toContain('Not authorized to update this dashboard')
+  })
+
+  it('disables dashboard drag for viewers', async () => {
+    mockCurrentOrg.value = {
+      ...mockCurrentOrg.value,
+      role: 'viewer',
+    }
+    vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
+    vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
+
+    const wrapper = mount(DashboardList)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="dashboard-card-123e4567-e89b-12d3-a456-426614174000"]').attributes('draggable')).toBe('false')
+  })
+
   it('does not fetch dashboards when no organization is selected', async () => {
     mockCurrentOrgId.value = null
 
