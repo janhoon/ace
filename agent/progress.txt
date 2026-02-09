@@ -70,3 +70,9 @@ Working on UX improvements and bug fixes.
 - Files changed: `frontend/src/components/CreateDashboardModal.vue`, `frontend/src/components/CreateDashboardModal.spec.ts`, `frontend/src/components/DashboardList.vue`, `frontend/src/components/DashboardList.spec.ts`, `frontend/src/components/Sidebar.vue`, `frontend/src/router/index.ts`, `frontend/src/views/GrafanaConverter.vue`, `frontend/src/views/GrafanaConverter.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/CreateDashboardModal.spec.ts src/components/DashboardList.spec.ts src/components/Sidebar.spec.ts`, plus `npm run type-check`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; could not run required real-browser validation for Grafana import happy path and conversion error state)
+
+## Task DASHBOARD-YAML-EDITOR-001: Dashboard YAML editor with Grafana conversion - 2026-02-09T09:16:13Z
+- What was done: Added a YAML Editor tab in dashboard settings with live schema validation, inline diff preview, Grafana JSON replace-and-convert workflow, and YAML save handling that updates dashboard metadata/default settings while keeping existing settings/export behavior.
+- Files changed: `frontend/src/components/DashboardSettingsModal.vue`, `frontend/src/components/DashboardSettingsModal.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: failing (full frontend suite has pre-existing failures in `src/api/dashboards.spec.ts` and `src/components/Panel.spec.ts`); passing (targeted touched-area: `npm run test -- src/components/DashboardSettingsModal.spec.ts`, plus `npm run type-check`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; could not run required real-browser YAML editor and Grafana conversion flow checks)

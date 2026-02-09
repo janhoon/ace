@@ -374,7 +374,7 @@
         "cd frontend && npm run type-check",
         "cd frontend && npm run test -- src/views/DashboardDetail"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "DASHBOARDS-DRAG-DROP-001",
