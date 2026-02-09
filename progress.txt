@@ -1,3 +1,85 @@
+## Task FRONTEND-BIOME-001: Add Biome linting defaults for Vue frontend - 2026-02-09T14:10:07Z
+- What was done:
+  - Added Biome configuration for the frontend with Vue-friendly defaults (2-space indentation, single quotes, trailing commas, 100-column width)
+  - Added frontend lint and formatting scripts (`lint`, `lint:fix`, `format`, `format:check`) while keeping `lint:dead-code`
+  - Tuned rules for current Vue SFC ergonomics by disabling Biome unused-variable/import checks (covered by TS) and keeping `useImportType` as a warning to guide gradual cleanup
+- Files changed:
+  - frontend/biome.jsonc
+  - frontend/package.json
+  - frontend/package-lock.json
+  - progress.txt
+- Validation: passing (`cd frontend && npm run lint`, `cd frontend && npm run lint:dead-code`, `cd frontend && npm run type-check`)
+- Browser validation: n/a (not run in this environment)
+
+## Task DASHBOARD-DEADCODE-004: Clear knip dead-code findings after modal removal - 2026-02-09T14:05:17Z
+- What was done:
+  - Removed dead exported API surfaces and types flagged by knip (auth/org APIs, promql helpers, and type-only exports)
+  - Converted internal-only exported types to module-local types across affected Vue/composable/utility files
+  - Kept dead-code lint enabled via `npm run lint:dead-code` and validated it now runs clean with no findings
+- Files changed:
+  - frontend/src/api/auth.ts
+  - frontend/src/api/organizations.ts
+  - frontend/src/api/datasources.ts
+  - frontend/src/components/BarChart.vue
+  - frontend/src/components/StatPanel.vue
+  - frontend/src/components/TablePanel.vue
+  - frontend/src/composables/useProm.ts
+  - frontend/src/composables/useQueryBuilder.ts
+  - frontend/src/composables/useTimeRange.ts
+  - frontend/src/promql/completionProvider.ts
+  - frontend/src/promql/hoverProvider.ts
+  - frontend/src/promql/language.ts
+  - frontend/src/types/converter.ts
+  - frontend/src/utils/formatting.ts
+  - progress.txt
+- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/views/DashboardDetailView.spec.ts src/views/DashboardSettingsView.spec.ts src/components/DashboardPermissionsEditor.spec.ts`)
+- Dead-code lint: passing (`cd frontend && npm run lint:dead-code`)
+- Browser validation: n/a (not run in this environment)
+
+## Task DASHBOARD-SETTINGS-PERMISSIONS-002: Render dashboard permissions inline in settings view - 2026-02-09T13:51:39Z
+- What was done:
+  - Replaced the dashboard settings permissions modal launcher with an inline permissions editor embedded directly in the settings page
+  - Added a reusable `DashboardPermissionsEditor` component with existing ACL behaviors (load members/groups, add/remove principals, update levels, save)
+  - Updated dashboard settings tests to validate inline permissions rendering and added dedicated editor tests for ACL flows
+- Files changed:
+  - frontend/src/views/DashboardSettingsView.vue
+  - frontend/src/views/DashboardSettingsView.spec.ts
+  - frontend/src/components/DashboardPermissionsEditor.vue
+  - frontend/src/components/DashboardPermissionsEditor.spec.ts
+  - progress.txt
+- Tests: passing (`cd frontend && npm run type-check && npm run test -- src/views/DashboardSettingsView.spec.ts src/components/DashboardPermissionsEditor.spec.ts src/views/DashboardDetailView.spec.ts`)
+- Browser validation: n/a (not run in this environment)
+
+## Task DASHBOARD-SETTINGS-VIEW-001: Move dashboard settings to dedicated route view - 2026-02-09T13:40:05Z
+- What was done:
+  - Replaced dashboard settings modal launch with route navigation to `/dashboards/:id/settings/:section`
+  - Added a new `DashboardSettingsView` that uses the org-settings-style secondary sidebar with `General`, `YAML Editor`, and role-gated `Permissions` sections
+  - Preserved settings behaviors (save metadata/defaults, YAML edit/validate/save, Grafana replace, YAML export) and kept permissions editing flow via `DashboardPermissionsModal`
+  - Added a dedicated view test suite for section routing/redirects/role gating and updated dashboard detail tests to assert navigation instead of modal behavior
+- Files changed:
+  - frontend/src/router/index.ts
+  - frontend/src/views/DashboardDetailView.vue
+  - frontend/src/views/DashboardDetailView.spec.ts
+  - frontend/src/views/DashboardSettingsView.vue
+  - frontend/src/views/DashboardSettingsView.spec.ts
+  - progress.txt
+- Tests: passing (`cd frontend && npm run type-check && npm run test -- src/views/DashboardDetailView.spec.ts src/views/DashboardSettingsView.spec.ts`)
+- Browser validation: n/a (not run in this environment)
+
+## Task DASHBOARD-SETTINGS-ACL-001: Move dashboard permissions into settings tab - 2026-02-09T13:27:43Z
+- What was done:
+  - Removed the dashboard header-level Permissions button and routed permissions access through Dashboard Settings
+  - Added a new Permissions tab in the dashboard settings modal with an action to open the existing dashboard permissions editor
+  - Wired settings-to-permissions modal flow and updated view/settings tests to validate role-gated visibility and launch behavior
+- Files changed:
+  - frontend/src/views/DashboardDetailView.vue
+  - frontend/src/components/DashboardSettingsModal.vue
+  - frontend/src/views/DashboardDetailView.spec.ts
+  - frontend/src/components/DashboardSettingsModal.spec.ts
+  - progress.txt
+- Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/views/DashboardDetailView.spec.ts src/components/DashboardSettingsModal.spec.ts`)
+- Browser validation: n/a (not run in this environment)
+
 ## Task DASHBOARD-UI-TIMERANGE-001: Fix dashboard time range dropdown layering - 2026-02-09T13:17:57Z
 - What was done:
   - Fixed dashboard header layering so the time range dropdown renders above panel content instead of behind it
@@ -53,73 +135,3 @@
   - progress.txt
 - Tests: passing (`cd frontend && npm run type-check`, `cd frontend && npm run test -- src/components/DashboardList.spec.ts`)
 - Browser validation: passing (validated before/after explorer behavior with dev-browser on `http://localhost:5173/dashboards`)
-
-## Task SSO-FE-UI-002: Restructure SSO settings into configure flow - 2026-02-09T00:20:30Z
-- What was done:
-  - Reworked the SSO section to present a single configure entry point plus a provider list with status and edit/add actions
-  - Added provider-specific configuration panels that preserve existing load/save behavior and error messaging
-  - Updated SSO view tests to drive the new configure/edit flow
-- Files changed:
-  - frontend/src/views/OrganizationSettings.vue
-  - frontend/src/views/OrganizationSettings.spec.ts
-  - agent/prd.json
-  - agent/progress.txt
-  - progress.txt
-- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures in `src/api/dashboards.spec.ts`, `src/components/Panel.spec.ts`, `src/components/CreateDashboardModal.spec.ts`); passing (`cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts`)
-- Browser validation: failing (dev-browser skill unavailable in this environment)
-
-## Task CAC-001: Configuration as Code (CaC) for Dashboards - 2026-02-09T00:33:49Z
-- What was done:
-  - Added backend conversion package for schema-versioned dashboard document import/export in JSON and YAML
-  - Added dashboard export endpoint with panel serialization and permission checks
-  - Added dashboard import endpoint with document validation and transactional dashboard/panel creation
-  - Added converter and handler tests for format handling and validation
-- Files changed:
-  - backend/internal/converter/dashboard_cac.go
-  - backend/internal/converter/dashboard_cac_test.go
-  - backend/internal/handlers/dashboard_cac.go
-  - backend/internal/handlers/dashboard_cac_test.go
-  - backend/cmd/api/main.go
-  - agent/prd.json
-  - agent/progress.txt
-  - progress.txt
-- Tests: passing (`cd backend && go test ./...`)
-- Browser validation: n/a (no frontend changes)
-
-## Task GRAFANA-CONVERTER-001: Grafana Dashboard Converter - 2026-02-09T00:39:02Z
-- What was done:
-  - Added backend Grafana JSON conversion logic that maps Grafana panels, variables, and time settings into Dash documents with warnings for unsupported features
-  - Added authenticated `POST /api/convert/grafana` API endpoint and CLI conversion command at `backend/cmd/converter/main.go`
-  - Added frontend Grafana converter page with upload/paste, format selection, warnings, preview, and download
-- Files changed:
-  - backend/internal/converter/dashboard_cac.go
-  - backend/internal/converter/grafana.go
-  - backend/internal/converter/grafana_test.go
-  - backend/internal/handlers/grafana_converter.go
-  - backend/internal/handlers/grafana_converter_test.go
-  - backend/cmd/converter/main.go
-  - backend/cmd/api/main.go
-  - frontend/src/types/converter.ts
-  - frontend/src/api/converter.ts
-  - frontend/src/api/converter.spec.ts
-  - frontend/src/views/GrafanaConverter.vue
-  - frontend/src/views/GrafanaConverter.spec.ts
-  - frontend/src/router/index.ts
-  - frontend/src/components/Sidebar.vue
-  - agent/prd.json
-  - agent/progress.txt
-  - progress.txt
-- Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/views/GrafanaConverter.spec.ts src/api/converter.spec.ts src/App.spec.ts`, `cd backend && go test ./...`)
-- Browser validation: failing (could not run; `dev-browser` skill is unavailable in this environment)
-
-## Task DASHBOARD-401-001: Fix unauthorized panel API calls - 2026-02-09T01:17:00Z
-- What was done:
-  - Identified dashboard open 401s as missing `Authorization` headers on panel API requests triggered by dashboard detail loading
-  - Added shared auth header helper in panel API client and wired it into list/create/update/delete panel requests
-  - Updated panel API unit tests to assert bearer token headers are sent
-- Files changed:
-  - frontend/src/api/panels.ts
-  - frontend/src/api/panels.spec.ts
-  - progress.txt
-- Tests: passing (`cd frontend && npm run test -- src/api/panels.spec.ts`, `cd frontend && npm run type-check`)
-- Browser validation: n/a (API client and unit test changes only)

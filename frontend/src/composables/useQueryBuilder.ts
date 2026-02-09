@@ -27,7 +27,7 @@ export const LABEL_OPERATORS = [
   { value: '!~', label: '!~' }
 ] as const
 
-export type AggregationFunction = typeof AGGREGATION_FUNCTIONS[number]['value']
+type AggregationFunction = typeof AGGREGATION_FUNCTIONS[number]['value']
 export type LabelOperator = typeof LABEL_OPERATORS[number]['value']
 
 export interface LabelFilter {
@@ -37,7 +37,7 @@ export interface LabelFilter {
   value: string
 }
 
-export interface QueryBuilderState {
+interface QueryBuilderState {
   metric: string
   labelFilters: LabelFilter[]
   aggregation: AggregationFunction

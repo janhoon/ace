@@ -113,23 +113,6 @@ export async function createInvitation(
   return response.json()
 }
 
-export async function acceptInvitation(token: string): Promise<Member> {
-  const response = await fetch(`${API_BASE}/api/invitations/${token}/accept`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-  })
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('Invitation not found or expired')
-    }
-    if (response.status === 403) {
-      throw new Error('Invitation is for a different email address')
-    }
-    throw new Error('Failed to accept invitation')
-  }
-  return response.json()
-}
-
 export async function listMembers(orgId: string): Promise<Member[]> {
   const response = await fetch(`${API_BASE}/api/orgs/${orgId}/members`, {
     headers: getAuthHeaders(),

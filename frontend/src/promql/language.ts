@@ -223,13 +223,6 @@ export const PROMQL_KEYWORDS = [
   'bool', 'offset', 'and', 'or', 'unless'
 ]
 
-// PromQL operators
-export const PROMQL_OPERATORS = [
-  '+', '-', '*', '/', '%', '^',
-  '==', '!=', '>', '<', '>=', '<=',
-  '=~', '!~'
-]
-
 // Register PromQL language with Monaco
 export function registerPromQLLanguage(monaco: typeof Monaco) {
   // Register the language

@@ -11,7 +11,7 @@ import type { EChartsOption } from 'echarts'
 // Register ECharts components for sparkline
 use([CanvasRenderer, LineChart, GridComponent])
 
-export interface Threshold {
+interface Threshold {
   value: number
   color: string
   background?: string

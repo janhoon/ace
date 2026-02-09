@@ -1,4 +1,4 @@
-export interface DashboardVariable {
+interface DashboardVariable {
   name: string
   type: string
   label?: string
@@ -7,12 +7,12 @@ export interface DashboardVariable {
   include_all?: boolean
 }
 
-export interface DashboardTimeRange {
+interface DashboardTimeRange {
   from: string
   to: string
 }
 
-export interface DashboardPanelResource {
+interface DashboardPanelResource {
   title: string
   type: string
   grid_pos: Record<string, number>

@@ -22,12 +22,12 @@ use([
   GridComponent,
 ])
 
-export interface DataPoint {
+interface DataPoint {
   timestamp: number // Unix timestamp in seconds
   value: number
 }
 
-export interface ChartSeries {
+interface ChartSeries {
   name: string
   data: DataPoint[]
 }

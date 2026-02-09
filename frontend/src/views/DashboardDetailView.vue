@@ -2,22 +2,20 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
-import { ArrowLeft, Plus, Trash2, LayoutGrid, AlertCircle, Shield, Settings } from 'lucide-vue-next'
+import { ArrowLeft, Plus, Trash2, LayoutGrid, AlertCircle, Settings } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import type { Panel as PanelType } from '../types/panel'
 import { getDashboard } from '../api/dashboards'
 import { listPanels, deletePanel, updatePanel } from '../api/panels'
 import Panel from '../components/Panel.vue'
 import PanelEditModal from '../components/PanelEditModal.vue'
-import DashboardPermissionsModal from '../components/DashboardPermissionsModal.vue'
-import DashboardSettingsModal from '../components/DashboardSettingsModal.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useOrganization } from '../composables/useOrganization'
 
 const route = useRoute()
 const router = useRouter()
-const { currentOrg, currentOrgId, fetchOrganizations } = useOrganization()
+const { currentOrg, fetchOrganizations } = useOrganization()
 
 const dashboard = ref<Dashboard | null>(null)
 const panels = ref<PanelType[]>([])
@@ -28,15 +26,8 @@ const showPanelModal = ref(false)
 const editingPanel = ref<PanelType | null>(null)
 const showDeleteConfirm = ref(false)
 const deletingPanel = ref<PanelType | null>(null)
-const showDashboardPermissionsModal = ref(false)
-const showDashboardSettingsModal = ref(false)
-const dashboardPermissionsMessage = ref<string | null>(null)
-const dashboardSettingsMessage = ref<string | null>(null)
 
 const dashboardId = route.params.id as string
-const canManageDashboardPermissions = computed(() => Boolean(currentOrg.value && currentOrg.value.role !== 'viewer'))
-const canEditDashboardSettings = computed(() => Boolean(currentOrg.value && (currentOrg.value.role === 'admin' || currentOrg.value.role === 'editor')))
-const permissionsOrgId = computed(() => currentOrgId.value || dashboard.value?.organization_id || null)
 
 interface DashboardViewSettings {
   timeRangePreset: string
@@ -149,12 +140,6 @@ function loadDashboardViewSettings() {
   setRefreshInterval(dashboardSettings.value.refreshInterval)
 }
 
-function persistDashboardViewSettings(settings: DashboardViewSettings) {
-  const allSettings = readStoredDashboardSettings()
-  allSettings[dashboardId] = settings
-  localStorage.setItem(DASHBOARD_VIEW_SETTINGS_KEY, JSON.stringify(allSettings))
-}
-
 async function fetchPanels() {
   try {
     panels.value = await listPanels(dashboardId)
@@ -223,56 +208,8 @@ function goBack() {
   router.push('/dashboards')
 }
 
-function openDashboardPermissions() {
-  dashboardPermissionsMessage.value = null
-  showDashboardPermissionsModal.value = true
-}
-
-function closeDashboardPermissionsModal() {
-  showDashboardPermissionsModal.value = false
-}
-
 function openDashboardSettings() {
-  dashboardSettingsMessage.value = null
-  showDashboardSettingsModal.value = true
-}
-
-function closeDashboardSettingsModal() {
-  showDashboardSettingsModal.value = false
-}
-
-function onDashboardSettingsSaved(payload: {
-  title: string
-  description: string
-  settings: DashboardViewSettings
-}) {
-  if (dashboard.value) {
-    dashboard.value = {
-      ...dashboard.value,
-      title: payload.title,
-      description: payload.description || undefined,
-    }
-  }
-
-  dashboardSettings.value = payload.settings
-  persistDashboardViewSettings(payload.settings)
-  setPreset(payload.settings.timeRangePreset)
-  setRefreshInterval(payload.settings.refreshInterval)
-
-  dashboardSettingsMessage.value = `Saved settings for "${payload.title}"`
-  closeDashboardSettingsModal()
-}
-
-async function onDashboardPermissionsSaved() {
-  const dashboardTitle = dashboard.value?.title || 'dashboard'
-
-  closeDashboardPermissionsModal()
-  dashboardPermissionsMessage.value = null
-  await loadData()
-
-  if (!error.value) {
-    dashboardPermissionsMessage.value = `Updated permissions for "${dashboardTitle}"`
-  }
+  router.push(`/dashboards/${dashboardId}/settings/general`)
 }
 
 // Handle layout changes (drag/resize)
@@ -378,24 +315,12 @@ onUnmounted(() => {
           <Settings :size="16" />
           <span>Settings</span>
         </button>
-        <button
-          v-if="canManageDashboardPermissions && dashboard && permissionsOrgId"
-          class="btn btn-secondary"
-          data-testid="dashboard-permissions-button"
-          @click="openDashboardPermissions"
-        >
-          <Shield :size="16" />
-          <span>Permissions</span>
-        </button>
         <button class="btn btn-primary" @click="openAddPanel" :disabled="loading">
           <Plus :size="18" />
           <span>Add Panel</span>
         </button>
       </div>
     </header>
-
-    <p v-if="dashboardPermissionsMessage" class="success-message">{{ dashboardPermissionsMessage }}</p>
-    <p v-if="dashboardSettingsMessage" class="success-message">{{ dashboardSettingsMessage }}</p>
 
     <div v-if="loading" class="state-container">
       <div class="loading-spinner"></div>
@@ -465,23 +390,6 @@ onUnmounted(() => {
       :panel="editingPanel || undefined"
       @close="closePanelModal"
       @saved="onPanelSaved"
-    />
-
-    <DashboardPermissionsModal
-      v-if="showDashboardPermissionsModal && dashboard && permissionsOrgId"
-      :dashboard="dashboard"
-      :org-id="permissionsOrgId"
-      @close="closeDashboardPermissionsModal"
-      @saved="onDashboardPermissionsSaved"
-    />
-
-    <DashboardSettingsModal
-      v-if="showDashboardSettingsModal && dashboard"
-      :dashboard="dashboard"
-      :can-edit="canEditDashboardSettings"
-      :default-settings="dashboardSettings"
-      @close="closeDashboardSettingsModal"
-      @saved="onDashboardSettingsSaved"
     />
 
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">

@@ -6,19 +6,19 @@ export interface User {
   updated_at: string
 }
 
-export interface AuthResponse {
+interface AuthResponse {
   access_token: string
   refresh_token: string
   token_type: string
   expires_in: number
 }
 
-export interface LoginRequest {
+interface LoginRequest {
   email: string
   password: string
 }
 
-export interface RegisterRequest {
+interface RegisterRequest {
   email: string
   password: string
   name?: string
@@ -92,18 +92,6 @@ export async function getMe(): Promise<MeResponse> {
   return response.json()
 }
 
-export async function refreshToken(refreshToken: string): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE}/api/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  })
-  if (!response.ok) {
-    throw new Error('Token refresh failed')
-  }
-  return response.json()
-}
-
 export async function logout(refreshToken: string): Promise<void> {
   const response = await fetch(`${API_BASE}/api/auth/logout`, {
     method: 'POST',
@@ -112,15 +100,5 @@ export async function logout(refreshToken: string): Promise<void> {
   })
   if (!response.ok) {
     throw new Error('Logout failed')
-  }
-}
-
-export async function logoutAll(): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/auth/logout-all`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-  })
-  if (!response.ok) {
-    throw new Error('Logout all failed')
   }
 }

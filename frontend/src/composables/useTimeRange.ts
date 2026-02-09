@@ -1,17 +1,17 @@
 import { ref, computed, readonly } from 'vue'
 
-export interface TimeRange {
+interface TimeRange {
   start: number // Unix timestamp in milliseconds
   end: number // Unix timestamp in milliseconds
 }
 
-export interface TimeRangePreset {
+interface TimeRangePreset {
   label: string
   value: string
   duration: number // Duration in milliseconds
 }
 
-export interface RefreshInterval {
+interface RefreshInterval {
   label: string
   value: string
   interval: number // Interval in milliseconds, 0 means off
@@ -127,7 +127,9 @@ export function useTimeRange() {
       isCustomRange.value = false
       customRange.value = null
       lastRefreshTime.value = Date.now()
-      refreshCallbacks.forEach(callback => callback())
+      refreshCallbacks.forEach((callback) => {
+        callback()
+      })
     }
   }
 
@@ -135,7 +137,9 @@ export function useTimeRange() {
     customRange.value = { start, end }
     isCustomRange.value = true
     lastRefreshTime.value = Date.now()
-    refreshCallbacks.forEach(callback => callback())
+    refreshCallbacks.forEach((callback) => {
+      callback()
+    })
   }
 
   function setRefreshInterval(intervalValue: string) {

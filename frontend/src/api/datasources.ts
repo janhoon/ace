@@ -123,7 +123,7 @@ interface ErrorEventPayload {
   message?: string
 }
 
-export interface DataSourceLogStreamHandlers {
+interface DataSourceLogStreamHandlers {
   onLog: (log: LogEntry) => void
   onStatus?: (status: string, message?: string) => void
   onHeartbeat?: () => void

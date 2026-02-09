@@ -3,7 +3,7 @@ import { ref, type Ref, watch } from 'vue'
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 // Types for Prometheus API response
-export interface PrometheusMetricResult {
+interface PrometheusMetricResult {
   metric: Record<string, string>
   values: [number, string][] // [timestamp, value] pairs
 }
@@ -67,7 +67,7 @@ export function transformToChartData(result: PrometheusQueryResult): ChartData {
 }
 
 // Metadata response type
-export interface MetadataResponse {
+interface MetadataResponse {
   status: 'success' | 'error'
   data?: string[]
   error?: string
@@ -129,7 +129,7 @@ export async function queryPrometheus(
   return data
 }
 
-export interface UsePromOptions {
+interface UsePromOptions {
   query: Ref<string>
   start: Ref<number>
   end: Ref<number>
@@ -137,7 +137,7 @@ export interface UsePromOptions {
   autoFetch?: boolean
 }
 
-export interface UsePromReturn {
+interface UsePromReturn {
   data: Ref<PrometheusQueryResult | null>
   chartData: Ref<ChartData>
   loading: Ref<boolean>

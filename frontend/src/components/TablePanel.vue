@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-export interface DataPoint {
+interface DataPoint {
   timestamp: number
   value: number
 }
 
-export interface TableSeries {
+interface TableSeries {
   name: string
   data: DataPoint[]
 }

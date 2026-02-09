@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import DashboardsView from '../views/DashboardsView.vue'
 import DashboardDetailView from '../views/DashboardDetailView.vue'
+import DashboardSettingsView from '../views/DashboardSettingsView.vue'
 import Explore from '../views/Explore.vue'
 import ExploreLogs from '../views/ExploreLogs.vue'
 import OrganizationSettings from '../views/OrganizationSettings.vue'
@@ -30,6 +31,15 @@ const router = createRouter({
       path: '/dashboards/:id',
       name: 'dashboard-detail',
       component: DashboardDetailView
+    },
+    {
+      path: '/dashboards/:id/settings',
+      redirect: to => `/dashboards/${to.params.id}/settings/general`
+    },
+    {
+      path: '/dashboards/:id/settings/:section',
+      name: 'dashboard-settings',
+      component: DashboardSettingsView
     },
     {
       path: '/explore',

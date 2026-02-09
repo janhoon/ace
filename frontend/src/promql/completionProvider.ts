@@ -141,7 +141,7 @@ function extractLabelName(text: string): string | undefined {
 }
 
 // Create completion provider
-export function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.CompletionItemProvider {
+function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.CompletionItemProvider {
   return {
     triggerCharacters: ['{', ',', '=', '(', ' '],
 

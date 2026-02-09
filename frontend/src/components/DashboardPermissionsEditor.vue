@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { X, Shield } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import type { Member } from '../types/organization'
 import type {
@@ -19,11 +18,6 @@ import {
 const props = defineProps<{
   dashboard: Dashboard
   orgId: string
-}>()
-
-const emit = defineEmits<{
-  close: []
-  saved: []
 }>()
 
 const loading = ref(true)
@@ -130,6 +124,7 @@ function updateEntryPermission(index: number, permission: ResourcePermissionLeve
         permission,
       }
     }
+
     return entry
   })
   successMessage.value = null
@@ -152,7 +147,6 @@ async function savePermissions() {
     })
     entries.value = updatedEntries
     successMessage.value = 'Dashboard permissions updated'
-    emit('saved')
   } catch (e) {
     actionError.value = e instanceof Error ? e.message : 'Failed to update dashboard permissions'
   } finally {
@@ -160,152 +154,102 @@ async function savePermissions() {
   }
 }
 
-function closeModal() {
-  emit('close')
-}
-
 onMounted(loadData)
+
+watch(
+  () => [props.dashboard.id, props.orgId],
+  () => {
+    void loadData()
+  },
+)
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="closeModal">
-    <div class="modal" data-testid="dashboard-permissions-modal">
-      <header class="modal-header">
-        <div>
-          <h2><Shield :size="18" /> Dashboard Permissions</h2>
-          <p>{{ props.dashboard.title }}</p>
+  <div class="permissions-editor" data-testid="dashboard-permissions-editor">
+    <div v-if="loading" class="inline-state">Loading permissions...</div>
+    <div v-else-if="error" class="error-message">{{ error }}</div>
+    <div v-else class="content">
+      <div class="add-entry-panel">
+        <div class="form-row">
+          <select v-model="newPrincipalType" data-testid="principal-type-select" :disabled="saving">
+            <option value="user">User</option>
+            <option value="group">Group</option>
+          </select>
+          <select v-model="newPrincipalId" data-testid="principal-select" :disabled="saving || principalOptions.length === 0">
+            <option value="">Select {{ newPrincipalType }}</option>
+            <option
+              v-for="option in principalOptions"
+              :key="`${newPrincipalType}-${option.id}`"
+              :value="option.id"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+          <select v-model="newPermission" data-testid="permission-select" :disabled="saving">
+            <option value="view">View</option>
+            <option value="edit">Edit</option>
+            <option value="admin">Admin</option>
+          </select>
         </div>
-        <button class="btn-icon" @click="closeModal" aria-label="Close permissions editor">
-          <X :size="18" />
+        <button class="btn btn-secondary" data-testid="add-permission-entry" @click="addEntry" :disabled="saving">
+          Add Entry
         </button>
-      </header>
+      </div>
 
-      <div v-if="loading" class="inline-state">Loading permissions...</div>
-      <div v-else-if="error" class="error-message">{{ error }}</div>
-      <div v-else class="content">
-        <div class="add-entry-panel">
-          <div class="form-row">
-            <select v-model="newPrincipalType" data-testid="principal-type-select" :disabled="saving">
-              <option value="user">User</option>
-              <option value="group">Group</option>
-            </select>
-            <select v-model="newPrincipalId" data-testid="principal-select" :disabled="saving || principalOptions.length === 0">
-              <option value="">Select {{ newPrincipalType }}</option>
-              <option
-                v-for="option in principalOptions"
-                :key="`${newPrincipalType}-${option.id}`"
-                :value="option.id"
-              >
-                {{ option.label }}
-              </option>
-            </select>
-            <select v-model="newPermission" data-testid="permission-select" :disabled="saving">
+      <div v-if="entries.length === 0" class="inline-state">
+        No explicit ACL entries. Organization role defaults apply.
+      </div>
+      <div v-else class="entries-list">
+        <div
+          v-for="(entry, index) in entries"
+          :key="`${entry.principal_type}-${entry.principal_id}`"
+          class="entry-row"
+          :data-testid="`permission-entry-${index}`"
+        >
+          <div class="entry-principal">
+            <strong>{{ principalLabel(entry) }}</strong>
+            <span class="entry-type">{{ entry.principal_type }}</span>
+          </div>
+          <div class="entry-actions">
+            <select
+              :value="entry.permission"
+              :data-testid="`entry-permission-${index}`"
+              :disabled="saving"
+              @change="updateEntryPermission(index, ($event.target as HTMLSelectElement).value as ResourcePermissionLevel)"
+            >
               <option value="view">View</option>
               <option value="edit">Edit</option>
               <option value="admin">Admin</option>
             </select>
-          </div>
-          <button class="btn btn-secondary" data-testid="add-permission-entry" @click="addEntry" :disabled="saving">
-            Add Entry
-          </button>
-        </div>
-
-        <div v-if="entries.length === 0" class="inline-state">
-          No explicit ACL entries. Organization role defaults apply.
-        </div>
-        <div v-else class="entries-list">
-          <div
-            v-for="(entry, index) in entries"
-            :key="`${entry.principal_type}-${entry.principal_id}`"
-            class="entry-row"
-            :data-testid="`permission-entry-${index}`"
-          >
-            <div class="entry-principal">
-              <strong>{{ principalLabel(entry) }}</strong>
-              <span class="entry-type">{{ entry.principal_type }}</span>
-            </div>
-            <div class="entry-actions">
-              <select
-                :value="entry.permission"
-                :data-testid="`entry-permission-${index}`"
-                :disabled="saving"
-                @change="updateEntryPermission(index, ($event.target as HTMLSelectElement).value as ResourcePermissionLevel)"
-              >
-                <option value="view">View</option>
-                <option value="edit">Edit</option>
-                <option value="admin">Admin</option>
-              </select>
-              <button
-                class="btn btn-danger btn-sm"
-                :data-testid="`remove-entry-${index}`"
-                @click="removeEntry(index)"
-                :disabled="saving"
-              >
-                Remove
-              </button>
-            </div>
+            <button
+              class="btn btn-danger btn-sm"
+              :data-testid="`remove-entry-${index}`"
+              @click="removeEntry(index)"
+              :disabled="saving"
+            >
+              Remove
+            </button>
           </div>
         </div>
+      </div>
 
-        <div v-if="actionError" class="error-message">{{ actionError }}</div>
-        <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
+      <div v-if="actionError" class="error-message">{{ actionError }}</div>
+      <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
 
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="closeModal" :disabled="saving">Close</button>
-          <button class="btn btn-primary" data-testid="save-dashboard-permissions" @click="savePermissions" :disabled="saving">
-            {{ saving ? 'Saving...' : 'Save Permissions' }}
-          </button>
-        </div>
+      <div class="actions">
+        <button class="btn btn-primary" data-testid="save-dashboard-permissions" @click="savePermissions" :disabled="saving">
+          {{ saving ? 'Saving...' : 'Save Permissions' }}
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(3, 10, 18, 0.76);
-  backdrop-filter: blur(8px);
+.permissions-editor {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-}
-
-.modal {
-  width: min(760px, calc(100vw - 2rem));
-  max-height: calc(100vh - 2rem);
-  overflow: auto;
-  background: var(--surface-1);
-  border: 1px solid var(--border-primary);
-  border-radius: 14px;
-  padding: 1rem;
-}
-
-.modal-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.modal-header h2 {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 0;
-  font-size: 1rem;
-  font-family: var(--font-mono);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.modal-header p {
-  margin: 0.25rem 0 0;
-  color: var(--text-secondary);
-  font-size: 0.82rem;
 }
 
 .content {
@@ -417,10 +361,9 @@ select:focus {
   font-size: 0.82rem;
 }
 
-.modal-actions {
+.actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.6rem;
 }
 
 .btn {
@@ -458,19 +401,6 @@ select:focus {
 .btn-danger {
   background: var(--accent-danger);
   color: white;
-}
-
-.btn-icon {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border-primary);
-  border-radius: 8px;
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  cursor: pointer;
 }
 
 @media (max-width: 760px) {

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { nextTick } from 'vue'
 import DashboardDetailView from './DashboardDetailView.vue'
 
 // Mock vue-router
@@ -56,22 +55,6 @@ vi.mock('../api/panels', () => ({
   listPanels: vi.fn(() => Promise.resolve(mockPanels)),
   deletePanel: vi.fn(() => Promise.resolve()),
   updatePanel: vi.fn(() => Promise.resolve())
-}))
-
-vi.mock('../components/DashboardPermissionsModal.vue', () => ({
-  default: {
-    name: 'DashboardPermissionsModal',
-    template: '<div data-testid="dashboard-permissions-modal"></div>',
-    props: ['dashboard', 'orgId'],
-  },
-}))
-
-vi.mock('../components/DashboardSettingsModal.vue', () => ({
-  default: {
-    name: 'DashboardSettingsModal',
-    template: '<div data-testid="dashboard-settings-modal"></div>',
-    props: ['dashboard', 'canEdit', 'defaultSettings'],
-  },
 }))
 
 const mockCurrentOrg = {
@@ -220,11 +203,11 @@ describe('DashboardDetailView', () => {
     expect(addBtn.text()).toContain('Add Panel')
   })
 
-  it('should show dashboard permissions button only for admins', async () => {
+  it('should hide dashboard permissions button from dashboard header', async () => {
     const adminWrapper = mount(DashboardDetailView)
     await flushPromises()
 
-    expect(adminWrapper.find('[data-testid="dashboard-permissions-button"]').exists()).toBe(true)
+    expect(adminWrapper.find('[data-testid="dashboard-permissions-button"]').exists()).toBe(false)
 
     mockCurrentOrg.value.role = 'viewer'
     const viewerWrapper = mount(DashboardDetailView)
@@ -233,13 +216,12 @@ describe('DashboardDetailView', () => {
     expect(viewerWrapper.find('[data-testid="dashboard-permissions-button"]').exists()).toBe(false)
   })
 
-  it('opens dashboard permissions modal', async () => {
+  it('navigates to dashboard settings view from header button', async () => {
     const wrapper = mount(DashboardDetailView)
     await flushPromises()
 
-    await wrapper.get('[data-testid="dashboard-permissions-button"]').trigger('click')
-
-    expect(wrapper.find('[data-testid="dashboard-permissions-modal"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="dashboard-settings-button"]').trigger('click')
+    expect(mockPush).toHaveBeenCalledWith('/dashboards/test-dashboard-id/settings/general')
   })
 
   it('shows dashboard settings button for viewers and admins', async () => {
@@ -254,18 +236,6 @@ describe('DashboardDetailView', () => {
     expect(viewerWrapper.find('[data-testid="dashboard-settings-button"]').exists()).toBe(true)
   })
 
-  it('opens settings modal and passes read-only mode for viewers', async () => {
-    mockCurrentOrg.value.role = 'viewer'
-    const wrapper = mount(DashboardDetailView)
-    await flushPromises()
-
-    await wrapper.get('[data-testid="dashboard-settings-button"]').trigger('click')
-
-    const settingsModal = wrapper.getComponent({ name: 'DashboardSettingsModal' })
-    expect(wrapper.find('[data-testid="dashboard-settings-modal"]').exists()).toBe(true)
-    expect(settingsModal.props('canEdit')).toBe(false)
-  })
-
   it('shows forbidden state for denied dashboard deep link', async () => {
     const { getDashboard } = await import('../api/dashboards')
     vi.mocked(getDashboard).mockRejectedValueOnce(new Error('Not a member of this organization'))
@@ -274,24 +244,6 @@ describe('DashboardDetailView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('You do not have permission to view this dashboard')
-  })
-
-  it('reloads dashboard data after permissions save and clears stale access', async () => {
-    const { getDashboard } = await import('../api/dashboards')
-
-    const wrapper = mount(DashboardDetailView)
-    await flushPromises()
-
-    await wrapper.get('[data-testid="dashboard-permissions-button"]').trigger('click')
-    expect(wrapper.find('[data-testid="dashboard-permissions-modal"]').exists()).toBe(true)
-
-    vi.mocked(getDashboard).mockRejectedValueOnce(new Error('Not a member of this organization'))
-    wrapper.getComponent({ name: 'DashboardPermissionsModal' }).vm.$emit('saved')
-    await flushPromises()
-
-    expect(wrapper.find('[data-testid="dashboard-permissions-modal"]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('You do not have permission to view this dashboard')
-    expect(wrapper.findAllComponents({ name: 'Panel' })).toHaveLength(0)
   })
 
   it('should open panel modal when Add Panel is clicked', async () => {

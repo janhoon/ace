@@ -2,19 +2,19 @@
  * Universal formatting utilities for chart visualizations
  */
 
-export interface Threshold {
+interface Threshold {
   value: number
   color: string
   background?: string
 }
 
-export interface ValueMapping {
+interface ValueMapping {
   value: number | string
   text: string
   color?: string
 }
 
-export type UnitType =
+type UnitType =
   | 'none'
   | 'short'
   | 'percent'

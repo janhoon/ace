@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import DashboardPermissionsModal from './DashboardPermissionsModal.vue'
+import DashboardPermissionsEditor from './DashboardPermissionsEditor.vue'
 
 const mockListDashboardPermissions = vi.hoisted(() => vi.fn())
 const mockReplaceDashboardPermissions = vi.hoisted(() => vi.fn())
@@ -29,7 +28,7 @@ const dashboard = {
   updated_at: '2026-02-08T00:00:00Z',
 }
 
-describe('DashboardPermissionsModal', () => {
+describe('DashboardPermissionsEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -84,7 +83,7 @@ describe('DashboardPermissionsModal', () => {
   })
 
   it('loads permissions, allows adding entries, and saves ACL updates', async () => {
-    const wrapper = mount(DashboardPermissionsModal, {
+    const wrapper = mount(DashboardPermissionsEditor, {
       props: {
         dashboard,
         orgId: 'org-1',
@@ -121,11 +120,10 @@ describe('DashboardPermissionsModal', () => {
     })
 
     expect(wrapper.text()).toContain('Dashboard permissions updated')
-    expect(wrapper.emitted('saved')).toHaveLength(1)
   })
 
   it('shows actionable validation when adding duplicate principals', async () => {
-    const wrapper = mount(DashboardPermissionsModal, {
+    const wrapper = mount(DashboardPermissionsEditor, {
       props: {
         dashboard,
         orgId: 'org-1',
