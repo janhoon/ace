@@ -8,6 +8,7 @@ describe('Panel API', () => {
   beforeEach(() => {
     global.fetch = mockFetch
     mockFetch.mockClear()
+    localStorage.clear()
   })
 
   afterEach(() => {
@@ -17,13 +18,22 @@ describe('Panel API', () => {
   describe('listPanels', () => {
     it('fetches panels for a dashboard from API', async () => {
       const mockData = [{ id: '1', title: 'Test Panel' }]
+      localStorage.setItem('access_token', 'token-123')
       mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(mockData)
       })
 
       const result = await listPanels('dashboard-123')
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/api/dashboards/dashboard-123/panels')
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/api/dashboards/dashboard-123/panels',
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer token-123',
+          },
+        }
+      )
       expect(result).toEqual(mockData)
     })
 
@@ -36,6 +46,7 @@ describe('Panel API', () => {
   describe('createPanel', () => {
     it('creates panel via API', async () => {
       const mockData = { id: '1', title: 'New Panel' }
+      localStorage.setItem('access_token', 'token-123')
       mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(mockData)
@@ -49,7 +60,10 @@ describe('Panel API', () => {
         'http://localhost:8080/api/dashboards/dashboard-123/panels',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer token-123',
+          },
           body: JSON.stringify({
             title: 'New Panel',
             grid_pos: { x: 0, y: 0, w: 6, h: 4 }
@@ -71,6 +85,7 @@ describe('Panel API', () => {
   describe('updatePanel', () => {
     it('updates panel via API', async () => {
       const mockData = { id: '1', title: 'Updated' }
+      localStorage.setItem('access_token', 'token-123')
       mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(mockData)
@@ -81,7 +96,10 @@ describe('Panel API', () => {
         'http://localhost:8080/api/panels/panel-1',
         expect.objectContaining({
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer token-123',
+          },
           body: JSON.stringify({ title: 'Updated' })
         })
       )
@@ -96,12 +114,19 @@ describe('Panel API', () => {
 
   describe('deletePanel', () => {
     it('deletes panel via API', async () => {
+      localStorage.setItem('access_token', 'token-123')
       mockFetch.mockResolvedValue({ ok: true })
 
       await deletePanel('panel-1')
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:8080/api/panels/panel-1',
-        expect.objectContaining({ method: 'DELETE' })
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer token-123',
+          },
+        })
       )
     })
 

@@ -55,3 +55,15 @@
   - progress.txt
 - Tests: failing (`cd frontend && npm run type-check && npm run test` has pre-existing failures outside touched files: `src/api/dashboards.spec.ts`, `src/components/CreateDashboardModal.spec.ts`, `src/components/Panel.spec.ts`); passing (`cd frontend && npm run test -- src/views/GrafanaConverter.spec.ts src/api/converter.spec.ts src/App.spec.ts`, `cd backend && go test ./...`)
 - Browser validation: failing (could not run; `dev-browser` skill is unavailable in this environment)
+
+## Task DASHBOARD-401-001: Fix unauthorized panel API calls - 2026-02-09T01:17:00Z
+- What was done:
+  - Identified dashboard open 401s as missing `Authorization` headers on panel API requests triggered by dashboard detail loading
+  - Added shared auth header helper in panel API client and wired it into list/create/update/delete panel requests
+  - Updated panel API unit tests to assert bearer token headers are sent
+- Files changed:
+  - frontend/src/api/panels.ts
+  - frontend/src/api/panels.spec.ts
+  - progress.txt
+- Tests: passing (`cd frontend && npm run test -- src/api/panels.spec.ts`, `cd frontend && npm run type-check`)
+- Browser validation: n/a (API client and unit test changes only)
