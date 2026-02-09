@@ -145,6 +145,7 @@ func (h *GoogleSSOHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   300, // 5 minutes
 		HttpOnly: true,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -192,6 +193,8 @@ func (h *GoogleSSOHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	// Check for errors from Google

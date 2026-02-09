@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -344,5 +345,69 @@ func TestMicrosoftSSOLoginRedirectsToMicrosoft(t *testing.T) {
 	}
 	if stateCookie == nil {
 		t.Error("Expected ms_oauth_state cookie to be set")
+		return
+	}
+
+	if !stateCookie.HttpOnly {
+		t.Error("Expected ms_oauth_state cookie to be HttpOnly")
+	}
+	if !stateCookie.Secure {
+		t.Error("Expected ms_oauth_state cookie to be Secure")
+	}
+	if stateCookie.SameSite != http.SameSiteLaxMode {
+		t.Errorf("Expected ms_oauth_state cookie SameSite=Lax, got %v", stateCookie.SameSite)
+	}
+	if stateCookie.Path != "/" {
+		t.Errorf("Expected ms_oauth_state cookie Path='/', got %q", stateCookie.Path)
+	}
+	if stateCookie.MaxAge != 300 {
+		t.Errorf("Expected ms_oauth_state cookie MaxAge=300, got %d", stateCookie.MaxAge)
+	}
+}
+
+func TestMicrosoftSSOCallbackClearsStateCookieWithSecureAttributes(t *testing.T) {
+	handler := NewMicrosoftSSOHandler(nil, nil)
+
+	state := "expected-state"
+	stateData := state + ":test-org"
+	encodedStateData := base64.URLEncoding.EncodeToString([]byte(stateData))
+
+	req := httptest.NewRequest("GET", "/api/auth/microsoft/callback?state="+state, nil)
+	req.AddCookie(&http.Cookie{Name: "ms_oauth_state", Value: encodedStateData})
+	w := httptest.NewRecorder()
+
+	handler.Callback(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for missing authorization code, got %d: %s", w.Code, w.Body.String())
+	}
+
+	cookies := w.Result().Cookies()
+	var clearedStateCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == "ms_oauth_state" {
+			clearedStateCookie = c
+			break
+		}
+	}
+
+	if clearedStateCookie == nil {
+		t.Fatal("Expected ms_oauth_state cookie to be cleared")
+	}
+
+	if !clearedStateCookie.HttpOnly {
+		t.Error("Expected cleared ms_oauth_state cookie to be HttpOnly")
+	}
+	if !clearedStateCookie.Secure {
+		t.Error("Expected cleared ms_oauth_state cookie to be Secure")
+	}
+	if clearedStateCookie.SameSite != http.SameSiteLaxMode {
+		t.Errorf("Expected cleared ms_oauth_state cookie SameSite=Lax, got %v", clearedStateCookie.SameSite)
+	}
+	if clearedStateCookie.Path != "/" {
+		t.Errorf("Expected cleared ms_oauth_state cookie Path='/', got %q", clearedStateCookie.Path)
+	}
+	if clearedStateCookie.MaxAge != -1 {
+		t.Errorf("Expected cleared ms_oauth_state cookie MaxAge=-1, got %d", clearedStateCookie.MaxAge)
 	}
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import Panel from './Panel.vue'
 
 // Mock state that can be controlled per test
