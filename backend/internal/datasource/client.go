@@ -3,6 +3,10 @@ package datasource
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/janhoon/dash/backend/internal/models"
@@ -71,7 +75,110 @@ func NewClient(ds models.DataSource) (Client, error) {
 		return NewLokiClient(ds.URL)
 	case models.DataSourceVictoriaLogs:
 		return NewVictoriaLogsClient(ds.URL)
+	case models.DataSourceTempo:
+		return NewTempoClient(ds)
+	case models.DataSourceVictoriaTraces:
+		return NewVictoriaTracesClient(ds)
 	default:
 		return nil, fmt.Errorf("unsupported datasource type: %s", ds.Type)
 	}
+}
+
+func TestConnection(ctx context.Context, ds models.DataSource) error {
+	switch ds.Type {
+	case models.DataSourcePrometheus:
+		return runHTTPConnectionCheck(ctx, ds, []string{"/-/healthy", "/api/v1/query?query=1", "/"})
+	case models.DataSourceVictoriaMetrics:
+		return runHTTPConnectionCheck(ctx, ds, []string{"/health", "/api/v1/query?query=1", "/"})
+	case models.DataSourceLoki:
+		return runHTTPConnectionCheck(ctx, ds, []string{"/ready", "/loki/api/v1/labels?limit=1", "/"})
+	case models.DataSourceVictoriaLogs:
+		return runHTTPConnectionCheck(ctx, ds, []string{"/health", "/select/logsql/field_names?query=*", "/"})
+	case models.DataSourceTempo:
+		client, err := NewTempoClient(ds)
+		if err != nil {
+			return err
+		}
+		return client.TestConnection(ctx)
+	case models.DataSourceVictoriaTraces:
+		client, err := NewVictoriaTracesClient(ds)
+		if err != nil {
+			return err
+		}
+		return client.TestConnection(ctx)
+	default:
+		return fmt.Errorf("unsupported datasource type: %s", ds.Type)
+	}
+}
+
+func runHTTPConnectionCheck(ctx context.Context, ds models.DataSource, endpoints []string) error {
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+
+	var lastErr error
+	for _, endpoint := range endpoints {
+		targetURL, err := resolveHealthEndpoint(ds.URL, endpoint)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to create request: %w", err)
+			continue
+		}
+
+		if err := applyDataSourceAuth(req, ds); err != nil {
+			return err
+		}
+
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("request failed: %w", err)
+			continue
+		}
+
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+		_ = resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return nil
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			return fmt.Errorf("authentication failed with status %d", resp.StatusCode)
+		}
+
+		if resp.StatusCode == http.StatusNotFound {
+			lastErr = fmt.Errorf("endpoint %s not found", endpoint)
+			continue
+		}
+
+		message := strings.TrimSpace(string(body))
+		if message == "" {
+			message = http.StatusText(resp.StatusCode)
+		}
+
+		lastErr = fmt.Errorf("endpoint %s returned status %d: %s", endpoint, resp.StatusCode, message)
+	}
+
+	if lastErr != nil {
+		return lastErr
+	}
+
+	return fmt.Errorf("connection test failed")
+}
+
+func resolveHealthEndpoint(baseURL, endpoint string) (string, error) {
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid datasource url: %w", err)
+	}
+
+	resolved, err := url.Parse(endpoint)
+	if err != nil {
+		return "", fmt.Errorf("invalid health endpoint %q: %w", endpoint, err)
+	}
+
+	return parsed.ResolveReference(resolved).String(), nil
 }

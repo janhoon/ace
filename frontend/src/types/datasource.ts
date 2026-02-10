@@ -1,4 +1,10 @@
-export type DataSourceType = 'prometheus' | 'loki' | 'victorialogs' | 'victoriametrics'
+export type DataSourceType =
+  | 'prometheus'
+  | 'loki'
+  | 'victorialogs'
+  | 'victoriametrics'
+  | 'tempo'
+  | 'victoriatraces'
 
 export interface DataSource {
   id: string
@@ -76,9 +82,15 @@ export function isLogsType(type_: DataSourceType): boolean {
   return type_ === 'loki' || type_ === 'victorialogs'
 }
 
+export function isTracingType(type_: DataSourceType): boolean {
+  return type_ === 'tempo' || type_ === 'victoriatraces'
+}
+
 export const dataSourceTypeLabels: Record<DataSourceType, string> = {
   prometheus: 'Prometheus',
   loki: 'Loki',
   victorialogs: 'Victoria Logs',
   victoriametrics: 'VictoriaMetrics',
+  tempo: 'Tempo',
+  victoriatraces: 'VictoriaTraces',
 }

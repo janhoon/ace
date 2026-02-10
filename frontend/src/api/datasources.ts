@@ -108,6 +108,18 @@ export async function queryDataSource(
   return response.json()
 }
 
+export async function testDataSourceConnection(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/datasources/${id}/test`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || 'Connection test failed')
+  }
+}
+
 interface ParsedSSEEvent {
   event: string
   data: string

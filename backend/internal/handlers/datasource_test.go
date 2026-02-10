@@ -131,6 +131,20 @@ func TestDataSourceHandler_LabelValues_InvalidUUID(t *testing.T) {
 	}
 }
 
+func TestDataSourceHandler_TestConnection_InvalidUUID(t *testing.T) {
+	handler := &DataSourceHandler{pool: nil}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/datasources/invalid-uuid/test", nil)
+	req.SetPathValue("id", "invalid-uuid")
+	rr := httptest.NewRecorder()
+
+	handler.TestConnection(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+}
+
 func TestDataSourceHandler_List_InvalidOrgID(t *testing.T) {
 	handler := &DataSourceHandler{pool: nil}
 
@@ -203,6 +217,8 @@ func TestDataSourceType_Valid(t *testing.T) {
 		{models.DataSourceLoki, true},
 		{models.DataSourceVictoriaLogs, true},
 		{models.DataSourceVictoriaMetrics, true},
+		{models.DataSourceTempo, true},
+		{models.DataSourceVictoriaTraces, true},
 		{"invalid", false},
 		{"", false},
 	}
@@ -223,6 +239,8 @@ func TestDataSourceType_IsMetrics(t *testing.T) {
 		{models.DataSourceVictoriaMetrics, true},
 		{models.DataSourceLoki, false},
 		{models.DataSourceVictoriaLogs, false},
+		{models.DataSourceTempo, false},
+		{models.DataSourceVictoriaTraces, false},
 	}
 
 	for _, tt := range tests {
@@ -241,11 +259,33 @@ func TestDataSourceType_IsLogs(t *testing.T) {
 		{models.DataSourceVictoriaMetrics, false},
 		{models.DataSourceLoki, true},
 		{models.DataSourceVictoriaLogs, true},
+		{models.DataSourceTempo, false},
+		{models.DataSourceVictoriaTraces, false},
 	}
 
 	for _, tt := range tests {
 		if got := tt.dsType.IsLogs(); got != tt.logs {
 			t.Errorf("DataSourceType(%q).IsLogs() = %v, want %v", tt.dsType, got, tt.logs)
+		}
+	}
+}
+
+func TestDataSourceType_IsTraces(t *testing.T) {
+	tests := []struct {
+		dsType models.DataSourceType
+		traces bool
+	}{
+		{models.DataSourcePrometheus, false},
+		{models.DataSourceVictoriaMetrics, false},
+		{models.DataSourceLoki, false},
+		{models.DataSourceVictoriaLogs, false},
+		{models.DataSourceTempo, true},
+		{models.DataSourceVictoriaTraces, true},
+	}
+
+	for _, tt := range tests {
+		if got := tt.dsType.IsTraces(); got != tt.traces {
+			t.Errorf("DataSourceType(%q).IsTraces() = %v, want %v", tt.dsType, got, tt.traces)
 		}
 	}
 }
@@ -256,6 +296,8 @@ func TestCreateDataSourceRequest_AllTypes(t *testing.T) {
 		models.DataSourceLoki,
 		models.DataSourceVictoriaLogs,
 		models.DataSourceVictoriaMetrics,
+		models.DataSourceTempo,
+		models.DataSourceVictoriaTraces,
 	}
 
 	for _, dsType := range types {

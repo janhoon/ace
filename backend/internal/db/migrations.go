@@ -204,6 +204,10 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		`CREATE INDEX IF NOT EXISTS idx_resource_permissions_org_id ON resource_permissions(organization_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_resource_permissions_resource_lookup ON resource_permissions(organization_id, resource_type, resource_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_resource_permissions_principal_lookup ON resource_permissions(organization_id, principal_type, principal_id)`,
+		`ALTER TABLE datasources DROP CONSTRAINT IF EXISTS datasources_type_check`,
+		`ALTER TABLE datasources
+			ADD CONSTRAINT datasources_type_check
+			CHECK (type IN ('prometheus', 'loki', 'victorialogs', 'victoriametrics', 'tempo', 'victoriatraces'))`,
 	}
 
 	for _, migration := range migrations {

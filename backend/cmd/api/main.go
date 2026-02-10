@@ -164,6 +164,7 @@ func main() {
 	mux.HandleFunc("GET /api/datasources/{id}/labels/{name}/values", auth.RequireAuth(jwtManager, dsHandler.LabelValues))
 	mux.HandleFunc("POST /api/datasources/{id}/query", auth.RequireAuth(jwtManager, dsHandler.Query))
 	mux.HandleFunc("POST /api/datasources/{id}/stream", auth.RequireAuth(jwtManager, dsHandler.Stream))
+	mux.HandleFunc("POST /api/datasources/{id}/test", auth.RequireAuth(jwtManager, dsHandler.TestConnection))
 
 	// Grafana conversion route
 	grafanaConverterHandler := handlers.NewGrafanaConverterHandler()

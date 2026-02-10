@@ -59,7 +59,7 @@ func (h *DataSourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !req.Type.Valid() {
-		http.Error(w, `{"error":"invalid datasource type, must be one of: prometheus, loki, victorialogs, victoriametrics"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"invalid datasource type, must be one of: prometheus, loki, victorialogs, victoriametrics, tempo, victoriatraces"}`, http.StatusBadRequest)
 		return
 	}
 	if req.URL == "" {
@@ -400,6 +400,54 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(result)
+}
+
+// TestConnection tests datasource connectivity and auth configuration.
+func (h *DataSourceHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid datasource id"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	var ds models.DataSource
+	err = h.pool.QueryRow(ctx,
+		`SELECT id, organization_id, name, type, url, is_default, auth_type, auth_config, created_at, updated_at
+		 FROM datasources WHERE id = $1`, id,
+	).Scan(&ds.ID, &ds.OrganizationID, &ds.Name, &ds.Type, &ds.URL, &ds.IsDefault, &ds.AuthType, &ds.AuthConfig, &ds.CreatedAt, &ds.UpdatedAt)
+	if err != nil {
+		http.Error(w, `{"error":"datasource not found"}`, http.StatusNotFound)
+		return
+	}
+
+	_, err = h.checkOrgMembership(ctx, userID, ds.OrganizationID)
+	if err != nil {
+		http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
+		return
+	}
+
+	if err := datasource.TestConnection(ctx, ds); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "connection test failed: " + err.Error()})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(struct {
+		Status string `json:"status"`
+	}{
+		Status: "success",
+	})
 }
 
 // Stream opens a live log stream against a datasource

@@ -6,6 +6,7 @@ import {
   updateDataSource,
   deleteDataSource,
   queryDataSource,
+  testDataSourceConnection,
   fetchDataSourceLabels,
   fetchDataSourceLabelValues,
 } from './datasources'
@@ -151,6 +152,30 @@ describe('datasources API', () => {
       await expect(
         queryDataSource('1', { query: 'up', start: 1000, end: 2000 }),
       ).rejects.toThrow('Query failed')
+    })
+  })
+
+  describe('testDataSourceConnection', () => {
+    it('tests datasource connectivity', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success' }),
+      })
+
+      await testDataSourceConnection('ds-1')
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/ds-1/test'),
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+
+    it('throws when connection test fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ error: 'connection test failed: timeout' }),
+      })
+
+      await expect(testDataSourceConnection('ds-1')).rejects.toThrow('connection test failed: timeout')
     })
   })
 

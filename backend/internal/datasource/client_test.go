@@ -63,6 +63,34 @@ func TestNewClient_VictoriaLogs(t *testing.T) {
 	}
 }
 
+func TestNewClient_Tempo(t *testing.T) {
+	ds := models.DataSource{
+		Type: models.DataSourceTempo,
+		URL:  "http://localhost:3200",
+	}
+	client, err := NewClient(ds)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := client.(*TempoClient); !ok {
+		t.Errorf("expected TempoClient, got %T", client)
+	}
+}
+
+func TestNewClient_VictoriaTraces(t *testing.T) {
+	ds := models.DataSource{
+		Type: models.DataSourceVictoriaTraces,
+		URL:  "http://localhost:10428",
+	}
+	client, err := NewClient(ds)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := client.(*VictoriaTracesClient); !ok {
+		t.Errorf("expected VictoriaTracesClient, got %T", client)
+	}
+}
+
 func TestNewClient_InvalidType(t *testing.T) {
 	ds := models.DataSource{
 		Type: "invalid",

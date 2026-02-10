@@ -15,6 +15,8 @@ import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
 import lokiLogo from '../assets/datasources/loki-logo.svg'
 import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
 import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
+import tempoLogo from '../assets/datasources/tempo-logo.svg'
+import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import type { ChartSeries } from '../components/LineChart.vue'
 
 const { timeRange, onRefresh } = useTimeRange()
@@ -26,6 +28,8 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   loki: lokiLogo,
   victoriametrics: victoriaMetricsLogo,
   victorialogs: victoriaLogsLogo,
+  tempo: tempoLogo,
+  victoriatraces: victoriaTracesLogo,
 }
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'

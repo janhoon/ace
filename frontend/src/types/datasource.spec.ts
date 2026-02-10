@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isMetricsType, isLogsType, dataSourceTypeLabels } from './datasource'
+import { isMetricsType, isLogsType, isTracingType, dataSourceTypeLabels } from './datasource'
 import type { DataSourceType } from './datasource'
 
 describe('datasource types', () => {
@@ -19,6 +19,10 @@ describe('datasource types', () => {
     it('returns false for victorialogs', () => {
       expect(isMetricsType('victorialogs')).toBe(false)
     })
+
+    it('returns false for tempo', () => {
+      expect(isMetricsType('tempo')).toBe(false)
+    })
   })
 
   describe('isLogsType', () => {
@@ -37,11 +41,29 @@ describe('datasource types', () => {
     it('returns false for victoriametrics', () => {
       expect(isLogsType('victoriametrics')).toBe(false)
     })
+
+    it('returns false for victoriatraces', () => {
+      expect(isLogsType('victoriatraces')).toBe(false)
+    })
+  })
+
+  describe('isTracingType', () => {
+    it('returns true for tempo', () => {
+      expect(isTracingType('tempo')).toBe(true)
+    })
+
+    it('returns true for victoriatraces', () => {
+      expect(isTracingType('victoriatraces')).toBe(true)
+    })
+
+    it('returns false for loki', () => {
+      expect(isTracingType('loki')).toBe(false)
+    })
   })
 
   describe('dataSourceTypeLabels', () => {
     it('has labels for all types', () => {
-      const types: DataSourceType[] = ['prometheus', 'loki', 'victorialogs', 'victoriametrics']
+      const types: DataSourceType[] = ['prometheus', 'loki', 'victorialogs', 'victoriametrics', 'tempo', 'victoriatraces']
       for (const type_ of types) {
         expect(dataSourceTypeLabels[type_]).toBeDefined()
         expect(typeof dataSourceTypeLabels[type_]).toBe('string')
@@ -62,6 +84,14 @@ describe('datasource types', () => {
 
     it('returns correct label for victoriametrics', () => {
       expect(dataSourceTypeLabels.victoriametrics).toBe('VictoriaMetrics')
+    })
+
+    it('returns correct label for tempo', () => {
+      expect(dataSourceTypeLabels.tempo).toBe('Tempo')
+    })
+
+    it('returns correct label for victoriatraces', () => {
+      expect(dataSourceTypeLabels.victoriatraces).toBe('VictoriaTraces')
     })
   })
 })

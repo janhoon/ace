@@ -3,13 +3,15 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { Plus, Trash2, Pencil, Database, X, Check, ExternalLink, HeartPulse, CircleAlert, Loader2 } from 'lucide-vue-next'
 import { useOrganization } from '../composables/useOrganization'
 import { useDatasource } from '../composables/useDatasource'
-import { queryDataSource } from '../api/datasources'
+import { testDataSourceConnection } from '../api/datasources'
 import type { DataSource, DataSourceType, CreateDataSourceRequest } from '../types/datasource'
-import { dataSourceTypeLabels } from '../types/datasource'
+import { dataSourceTypeLabels, isTracingType } from '../types/datasource'
 import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
 import lokiLogo from '../assets/datasources/loki-logo.svg'
 import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
 import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
+import tempoLogo from '../assets/datasources/tempo-logo.svg'
+import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 
 const { currentOrg } = useOrganization()
 const {
@@ -30,6 +32,12 @@ const formName = ref('')
 const formType = ref<DataSourceType>('prometheus')
 const formUrl = ref('')
 const formIsDefault = ref(false)
+const formAuthType = ref<'none' | 'basic' | 'bearer' | 'api_key'>('none')
+const formBasicUsername = ref('')
+const formBasicPassword = ref('')
+const formBearerToken = ref('')
+const formApiKeyHeader = ref('X-API-Key')
+const formApiKeyValue = ref('')
 const formError = ref<string | null>(null)
 const formLoading = ref(false)
 const testAllLoading = ref(false)
@@ -43,7 +51,11 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   loki: lokiLogo,
   victoriametrics: victoriaMetricsLogo,
   victorialogs: victoriaLogsLogo,
+  tempo: tempoLogo,
+  victoriatraces: victoriaTracesLogo,
 }
+
+const showAuthSettings = computed(() => isTracingType(formType.value))
 
 function openCreateModal() {
   editingDs.value = null
@@ -51,6 +63,7 @@ function openCreateModal() {
   formType.value = 'prometheus'
   formUrl.value = ''
   formIsDefault.value = false
+  resetAuthForm()
   formError.value = null
   showModal.value = true
 }
@@ -61,6 +74,7 @@ function openEditModal(ds: DataSource) {
   formType.value = ds.type
   formUrl.value = ds.url
   formIsDefault.value = ds.is_default
+  hydrateAuthForm(ds)
   formError.value = null
   showModal.value = true
 }
@@ -68,6 +82,45 @@ function openEditModal(ds: DataSource) {
 function closeModal() {
   showModal.value = false
   editingDs.value = null
+}
+
+function resetAuthForm() {
+  formAuthType.value = 'none'
+  formBasicUsername.value = ''
+  formBasicPassword.value = ''
+  formBearerToken.value = ''
+  formApiKeyHeader.value = 'X-API-Key'
+  formApiKeyValue.value = ''
+}
+
+function hydrateAuthForm(ds: DataSource) {
+  resetAuthForm()
+
+  const authType = (ds.auth_type || 'none') as 'none' | 'basic' | 'bearer' | 'api_key'
+  formAuthType.value = authType
+
+  const authConfig = ds.auth_config || {}
+  const username = authConfig.username
+  const password = authConfig.password
+  const token = authConfig.token
+  const header = authConfig.header
+  const value = authConfig.value
+
+  if (typeof username === 'string') {
+    formBasicUsername.value = username
+  }
+  if (typeof password === 'string') {
+    formBasicPassword.value = password
+  }
+  if (typeof token === 'string') {
+    formBearerToken.value = token
+  }
+  if (typeof header === 'string' && header.trim() !== '') {
+    formApiKeyHeader.value = header
+  }
+  if (typeof value === 'string') {
+    formApiKeyValue.value = value
+  }
 }
 
 function getHealthStatus(dsId: string) {
@@ -82,35 +135,12 @@ function getHealthLabel(dsId: string) {
   return 'Unknown'
 }
 
-function getSmokeQuery(type_: DataSourceType) {
-  if (type_ === 'prometheus' || type_ === 'victoriametrics') {
-    return 'up'
-  }
-  if (type_ === 'loki') {
-    return '{job=~".+"}'
-  }
-  return '*'
-}
-
 async function testDatasource(ds: DataSource) {
   healthStatus.value[ds.id] = 'checking'
   delete healthErrors.value[ds.id]
 
-  const end = Math.floor(Date.now() / 1000)
-  const start = end - 15 * 60
-
   try {
-    const result = await queryDataSource(ds.id, {
-      query: getSmokeQuery(ds.type),
-      start,
-      end,
-      step: 15,
-      limit: 100,
-    })
-
-    if (result.status === 'error') {
-      throw new Error(result.error || 'Query failed')
-    }
+    await testDataSourceConnection(ds.id)
 
     healthStatus.value[ds.id] = 'healthy'
   } catch (e) {
@@ -130,6 +160,54 @@ async function testAllDatasources() {
   }
 }
 
+function buildAuthPayload() {
+  if (!showAuthSettings.value || formAuthType.value === 'none') {
+    return {
+      auth_type: 'none' as const,
+      auth_config: undefined,
+    }
+  }
+
+  if (formAuthType.value === 'basic') {
+    if (!formBasicUsername.value.trim()) {
+      throw new Error('Basic auth username is required')
+    }
+
+    return {
+      auth_type: 'basic' as const,
+      auth_config: {
+        username: formBasicUsername.value.trim(),
+        password: formBasicPassword.value,
+      },
+    }
+  }
+
+  if (formAuthType.value === 'bearer') {
+    if (!formBearerToken.value.trim()) {
+      throw new Error('Bearer token is required')
+    }
+
+    return {
+      auth_type: 'bearer' as const,
+      auth_config: {
+        token: formBearerToken.value.trim(),
+      },
+    }
+  }
+
+  if (!formApiKeyValue.value.trim()) {
+    throw new Error('API key value is required')
+  }
+
+  return {
+    auth_type: 'api_key' as const,
+    auth_config: {
+      header: formApiKeyHeader.value.trim() || 'X-API-Key',
+      value: formApiKeyValue.value.trim(),
+    },
+  }
+}
+
 async function handleSubmit() {
   if (!formName.value.trim()) {
     formError.value = 'Name is required'
@@ -144,12 +222,16 @@ async function handleSubmit() {
   formError.value = null
 
   try {
+    const authPayload = buildAuthPayload()
+
     if (isEditing.value && editingDs.value) {
       await editDatasource(editingDs.value.id, {
         name: formName.value.trim(),
         type: formType.value,
         url: formUrl.value.trim(),
         is_default: formIsDefault.value,
+        auth_type: authPayload.auth_type,
+        auth_config: authPayload.auth_config,
       })
     } else if (currentOrg.value) {
       await addDatasource(currentOrg.value.id, {
@@ -157,6 +239,8 @@ async function handleSubmit() {
         type: formType.value,
         url: formUrl.value.trim(),
         is_default: formIsDefault.value,
+        auth_type: authPayload.auth_type,
+        auth_config: authPayload.auth_config,
       } as CreateDataSourceRequest)
     }
     closeModal()
@@ -186,6 +270,10 @@ function getTypeColor(type_: DataSourceType): string {
       return '#6ec6ff'
     case 'victoriametrics':
       return '#59a14f'
+    case 'tempo':
+      return '#8f6dff'
+    case 'victoriatraces':
+      return '#5bc0be'
   }
 }
 
@@ -348,6 +436,8 @@ watch(
               <option value="victoriametrics">VictoriaMetrics (PromQL)</option>
               <option value="loki">Loki (LogQL)</option>
               <option value="victorialogs">Victoria Logs (LogsQL)</option>
+              <option value="tempo">Tempo (Tracing)</option>
+              <option value="victoriatraces">VictoriaTraces (Tracing)</option>
             </select>
           </div>
 
@@ -361,6 +451,75 @@ watch(
               :disabled="formLoading"
               autocomplete="off"
             />
+          </div>
+
+          <div v-if="showAuthSettings" class="form-auth-section">
+            <div class="form-group">
+              <label for="ds-auth-type">Authentication</label>
+              <select id="ds-auth-type" v-model="formAuthType" :disabled="formLoading">
+                <option value="none">None</option>
+                <option value="basic">Basic auth</option>
+                <option value="bearer">Bearer token</option>
+                <option value="api_key">API key</option>
+              </select>
+            </div>
+
+            <div v-if="formAuthType === 'basic'" class="auth-grid">
+              <div class="form-group">
+                <label for="ds-basic-username">Username <span class="required">*</span></label>
+                <input
+                  id="ds-basic-username"
+                  v-model="formBasicUsername"
+                  type="text"
+                  :disabled="formLoading"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-group">
+                <label for="ds-basic-password">Password</label>
+                <input
+                  id="ds-basic-password"
+                  v-model="formBasicPassword"
+                  type="password"
+                  :disabled="formLoading"
+                  autocomplete="new-password"
+                />
+              </div>
+            </div>
+
+            <div v-else-if="formAuthType === 'bearer'" class="form-group">
+              <label for="ds-bearer-token">Bearer token <span class="required">*</span></label>
+              <input
+                id="ds-bearer-token"
+                v-model="formBearerToken"
+                type="password"
+                :disabled="formLoading"
+                autocomplete="new-password"
+              />
+            </div>
+
+            <div v-else-if="formAuthType === 'api_key'" class="auth-grid">
+              <div class="form-group">
+                <label for="ds-api-header">Header name</label>
+                <input
+                  id="ds-api-header"
+                  v-model="formApiKeyHeader"
+                  type="text"
+                  :disabled="formLoading"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-group">
+                <label for="ds-api-value">API key <span class="required">*</span></label>
+                <input
+                  id="ds-api-value"
+                  v-model="formApiKeyValue"
+                  type="password"
+                  :disabled="formLoading"
+                  autocomplete="new-password"
+                />
+              </div>
+            </div>
           </div>
 
           <div class="form-group">
@@ -688,6 +847,10 @@ watch(
     justify-content: flex-start;
     flex-wrap: wrap;
   }
+
+  .auth-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .btn-icon {
@@ -782,6 +945,20 @@ form {
   margin-bottom: 1.25rem;
 }
 
+.form-auth-section {
+  padding: 0.85rem 0.95rem 0.1rem;
+  margin-bottom: 1.1rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: rgba(24, 37, 54, 0.45);
+}
+
+.auth-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
@@ -795,6 +972,7 @@ form {
 }
 
 .form-group input[type="text"],
+.form-group input[type="password"],
 .form-group select {
   width: 100%;
   padding: 0.75rem 1rem;

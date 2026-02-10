@@ -89,7 +89,9 @@
       "task_size": "small",
       "description": "When sidebar is collapsed and user hovers over it, automatically expand to reveal full navigation.",
       "why_it_matters": "Some navigation items become inaccessible when sidebar is collapsed. Hover-expand provides quick access.",
-      "depends_on": ["SIDEBAR-OVERFLOW-001"],
+      "depends_on": [
+        "SIDEBAR-OVERFLOW-001"
+      ],
       "unblocks": [],
       "requirements": [
         "Detect hover on collapsed sidebar",
@@ -201,7 +203,9 @@
       "description": "Add settings page/panel accessible from dashboard view for managing dashboard configuration.",
       "why_it_matters": "Users should be able to configure dashboards without leaving the dashboard view.",
       "depends_on": [],
-      "unblocks": ["DASHBOARD-EXPORT-001"],
+      "unblocks": [
+        "DASHBOARD-EXPORT-001"
+      ],
       "requirements": [
         "Settings icon/button in dashboard toolbar",
         "Settings panel or page with dashboard configuration options",
@@ -236,7 +240,9 @@
       "task_size": "small",
       "description": "Add export functionality to dashboard settings to download dashboard as YAML file.",
       "why_it_matters": "Users need easy way to export dashboards for backup, sharing, or version control.",
-      "depends_on": ["DASHBOARD-SETTINGS-001"],
+      "depends_on": [
+        "DASHBOARD-SETTINGS-001"
+      ],
       "unblocks": [],
       "requirements": [
         "Export button in dashboard settings",
@@ -344,7 +350,9 @@
       "task_size": "medium",
       "description": "Add YAML editor view for dashboards allowing direct editing and Grafana JSON conversion.",
       "why_it_matters": "Advanced users need direct YAML editing and quick Grafana migration path.",
-      "depends_on": ["DASHBOARD-SETTINGS-001"],
+      "depends_on": [
+        "DASHBOARD-SETTINGS-001"
+      ],
       "unblocks": [],
       "requirements": [
         "YAML editor tab/view in dashboard settings",
@@ -555,6 +563,178 @@
         "cd frontend && npm run test -- src/views/Dashboards"
       ],
       "passes": true
+    },
+    {
+      "id": "TRACING-DATASOURCE-001",
+      "name": "Tracing 1/7: Data source setup for Tempo and VictoriaTraces",
+      "category": "Tracing/Foundation",
+      "task_size": "medium",
+      "fizzy_ticket": 189,
+      "description": "Add Tempo and VictoriaTraces as new data source types with configuration UI, authentication, and connection testing.",
+      "depends_on": [],
+      "unblocks": [
+        "TRACING-API-001"
+      ],
+      "requirements": [
+        "Add Tempo and VictoriaTraces to DataSourceType enum",
+        "Create datasources/tempo.go and datasources/victoriatraces.go",
+        "Support auth: basic, bearer token, API key",
+        "Connection test endpoint",
+        "Frontend configuration form with auth options"
+      ],
+      "passes": true
+    },
+    {
+      "id": "TRACING-API-001",
+      "name": "Tracing 2/7: Backend trace API and query support",
+      "category": "Tracing/Backend",
+      "task_size": "large",
+      "fizzy_ticket": 190,
+      "description": "Implement backend API endpoints for querying traces from Tempo/VictoriaTraces with unified trace model.",
+      "depends_on": [
+        "TRACING-DATASOURCE-001"
+      ],
+      "unblocks": [
+        "TRACING-TIMELINE-001",
+        "TRACING-PANELS-001"
+      ],
+      "requirements": [
+        "GET /api/datasources/:id/traces/:traceId - fetch trace by ID",
+        "POST /api/datasources/:id/traces/search - search traces",
+        "GET /api/datasources/:id/traces/services - list services",
+        "Unified trace model (Go structs)",
+        "Parse Jaeger JSON format from Tempo"
+      ],
+      "passes": false
+    },
+    {
+      "id": "TRACING-TIMELINE-001",
+      "name": "Tracing 3/7: Trace timeline waterfall visualization",
+      "category": "Tracing/Visualization",
+      "task_size": "large",
+      "fizzy_ticket": 191,
+      "description": "Build core trace timeline visualization - waterfall/Gantt chart showing spans hierarchically.",
+      "depends_on": [
+        "TRACING-API-001"
+      ],
+      "unblocks": [
+        "TRACING-SPAN-DETAILS-001"
+      ],
+      "requirements": [
+        "D3.js waterfall chart with nested spans",
+        "Color-coded by service",
+        "Duration labels, time markers",
+        "Critical path highlighting",
+        "Zoom/pan for large traces",
+        "Click span to select for details"
+      ],
+      "passes": false
+    },
+    {
+      "id": "TRACING-SPAN-DETAILS-001",
+      "name": "Tracing 4/7: Span details panel",
+      "category": "Tracing/Visualization",
+      "task_size": "medium",
+      "fizzy_ticket": 192,
+      "description": "Create span details panel/drawer displaying comprehensive span information.",
+      "depends_on": [
+        "TRACING-TIMELINE-001"
+      ],
+      "unblocks": [
+        "TRACING-INTEGRATION-001"
+      ],
+      "requirements": [
+        "Side panel opens on span click",
+        "Display: operation, service, duration, timing",
+        "Tags/attributes table with syntax highlighting",
+        "Logs/events timeline",
+        "Parent/child span links",
+        "Error indicator for failed spans",
+        "Copy span/trace ID, export JSON"
+      ],
+      "passes": false
+    },
+    {
+      "id": "TRACING-SERVICE-GRAPH-001",
+      "name": "Tracing 5/7: Service dependency graph visualization",
+      "category": "Tracing/Visualization",
+      "task_size": "large",
+      "fizzy_ticket": 193,
+      "description": "Create service dependency graph showing service-to-service calls with request volume and error rates.",
+      "depends_on": [
+        "TRACING-API-001"
+      ],
+      "unblocks": [],
+      "requirements": [
+        "D3.js force-directed graph or hierarchical layout",
+        "Nodes: services (size = request count)",
+        "Edges: service calls (width = volume, color = error rate)",
+        "Interactive: drag, zoom, pan",
+        "Click node/edge to filter traces",
+        "Backend aggregates spans into service graph"
+      ],
+      "passes": false
+    },
+    {
+      "id": "TRACING-PANELS-001",
+      "name": "Tracing 6/7: Panel types (Trace List, Trace Heatmap)",
+      "category": "Tracing/Panels",
+      "task_size": "medium",
+      "fizzy_ticket": 194,
+      "description": "Create reusable trace panel components: Trace List table and Trace Heatmap.",
+      "depends_on": [
+        "TRACING-API-001"
+      ],
+      "unblocks": [],
+      "requirements": [
+        "Trace List: table with trace ID, services, duration, span count, errors",
+        "Duration color-coded, sortable columns",
+        "Trace Heatmap: 2D visualization of duration distribution over time",
+        "Both panels configurable in dashboard editor",
+        "Click trace to open timeline view"
+      ],
+      "passes": false
+    },
+    {
+      "id": "TRACING-INTEGRATION-001",
+      "name": "Tracing 7/7: Integration features (Trace to Logs, Trace to Metrics)",
+      "category": "Tracing/Integration",
+      "task_size": "medium",
+      "fizzy_ticket": 195,
+      "description": "Implement correlation features linking traces to logs and metrics.",
+      "depends_on": [
+        "TRACING-SPAN-DETAILS-001"
+      ],
+      "unblocks": [],
+      "requirements": [
+        "Trace to Logs: View Logs button in span details",
+        "Filter logs by trace ID and service",
+        "Trace to Metrics: View Service Metrics button",
+        "Navigate to service dashboard with time range",
+        "Optional: Exemplars in metric graphs"
+      ],
+      "passes": false
+    },
+    {
+      "id": "TRACING-AUTO-INSTRUMENT-001",
+      "name": "Auto-instrumentation: Add OpenTelemetry tracing to docker-compose",
+      "category": "Tracing/Infrastructure",
+      "task_size": "medium",
+      "fizzy_ticket": 196,
+      "description": "Set up auto-instrumentation for Dash services in docker-compose to emit test traces.",
+      "depends_on": [],
+      "unblocks": [
+        "TRACING-DATASOURCE-001"
+      ],
+      "requirements": [
+        "Add Tempo service to docker-compose",
+        "Tempo configuration (OTLP receivers, local storage)",
+        "Instrument Dash backend with OpenTelemetry Go",
+        "HTTP request tracing, database query spans",
+        "Environment-based configuration",
+        "Test traces visible in Tempo API"
+      ],
+      "passes": false
     }
   ]
 }
