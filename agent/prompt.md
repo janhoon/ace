@@ -57,15 +57,17 @@ If no incomplete tasks remain:
 - Browser validation: passing/failing (frontend changes only)
 ```
 
-6. Commit and push only this task:
+6. Commit changes (but do NOT push):
 
 ```bash
 git add <task-related-files> agent/prd.json agent/progress.txt
 git commit -m "feat: <task id> <short description>"
-git push origin master
 ```
 
-Important: do not include unrelated pre-existing working tree changes in the commit.
+Important: 
+- Do NOT push changes yourself
+- The ralph.sh wrapper will create a PR and merge it for proper changelog tracking
+- Do not include unrelated pre-existing working tree changes in the commit
 
 7. Output completion marker and stop:
    - `✅ Task complete: <id> - <name>`
