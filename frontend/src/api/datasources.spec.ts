@@ -9,6 +9,9 @@ import {
   testDataSourceConnection,
   fetchDataSourceLabels,
   fetchDataSourceLabelValues,
+  fetchDataSourceTrace,
+  searchDataSourceTraces,
+  fetchDataSourceTraceServices,
 } from './datasources'
 
 const mockFetch = vi.fn()
@@ -204,6 +207,69 @@ describe('datasources API', () => {
       expect(values).toEqual(['api', 'worker'])
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/datasources/ds-1/labels/job/values'),
+        expect.any(Object),
+      )
+    })
+  })
+
+  describe('trace APIs', () => {
+    it('fetches a single trace by id', async () => {
+      const trace = {
+        traceId: 'trace-1',
+        spans: [],
+        services: ['api'],
+        startTimeUnixNano: 1000,
+        durationNano: 5000,
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: trace }),
+      })
+
+      const result = await fetchDataSourceTrace('ds-1', 'trace-1')
+      expect(result).toEqual(trace)
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/ds-1/traces/trace-1'),
+        expect.any(Object),
+      )
+    })
+
+    it('searches traces for a datasource', async () => {
+      const summaries = [{
+        traceId: 'trace-1',
+        rootServiceName: 'api',
+        rootOperationName: 'GET /health',
+        startTimeUnixNano: 1000,
+        durationNano: 5000,
+        spanCount: 4,
+        serviceCount: 2,
+        errorSpanCount: 0,
+      }]
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: summaries }),
+      })
+
+      const result = await searchDataSourceTraces('ds-1', { query: 'service=api', limit: 20 })
+      expect(result).toEqual(summaries)
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/ds-1/traces/search'),
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+
+    it('fetches trace services from datasource', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: ['api', 'worker'] }),
+      })
+
+      const result = await fetchDataSourceTraceServices('ds-1')
+      expect(result).toEqual(['api', 'worker'])
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/ds-1/traces/services'),
         expect.any(Object),
       )
     })

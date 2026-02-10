@@ -1,0 +1,1015 @@
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { AlertCircle, Check, ChevronDown, ChevronUp, Loader2, Search, Waypoints } from 'lucide-vue-next'
+import TimeRangePicker from '../components/TimeRangePicker.vue'
+import TraceTimeline from '../components/TraceTimeline.vue'
+import { useTimeRange } from '../composables/useTimeRange'
+import { useOrganization } from '../composables/useOrganization'
+import { useDatasource } from '../composables/useDatasource'
+import {
+  fetchDataSourceTrace,
+  fetchDataSourceTraceServices,
+  searchDataSourceTraces,
+} from '../api/datasources'
+import type { DataSourceType, Trace, TraceSpan, TraceSummary } from '../types/datasource'
+import { dataSourceTypeLabels } from '../types/datasource'
+import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
+import lokiLogo from '../assets/datasources/loki-logo.svg'
+import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
+import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
+import tempoLogo from '../assets/datasources/tempo-logo.svg'
+import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
+
+const { timeRange } = useTimeRange()
+const { currentOrg } = useOrganization()
+const { tracingDatasources, fetchDatasources } = useDatasource()
+
+const dataSourceTypeLogos: Record<DataSourceType, string> = {
+  prometheus: prometheusLogo,
+  loki: lokiLogo,
+  victoriametrics: victoriaMetricsLogo,
+  victorialogs: victoriaLogsLogo,
+  tempo: tempoLogo,
+  victoriatraces: victoriaTracesLogo,
+}
+
+const selectedDatasourceId = ref('')
+const showDatasourceMenu = ref(false)
+const datasourceMenuRef = ref<HTMLElement | null>(null)
+
+const query = ref('')
+const selectedService = ref('')
+const limit = ref(20)
+const traceIdInput = ref('')
+
+const loadingSearch = ref(false)
+const loadingTrace = ref(false)
+const loadingServices = ref(false)
+const error = ref<string | null>(null)
+
+const services = ref<string[]>([])
+const traceSummaries = ref<TraceSummary[]>([])
+const selectedTraceId = ref('')
+const activeTrace = ref<Trace | null>(null)
+const selectedSpan = ref<TraceSpan | null>(null)
+
+const hasTracingDatasources = computed(() => tracingDatasources.value.length > 0)
+const activeDatasource = computed(
+  () => tracingDatasources.value.find((ds) => ds.id === selectedDatasourceId.value) || null,
+)
+
+function getTypeLogo(type_: DataSourceType): string {
+  return dataSourceTypeLogos[type_]
+}
+
+function toggleDatasourceMenu() {
+  if (!hasTracingDatasources.value || loadingSearch.value || loadingTrace.value) {
+    return
+  }
+  showDatasourceMenu.value = !showDatasourceMenu.value
+}
+
+function selectDatasource(datasourceId: string) {
+  selectedDatasourceId.value = datasourceId
+  showDatasourceMenu.value = false
+}
+
+function handleDocumentClick(event: MouseEvent) {
+  const target = event.target as Node
+  if (!datasourceMenuRef.value?.contains(target)) {
+    showDatasourceMenu.value = false
+  }
+}
+
+function formatDurationNano(durationNano: number): string {
+  if (durationNano >= 1_000_000_000) {
+    return `${(durationNano / 1_000_000_000).toFixed(durationNano >= 10_000_000_000 ? 1 : 2)}s`
+  }
+  if (durationNano >= 1_000_000) {
+    return `${(durationNano / 1_000_000).toFixed(durationNano >= 100_000_000 ? 0 : 1)}ms`
+  }
+  if (durationNano >= 1_000) {
+    return `${(durationNano / 1_000).toFixed(durationNano >= 100_000 ? 0 : 1)}us`
+  }
+  return `${durationNano}ns`
+}
+
+function formatStart(unixNanoTimestamp: number): string {
+  return new Date(Math.floor(unixNanoTimestamp / 1_000_000)).toLocaleTimeString()
+}
+
+async function loadServices() {
+  if (!selectedDatasourceId.value) {
+    services.value = []
+    selectedService.value = ''
+    return
+  }
+
+  loadingServices.value = true
+  try {
+    services.value = await fetchDataSourceTraceServices(selectedDatasourceId.value)
+    if (selectedService.value && !services.value.includes(selectedService.value)) {
+      selectedService.value = ''
+    }
+  } catch {
+    services.value = []
+  } finally {
+    loadingServices.value = false
+  }
+}
+
+async function runSearch() {
+  if (!selectedDatasourceId.value) {
+    error.value = 'Select a tracing datasource'
+    return
+  }
+
+  loadingSearch.value = true
+  error.value = null
+
+  try {
+    const start = Math.floor(timeRange.value.start / 1000)
+    const end = Math.floor(timeRange.value.end / 1000)
+
+    traceSummaries.value = await searchDataSourceTraces(selectedDatasourceId.value, {
+      query: query.value.trim() || undefined,
+      service: selectedService.value || undefined,
+      start,
+      end,
+      limit: limit.value,
+    })
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to search traces'
+    traceSummaries.value = []
+  } finally {
+    loadingSearch.value = false
+  }
+}
+
+async function loadTrace(traceId: string) {
+  if (!selectedDatasourceId.value) {
+    error.value = 'Select a tracing datasource'
+    return
+  }
+
+  loadingTrace.value = true
+  error.value = null
+  try {
+    activeTrace.value = await fetchDataSourceTrace(selectedDatasourceId.value, traceId)
+    selectedTraceId.value = traceId
+    selectedSpan.value = null
+    traceIdInput.value = traceId
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to fetch trace'
+    activeTrace.value = null
+  } finally {
+    loadingTrace.value = false
+  }
+}
+
+async function lookupTraceById() {
+  const traceId = traceIdInput.value.trim()
+  if (!traceId) {
+    error.value = 'Trace ID is required'
+    return
+  }
+
+  await loadTrace(traceId)
+}
+
+function handleSelectSpan(span: TraceSpan) {
+  selectedSpan.value = span
+}
+
+watch(
+  tracingDatasources,
+  (sources) => {
+    if (sources.length === 0) {
+      selectedDatasourceId.value = ''
+      return
+    }
+
+    const hasSelected = sources.some((ds) => ds.id === selectedDatasourceId.value)
+    if (!hasSelected) {
+      const defaultDatasource = sources.find((ds) => ds.is_default)
+      selectedDatasourceId.value = defaultDatasource?.id || sources[0].id
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => currentOrg.value?.id,
+  (orgId, previousOrgId) => {
+    if (orgId && orgId !== previousOrgId) {
+      fetchDatasources(orgId)
+    }
+  },
+)
+
+watch(
+  selectedDatasourceId,
+  () => {
+    traceSummaries.value = []
+    activeTrace.value = null
+    selectedTraceId.value = ''
+    selectedSpan.value = null
+    void loadServices()
+  },
+  { immediate: true },
+)
+
+onMounted(() => {
+  document.addEventListener('click', handleDocumentClick)
+  if (currentOrg.value) {
+    fetchDatasources(currentOrg.value.id)
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleDocumentClick)
+})
+</script>
+
+<template>
+  <div class="explore-page">
+    <header class="explore-header">
+      <div class="header-title">
+        <h1>Explore</h1>
+        <span class="mode-badge">Tracing</span>
+      </div>
+    </header>
+
+    <div class="explore-content">
+      <div class="query-section">
+        <div class="query-context-row">
+          <div class="datasource-row">
+            <label>Data Source</label>
+            <div ref="datasourceMenuRef" class="datasource-selector">
+              <button
+                type="button"
+                class="active-datasource-panel datasource-trigger"
+                :disabled="!hasTracingDatasources"
+                @click="toggleDatasourceMenu"
+              >
+                <template v-if="activeDatasource">
+                  <img
+                    :src="getTypeLogo(activeDatasource.type)"
+                    :alt="`${dataSourceTypeLabels[activeDatasource.type]} logo`"
+                    class="active-datasource-logo"
+                  />
+                  <div class="active-datasource-meta">
+                    <span class="active-datasource-label">Active Source</span>
+                    <strong class="active-datasource-name">{{ activeDatasource.name }}</strong>
+                    <span class="active-datasource-type">{{ dataSourceTypeLabels[activeDatasource.type] }}</span>
+                  </div>
+                </template>
+                <span v-else class="active-datasource-empty">No tracing datasource configured</span>
+                <component
+                  :is="showDatasourceMenu ? ChevronUp : ChevronDown"
+                  :size="16"
+                  class="datasource-chevron"
+                />
+              </button>
+
+              <div v-if="showDatasourceMenu && hasTracingDatasources" class="datasource-dropdown">
+                <button
+                  v-for="ds in tracingDatasources"
+                  :key="ds.id"
+                  type="button"
+                  class="datasource-option"
+                  :class="{ selected: ds.id === selectedDatasourceId }"
+                  @click="selectDatasource(ds.id)"
+                >
+                  <img
+                    :src="getTypeLogo(ds.type)"
+                    :alt="`${dataSourceTypeLabels[ds.type]} logo`"
+                    class="datasource-option-logo"
+                  />
+                  <div class="datasource-option-meta">
+                    <strong>{{ ds.name }}</strong>
+                    <span>{{ dataSourceTypeLabels[ds.type] }}</span>
+                  </div>
+                  <Check v-if="ds.id === selectedDatasourceId" :size="14" class="datasource-option-check" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="query-time-controls">
+            <label>Search Range</label>
+            <TimeRangePicker stacked />
+          </div>
+        </div>
+
+        <div class="search-filters-row">
+          <label class="filter-field">
+            <span>Service</span>
+            <select v-model="selectedService" :disabled="loadingServices || services.length === 0">
+              <option value="">All services</option>
+              <option v-for="service in services" :key="service" :value="service">{{ service }}</option>
+            </select>
+          </label>
+
+          <label class="filter-field limit-field">
+            <span>Limit</span>
+            <select v-model.number="limit">
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="search-query-row">
+          <label for="trace-search-query" class="query-label">Search Query</label>
+          <input
+            id="trace-search-query"
+            v-model="query"
+            type="text"
+            class="query-input"
+            placeholder="service.name=api error=true"
+          />
+        </div>
+
+        <div class="query-actions">
+          <button
+            class="btn btn-search"
+            :disabled="loadingSearch || !selectedDatasourceId"
+            @click="runSearch"
+          >
+            <Loader2 v-if="loadingSearch" :size="16" class="icon-spin" />
+            <Search v-else :size="16" />
+            <span>{{ loadingSearch ? 'Searching...' : 'Search Traces' }}</span>
+          </button>
+        </div>
+
+        <div class="trace-lookup-row">
+          <label for="trace-id-input">Open Trace ID</label>
+          <div class="trace-lookup-input-wrap">
+            <input
+              id="trace-id-input"
+              v-model="traceIdInput"
+              type="text"
+              placeholder="Paste trace id"
+              class="trace-id-input"
+            />
+            <button
+              class="btn btn-find-trace"
+              :disabled="loadingTrace || !selectedDatasourceId || !traceIdInput.trim()"
+              @click="lookupTraceById"
+            >
+              <Loader2 v-if="loadingTrace" :size="15" class="icon-spin" />
+              <Waypoints v-else :size="15" />
+              <span>{{ loadingTrace ? 'Loading...' : 'Open Trace' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="error" class="query-error">
+          <AlertCircle :size="16" />
+          <span>{{ error }}</span>
+        </div>
+      </div>
+
+      <div class="results-section">
+        <div v-if="!hasTracingDatasources" class="empty-state">
+          <p>No tracing datasource configured.</p>
+          <p class="hint-text">Add a Tempo or VictoriaTraces datasource in Data Sources.</p>
+        </div>
+
+        <div v-else class="trace-layout">
+          <aside class="trace-results-panel">
+            <div class="panel-header">
+              <h2>Matching traces</h2>
+              <span>{{ traceSummaries.length }} result{{ traceSummaries.length === 1 ? '' : 's' }}</span>
+            </div>
+
+            <div v-if="loadingSearch" class="loading-state compact">
+              <Loader2 :size="16" class="icon-spin" />
+              <span>Searching traces...</span>
+            </div>
+
+            <div v-else-if="traceSummaries.length > 0" class="trace-result-list">
+              <button
+                v-for="summary in traceSummaries"
+                :key="summary.traceId"
+                class="trace-result-row"
+                :class="{ active: selectedTraceId === summary.traceId }"
+                @click="loadTrace(summary.traceId)"
+              >
+                <code class="trace-id">{{ summary.traceId }}</code>
+                <div class="trace-meta-grid">
+                  <span>{{ summary.rootServiceName || 'unknown service' }}</span>
+                  <span>{{ formatDurationNano(summary.durationNano) }}</span>
+                  <span>{{ summary.spanCount }} spans</span>
+                  <span :class="{ error: summary.errorSpanCount > 0 }">{{ summary.errorSpanCount }} errors</span>
+                </div>
+                <span class="trace-start">{{ formatStart(summary.startTimeUnixNano) }}</span>
+              </button>
+            </div>
+
+            <div v-else class="empty-traces">
+              Run a trace search or open a trace ID directly.
+            </div>
+          </aside>
+
+          <section class="timeline-panel">
+            <div class="panel-header">
+              <h2>Timeline waterfall</h2>
+              <span v-if="activeTrace">{{ activeTrace.spans.length }} spans</span>
+            </div>
+
+            <div v-if="loadingTrace" class="loading-state">
+              <Loader2 :size="18" class="icon-spin" />
+              <span>Loading trace...</span>
+            </div>
+
+            <div v-else-if="activeTrace" class="timeline-content">
+              <div class="trace-summary-bar">
+                <code>{{ activeTrace.traceId }}</code>
+                <span>{{ formatDurationNano(activeTrace.durationNano) }}</span>
+                <span>{{ activeTrace.services.length }} services</span>
+              </div>
+
+              <TraceTimeline
+                :trace="activeTrace"
+                :selected-span-id="selectedSpan?.spanId || null"
+                @select-span="handleSelectSpan"
+              />
+
+              <div v-if="selectedSpan" class="selected-span-panel">
+                <h3>Selected span</h3>
+                <div class="selected-span-grid">
+                  <span><strong>Operation:</strong> {{ selectedSpan.operationName }}</span>
+                  <span><strong>Service:</strong> {{ selectedSpan.serviceName }}</span>
+                  <span><strong>Duration:</strong> {{ formatDurationNano(selectedSpan.durationNano) }}</span>
+                  <span><strong>Status:</strong> {{ selectedSpan.status || 'ok' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="empty-state">
+              <p>Select a trace result to view the waterfall timeline.</p>
+              <p class="hint-text">You can search by service/time range or open a known trace ID.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.explore-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 1.25rem 1.8rem;
+}
+
+.explore-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.95rem 1.15rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.explore-header h1 {
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.mode-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(14, 165, 233, 0.38);
+  background: rgba(14, 165, 233, 0.14);
+  color: #bde9ff;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.explore-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  flex: 1;
+}
+
+.query-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.2rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.query-context-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.datasource-row,
+.query-time-controls,
+.search-query-row,
+.trace-lookup-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.datasource-row label,
+.query-time-controls label,
+.search-query-row .query-label,
+.trace-lookup-row label,
+.filter-field span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.active-datasource-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+}
+
+.datasource-selector {
+  position: relative;
+}
+
+.datasource-trigger {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.datasource-trigger:hover:not(:disabled) {
+  border-color: var(--border-secondary);
+  background: var(--bg-hover);
+}
+
+.datasource-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.active-datasource-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.active-datasource-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.active-datasource-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.active-datasource-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.active-datasource-type {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.active-datasource-empty {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+}
+
+.datasource-chevron {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.datasource-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: rgba(11, 21, 33, 0.98);
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 110;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.datasource-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.datasource-option:hover {
+  background: var(--bg-hover);
+}
+
+.datasource-option.selected {
+  background: rgba(56, 189, 248, 0.14);
+}
+
+.datasource-option-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.datasource-option-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.datasource-option-meta strong {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.datasource-option-meta span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.datasource-option-check {
+  margin-left: auto;
+  color: var(--accent-primary);
+}
+
+.search-filters-row {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 180px;
+}
+
+.limit-field {
+  min-width: 110px;
+}
+
+.filter-field select,
+.query-input,
+.trace-id-input {
+  border: 1px solid var(--border-primary);
+  background: rgba(12, 21, 34, 0.85);
+  color: var(--text-primary);
+  border-radius: 10px;
+  font-size: 0.86rem;
+  padding: 0.62rem 0.72rem;
+}
+
+.trace-lookup-input-wrap {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.trace-id-input {
+  flex: 1;
+}
+
+.query-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.62rem 1.1rem;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-search {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #051625;
+}
+
+.btn-find-trace {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.28);
+  color: #ccefff;
+}
+
+.query-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(251, 113, 133, 0.1);
+  border: 1px solid rgba(251, 113, 133, 0.3);
+  border-radius: 8px;
+  color: var(--accent-danger);
+  font-size: 0.875rem;
+}
+
+.results-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  min-height: 440px;
+  box-shadow: var(--shadow-sm);
+}
+
+.trace-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  min-height: 460px;
+  flex: 1;
+}
+
+.trace-results-panel {
+  border-right: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-primary);
+  background: rgba(15, 24, 39, 0.85);
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+
+.panel-header span {
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+}
+
+.trace-result-list {
+  overflow-y: auto;
+  padding: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.trace-result-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  padding: 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
+  background: rgba(14, 22, 36, 0.8);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.trace-result-row:hover {
+  border-color: rgba(56, 189, 248, 0.42);
+  background: rgba(18, 29, 45, 0.9);
+}
+
+.trace-result-row.active {
+  border-color: rgba(56, 189, 248, 0.52);
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.trace-id {
+  font-size: 0.75rem;
+  color: #bae6fd;
+  word-break: break-all;
+  font-family: var(--font-mono);
+}
+
+.trace-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem 0.5rem;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.trace-meta-grid .error {
+  color: #fb7185;
+}
+
+.trace-start {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.9rem;
+}
+
+.trace-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  background: rgba(12, 20, 32, 0.82);
+}
+
+.trace-summary-bar code {
+  font-size: 0.76rem;
+  color: #bae6fd;
+  font-family: var(--font-mono);
+}
+
+.trace-summary-bar span {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.selected-span-panel {
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: rgba(15, 25, 40, 0.78);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.selected-span-panel h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.selected-span-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.selected-span-grid strong {
+  color: var(--text-primary);
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  color: var(--text-secondary);
+  padding: 2rem;
+  flex: 1;
+}
+
+.loading-state.compact {
+  padding: 1.2rem;
+}
+
+.empty-state,
+.empty-traces {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.hint-text {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
+
+.icon-spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1100px) {
+  .trace-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .trace-results-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border-primary);
+    max-height: 320px;
+  }
+}
+
+@media (max-width: 900px) {
+  .explore-page {
+    padding: 0.9rem;
+  }
+
+  .query-context-row {
+    grid-template-columns: 1fr;
+  }
+
+  .trace-lookup-input-wrap {
+    flex-direction: column;
+  }
+
+  .selected-span-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

@@ -58,3 +58,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `backend/internal/datasource/tracing.go`, `backend/internal/datasource/tracing_test.go`, `backend/internal/datasource/tempo.go`, `backend/internal/datasource/victoriatraces.go`, `backend/internal/handlers/datasource.go`, `backend/internal/handlers/datasource_test.go`, `backend/cmd/api/main.go`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd backend && go test ./...`)
 - Browser validation: not run (no frontend files changed)
+
+## Task TRACING-TIMELINE-001: Tracing 3/7: Trace timeline waterfall visualization - 2026-02-10 08:24 UTC
+- What was done: Added tracing explore mode with trace search and direct trace lookup, implemented an interactive waterfall timeline (hierarchical spans, service-based colors, time markers, zoom/pan controls, critical-path highlighting, and span selection), and wired new tracing API client methods plus routing/navigation updates for `/explore/traces`.
+- Files changed: `frontend/src/types/datasource.ts`, `frontend/src/api/datasources.ts`, `frontend/src/api/datasources.spec.ts`, `frontend/src/composables/useDatasource.ts`, `frontend/src/components/TraceTimeline.vue`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/views/ExploreTraces.spec.ts`, `frontend/src/router/index.ts`, `frontend/src/components/Sidebar.vue`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd frontend && npm run type-check && npm run test`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and no skill is installed)

@@ -6,6 +6,9 @@ import type {
   DataSourceQueryResult,
   DataSourceLogStreamRequest,
   LogEntry,
+  Trace,
+  TraceSummary,
+  TraceSearchRequest,
 } from '../types/datasource'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
@@ -106,6 +109,83 @@ export async function queryDataSource(
     throw new Error(err.error || 'Query failed')
   }
   return response.json()
+}
+
+interface TraceResponse {
+  status: 'success' | 'error'
+  data?: Trace
+  error?: string
+}
+
+interface TraceSearchResponse {
+  status: 'success' | 'error'
+  data?: TraceSummary[]
+  error?: string
+}
+
+export async function fetchDataSourceTrace(id: string, traceId: string): Promise<Trace> {
+  const response = await fetch(`${API_BASE}/api/datasources/${id}/traces/${encodeURIComponent(traceId)}`, {
+    headers: getAuthHeaders(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to fetch trace')
+  }
+
+  const body = await response.json() as TraceResponse
+  if (body.status === 'error' || !body.data) {
+    throw new Error(body.error || 'Failed to fetch trace')
+  }
+
+  return body.data
+}
+
+export async function searchDataSourceTraces(
+  id: string,
+  request: TraceSearchRequest,
+): Promise<TraceSummary[]> {
+  const response = await fetch(`${API_BASE}/api/datasources/${id}/traces/search`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(request),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to search traces')
+  }
+
+  const body = await response.json() as TraceSearchResponse
+  if (body.status === 'error') {
+    throw new Error(body.error || 'Failed to search traces')
+  }
+
+  return body.data || []
+}
+
+interface TraceServicesResponse {
+  status: 'success' | 'error'
+  data?: string[]
+  error?: string
+}
+
+export async function fetchDataSourceTraceServices(id: string): Promise<string[]> {
+  const response = await fetch(`${API_BASE}/api/datasources/${id}/traces/services`, {
+    headers: getAuthHeaders(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to fetch trace services')
+  }
+
+  const body = await response.json() as TraceServicesResponse
+  if (body.status === 'error') {
+    throw new Error(body.error || 'Failed to fetch trace services')
+  }
+
+  return body.data || []
 }
 
 export async function testDataSourceConnection(id: string): Promise<void> {

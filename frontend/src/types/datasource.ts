@@ -63,6 +63,54 @@ export interface LogEntry {
   level?: string
 }
 
+export interface TraceLog {
+  timestampUnixNano: number
+  fields?: Record<string, string>
+}
+
+export interface TraceSpan {
+  spanId: string
+  parentSpanId?: string
+  operationName: string
+  serviceName: string
+  startTimeUnixNano: number
+  durationNano: number
+  tags?: Record<string, string>
+  logs?: TraceLog[]
+  status?: string
+}
+
+export interface Trace {
+  traceId: string
+  spans: TraceSpan[]
+  services: string[]
+  startTimeUnixNano: number
+  durationNano: number
+}
+
+export interface TraceSummary {
+  traceId: string
+  rootServiceName?: string
+  rootOperationName?: string
+  startTimeUnixNano: number
+  durationNano: number
+  spanCount: number
+  serviceCount: number
+  errorSpanCount: number
+}
+
+export interface TraceSearchRequest {
+  query?: string
+  service?: string
+  operation?: string
+  tags?: Record<string, string>
+  minDuration?: string
+  maxDuration?: string
+  start?: number
+  end?: number
+  limit?: number
+}
+
 export interface DataSourceQueryResult {
   status: 'success' | 'error'
   data?: {

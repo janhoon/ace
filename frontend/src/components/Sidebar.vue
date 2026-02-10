@@ -43,6 +43,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Metrics', path: '/explore/metrics' },
       { label: 'Logs', path: '/explore/logs' },
+      { label: 'Traces', path: '/explore/traces' },
     ],
   },
   { id: 'datasources', icon: Database, label: 'Data Sources', path: '/datasources' },

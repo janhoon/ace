@@ -628,7 +628,7 @@
         "Zoom/pan for large traces",
         "Click span to select for details"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "TRACING-SPAN-DETAILS-001",

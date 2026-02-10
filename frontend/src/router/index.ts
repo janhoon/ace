@@ -5,6 +5,7 @@ import DashboardDetailView from '../views/DashboardDetailView.vue'
 import DashboardSettingsView from '../views/DashboardSettingsView.vue'
 import Explore from '../views/Explore.vue'
 import ExploreLogs from '../views/ExploreLogs.vue'
+import ExploreTraces from '../views/ExploreTraces.vue'
 import OrganizationSettings from '../views/OrganizationSettings.vue'
 import DataSourceSettings from '../views/DataSourceSettings.vue'
 import LoginView from '../views/LoginView.vue'
@@ -55,6 +56,11 @@ const router = createRouter({
       path: '/explore/logs',
       name: 'explore-logs',
       component: ExploreLogs
+    },
+    {
+      path: '/explore/traces',
+      name: 'explore-traces',
+      component: ExploreTraces
     },
     {
       path: '/settings/org/:id',

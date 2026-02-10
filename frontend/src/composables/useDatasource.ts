@@ -83,12 +83,19 @@ export function useDatasource() {
     ),
   )
 
+  const tracingDatasources = computed(() =>
+    datasources.value.filter(
+      (d) => d.type === 'tempo' || d.type === 'victoriatraces',
+    ),
+  )
+
   return {
     datasources,
     loading,
     error,
     metricsDatasources,
     logsDatasources,
+    tracingDatasources,
     fetchDatasources,
     addDatasource,
     editDatasource,
