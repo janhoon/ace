@@ -3,6 +3,9 @@ package datasource
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/janhoon/dash/backend/internal/models"
@@ -11,6 +14,7 @@ import (
 // TempoClient is used for trace datasource connectivity checks.
 type TempoClient struct {
 	datasource models.DataSource
+	httpClient *http.Client
 }
 
 func NewTempoClient(ds models.DataSource) (*TempoClient, error) {
@@ -18,7 +22,10 @@ func NewTempoClient(ds models.DataSource) (*TempoClient, error) {
 		return nil, fmt.Errorf("datasource url is required")
 	}
 
-	return &TempoClient{datasource: ds}, nil
+	return &TempoClient{
+		datasource: ds,
+		httpClient: &http.Client{Timeout: 15 * time.Second},
+	}, nil
 }
 
 func (c *TempoClient) Query(ctx context.Context, query string, start, end time.Time, step time.Duration, limit int) (*QueryResult, error) {
@@ -34,4 +41,58 @@ func (c *TempoClient) Query(ctx context.Context, query string, start, end time.T
 
 func (c *TempoClient) TestConnection(ctx context.Context) error {
 	return runHTTPConnectionCheck(ctx, c.datasource, []string{"/ready", "/api/search?limit=1", "/"})
+}
+
+func (c *TempoClient) GetTrace(ctx context.Context, traceID string) (*Trace, error) {
+	trimmedTraceID := strings.TrimSpace(traceID)
+	if trimmedTraceID == "" {
+		return nil, fmt.Errorf("trace id is required")
+	}
+
+	payload, err := doTracingRequest(ctx, c.httpClient, c.datasource, http.MethodGet, "/api/traces/"+url.PathEscape(trimmedTraceID), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseTrace(payload)
+}
+
+func (c *TempoClient) SearchTraces(ctx context.Context, req TraceSearchRequest) ([]TraceSummary, error) {
+	params := buildTraceSearchParams(req)
+	payload, err := doTracingRequest(ctx, c.httpClient, c.datasource, http.MethodGet, "/api/search?"+params.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseTraceSearchResponse(payload)
+}
+
+func (c *TempoClient) Services(ctx context.Context) ([]string, error) {
+	endpoints := []string{
+		"/api/search/tags/service.name/values",
+		"/api/services",
+	}
+
+	var lastErr error
+	for _, endpoint := range endpoints {
+		payload, err := doTracingRequest(ctx, c.httpClient, c.datasource, http.MethodGet, endpoint, nil)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		services, err := parseStringSlicePayload(payload)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		return services, nil
+	}
+
+	if lastErr != nil {
+		return nil, lastErr
+	}
+
+	return nil, fmt.Errorf("failed to fetch trace services")
 }

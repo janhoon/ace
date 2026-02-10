@@ -101,6 +101,50 @@ func TestDataSourceHandler_Query_InvalidUUID(t *testing.T) {
 	}
 }
 
+func TestDataSourceHandler_GetTrace_InvalidUUID(t *testing.T) {
+	handler := &DataSourceHandler{pool: nil}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/datasources/invalid-uuid/traces/trace-1", nil)
+	req.SetPathValue("id", "invalid-uuid")
+	req.SetPathValue("traceId", "trace-1")
+	rr := httptest.NewRecorder()
+
+	handler.GetTrace(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+}
+
+func TestDataSourceHandler_SearchTraces_InvalidUUID(t *testing.T) {
+	handler := &DataSourceHandler{pool: nil}
+
+	body := bytes.NewBufferString(`{"service":"frontend"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/datasources/invalid-uuid/traces/search", body)
+	req.SetPathValue("id", "invalid-uuid")
+	rr := httptest.NewRecorder()
+
+	handler.SearchTraces(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+}
+
+func TestDataSourceHandler_TraceServices_InvalidUUID(t *testing.T) {
+	handler := &DataSourceHandler{pool: nil}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/datasources/invalid-uuid/traces/services", nil)
+	req.SetPathValue("id", "invalid-uuid")
+	rr := httptest.NewRecorder()
+
+	handler.TraceServices(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+}
+
 func TestDataSourceHandler_Stream_InvalidUUID(t *testing.T) {
 	handler := &DataSourceHandler{pool: nil}
 

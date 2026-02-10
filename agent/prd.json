@@ -605,7 +605,7 @@
         "Unified trace model (Go structs)",
         "Parse Jaeger JSON format from Tempo"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "TRACING-TIMELINE-001",
