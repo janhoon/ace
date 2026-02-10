@@ -18,7 +18,7 @@ import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
 import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 
-const { timeRange, onRefresh } = useTimeRange()
+const { timeRange, onRefresh, setCustomRange } = useTimeRange()
 const { currentOrg } = useOrganization()
 const { logsDatasources, fetchDatasources } = useDatasource()
 
@@ -32,6 +32,17 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
 }
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'
+
+interface TraceLogsNavigationContext {
+  traceId?: string
+  serviceName?: string
+  startMs?: number
+  endMs?: number
+  createdAt?: number
+}
+
+const TRACE_LOGS_NAVIGATION_CONTEXT_KEY = 'trace_logs_navigation'
+const TRACE_NAVIGATION_MAX_AGE_MS = 5 * 60 * 1000
 
 const selectedDatasourceId = ref('')
 const query = ref('')
@@ -58,6 +69,10 @@ const labelsCache = ref<Map<string, string[]>>(new Map())
 const seenLogKeys = ref<Set<string>>(new Set())
 const highlightedLogKeys = ref<Set<string>>(new Set())
 const highlightTimeoutIds = ref<Map<string, number>>(new Map())
+const pendingTraceId = ref('')
+const pendingServiceName = ref('')
+const pendingStartMs = ref<number | null>(null)
+const pendingEndMs = ref<number | null>(null)
 
 const MAX_STREAM_LOGS = 2000
 const LIVE_RESUME_OVERLAP_SECONDS = 5
@@ -65,7 +80,93 @@ const LIVE_RECONNECT_BASE_DELAY_MS = 1000
 const LIVE_RECONNECT_MAX_DELAY_MS = 15000
 const NEW_LOG_HIGHLIGHT_MS = 2500
 
+function escapeForDoubleQuotedValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
+function buildTraceLogsQuery(type_: DataSourceType, traceId: string, serviceName: string): string {
+  const escapedTraceId = escapeForDoubleQuotedValue(traceId)
+  const escapedServiceName = escapeForDoubleQuotedValue(serviceName)
+
+  if (type_ === 'loki') {
+    const selector = escapedServiceName
+      ? `{service_name="${escapedServiceName}"}`
+      : '{job=~".+"}'
+    return `${selector} |= "${escapedTraceId}"`
+  }
+
+  if (escapedServiceName) {
+    return `"${escapedServiceName}" "${escapedTraceId}"`
+  }
+
+  return `"${escapedTraceId}"`
+}
+
+function consumeTraceLogsNavigationContext() {
+  let rawContext: string | null = null
+  try {
+    rawContext = localStorage.getItem(TRACE_LOGS_NAVIGATION_CONTEXT_KEY)
+    localStorage.removeItem(TRACE_LOGS_NAVIGATION_CONTEXT_KEY)
+  } catch {
+    return
+  }
+
+  if (!rawContext) {
+    return
+  }
+
+  try {
+    const parsed = JSON.parse(rawContext) as TraceLogsNavigationContext
+
+    if (!parsed.traceId || typeof parsed.traceId !== 'string') {
+      return
+    }
+
+    if (typeof parsed.createdAt === 'number') {
+      const ageMs = Date.now() - parsed.createdAt
+      if (ageMs > TRACE_NAVIGATION_MAX_AGE_MS) {
+        return
+      }
+    }
+
+    pendingTraceId.value = parsed.traceId.trim()
+    pendingServiceName.value = typeof parsed.serviceName === 'string'
+      ? parsed.serviceName.trim()
+      : ''
+
+    if (typeof parsed.startMs === 'number' && typeof parsed.endMs === 'number' && parsed.endMs > parsed.startMs) {
+      pendingStartMs.value = parsed.startMs
+      pendingEndMs.value = parsed.endMs
+    }
+  } catch {
+    // Ignore malformed navigation context.
+  }
+}
+
+function applyTraceLogsNavigationContext(type_: DataSourceType) {
+  if (!pendingTraceId.value) {
+    return
+  }
+
+  query.value = buildTraceLogsQuery(type_, pendingTraceId.value, pendingServiceName.value)
+
+  if (pendingStartMs.value !== null && pendingEndMs.value !== null) {
+    setCustomRange(pendingStartMs.value, pendingEndMs.value)
+  }
+
+  pendingTraceId.value = ''
+  pendingServiceName.value = ''
+  pendingStartMs.value = null
+  pendingEndMs.value = null
+}
+
 onMounted(() => {
+  consumeTraceLogsNavigationContext()
+
+  if (activeDatasource.value) {
+    applyTraceLogsNavigationContext(activeDatasource.value.type)
+  }
+
   const stored = sessionStorage.getItem(HISTORY_KEY)
   if (stored) {
     try {
@@ -673,6 +774,8 @@ watch(
     if (!datasource) {
       return
     }
+
+    applyTraceLogsNavigationContext(datasource.type)
 
     if ((datasourceHealth.value[datasource.id] || 'unknown') === 'unknown') {
       checkDatasourceHealth(datasource.id, datasource.type)

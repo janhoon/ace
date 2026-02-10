@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { AlertCircle, Check, ChevronDown, ChevronUp, Loader2, Search, Waypoints } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import TraceTimeline from '../components/TraceTimeline.vue'
 import TraceSpanDetailsPanel from '../components/TraceSpanDetailsPanel.vue'
@@ -35,9 +36,28 @@ interface TraceNavigationContext {
   createdAt?: number
 }
 
-const TRACE_NAVIGATION_CONTEXT_KEY = 'dashboard_trace_navigation'
-const TRACE_NAVIGATION_MAX_AGE_MS = 5 * 60 * 1000
+interface TraceLogsNavigationContext {
+  traceId: string
+  serviceName?: string
+  startMs: number
+  endMs: number
+  createdAt: number
+}
 
+interface TraceMetricsNavigationContext {
+  serviceName?: string
+  startMs: number
+  endMs: number
+  createdAt: number
+}
+
+const TRACE_NAVIGATION_CONTEXT_KEY = 'dashboard_trace_navigation'
+const TRACE_LOGS_NAVIGATION_CONTEXT_KEY = 'trace_logs_navigation'
+const TRACE_METRICS_NAVIGATION_CONTEXT_KEY = 'trace_metrics_navigation'
+const TRACE_NAVIGATION_MAX_AGE_MS = 5 * 60 * 1000
+const TRACE_TO_X_PADDING_MS = 5 * 60 * 1000
+
+const router = useRouter()
 const { timeRange } = useTimeRange()
 const { currentOrg } = useOrganization()
 const { tracingDatasources, fetchDatasources } = useDatasource()
@@ -237,6 +257,70 @@ function handleSelectEdgeFromGraph(edge: { source: string, target: string }) {
   selectedService.value = edge.target
   query.value = `caller.service=${edge.source} callee.service=${edge.target}`
   void runSearch()
+}
+
+function toMilliseconds(unixNanoTimestamp: number): number {
+  return Math.floor(unixNanoTimestamp / 1_000_000)
+}
+
+function buildNavigationWindow(payload: {
+  startTimeUnixNano: number
+  endTimeUnixNano: number
+}): { startMs: number, endMs: number } {
+  const startMs = toMilliseconds(payload.startTimeUnixNano)
+  const endMs = toMilliseconds(payload.endTimeUnixNano)
+  const paddedStartMs = Math.max(0, startMs - TRACE_TO_X_PADDING_MS)
+  const paddedEndMs = Math.max(paddedStartMs + 1_000, endMs + TRACE_TO_X_PADDING_MS)
+  return {
+    startMs: paddedStartMs,
+    endMs: paddedEndMs,
+  }
+}
+
+function openTraceLogs(payload: {
+  traceId: string
+  serviceName: string
+  startTimeUnixNano: number
+  endTimeUnixNano: number
+}) {
+  const { startMs, endMs } = buildNavigationWindow(payload)
+  const navigationContext: TraceLogsNavigationContext = {
+    traceId: payload.traceId,
+    serviceName: payload.serviceName || undefined,
+    startMs,
+    endMs,
+    createdAt: Date.now(),
+  }
+
+  try {
+    localStorage.setItem(TRACE_LOGS_NAVIGATION_CONTEXT_KEY, JSON.stringify(navigationContext))
+  } catch {
+    // Ignore localStorage write issues; navigation still works.
+  }
+
+  router.push('/explore/logs')
+}
+
+function openServiceMetrics(payload: {
+  serviceName: string
+  startTimeUnixNano: number
+  endTimeUnixNano: number
+}) {
+  const { startMs, endMs } = buildNavigationWindow(payload)
+  const navigationContext: TraceMetricsNavigationContext = {
+    serviceName: payload.serviceName || undefined,
+    startMs,
+    endMs,
+    createdAt: Date.now(),
+  }
+
+  try {
+    localStorage.setItem(TRACE_METRICS_NAVIGATION_CONTEXT_KEY, JSON.stringify(navigationContext))
+  } catch {
+    // Ignore localStorage write issues; navigation still works.
+  }
+
+  router.push('/explore/metrics')
 }
 
 function consumeTraceNavigationContext() {
@@ -600,6 +684,8 @@ onUnmounted(() => {
                   :trace="activeTrace"
                   :span="selectedSpan"
                   @select-span="handleSelectSpan"
+                  @open-trace-logs="openTraceLogs"
+                  @open-service-metrics="openServiceMetrics"
                 />
 
                 <aside v-else class="span-selection-placeholder">

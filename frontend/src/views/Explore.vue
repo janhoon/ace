@@ -19,7 +19,7 @@ import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import type { ChartSeries } from '../components/LineChart.vue'
 
-const { timeRange, onRefresh } = useTimeRange()
+const { timeRange, onRefresh, setCustomRange } = useTimeRange()
 const { currentOrg } = useOrganization()
 const { metricsDatasources, fetchDatasources } = useDatasource()
 
@@ -33,6 +33,16 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
 }
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'
+
+interface TraceMetricsNavigationContext {
+  serviceName?: string
+  startMs?: number
+  endMs?: number
+  createdAt?: number
+}
+
+const TRACE_METRICS_NAVIGATION_CONTEXT_KEY = 'trace_metrics_navigation'
+const TRACE_NAVIGATION_MAX_AGE_MS = 5 * 60 * 1000
 
 // Query state
 const selectedDatasourceId = ref('')
@@ -51,9 +61,81 @@ const showDatasourceMenu = ref(false)
 const datasourceMenuRef = ref<HTMLElement | null>(null)
 const datasourceHealth = ref<Record<string, DatasourceHealthStatus>>({})
 const datasourceHealthErrors = ref<Record<string, string>>({})
+const pendingServiceName = ref('')
+const pendingStartMs = ref<number | null>(null)
+const pendingEndMs = ref<number | null>(null)
+
+function escapePromQLLabelValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
+function buildServiceMetricsQuery(serviceName: string): string {
+  if (!serviceName) {
+    return 'sum(rate(http_requests_total[5m]))'
+  }
+
+  const escapedService = escapePromQLLabelValue(serviceName)
+  return `sum(rate(http_requests_total{service="${escapedService}"}[5m])) or sum(rate(http_requests_total{service_name="${escapedService}"}[5m]))`
+}
+
+function consumeTraceMetricsNavigationContext() {
+  let rawContext: string | null = null
+  try {
+    rawContext = localStorage.getItem(TRACE_METRICS_NAVIGATION_CONTEXT_KEY)
+    localStorage.removeItem(TRACE_METRICS_NAVIGATION_CONTEXT_KEY)
+  } catch {
+    return
+  }
+
+  if (!rawContext) {
+    return
+  }
+
+  try {
+    const parsed = JSON.parse(rawContext) as TraceMetricsNavigationContext
+
+    if (typeof parsed.createdAt === 'number') {
+      const ageMs = Date.now() - parsed.createdAt
+      if (ageMs > TRACE_NAVIGATION_MAX_AGE_MS) {
+        return
+      }
+    }
+
+    pendingServiceName.value = typeof parsed.serviceName === 'string' ? parsed.serviceName.trim() : ''
+
+    if (typeof parsed.startMs === 'number' && typeof parsed.endMs === 'number' && parsed.endMs > parsed.startMs) {
+      pendingStartMs.value = parsed.startMs
+      pendingEndMs.value = parsed.endMs
+    }
+  } catch {
+    // Ignore malformed navigation context.
+  }
+}
+
+function applyTraceMetricsNavigationContext() {
+  if (!pendingServiceName.value && pendingStartMs.value === null && pendingEndMs.value === null) {
+    return
+  }
+
+  query.value = buildServiceMetricsQuery(pendingServiceName.value)
+
+  if (pendingStartMs.value !== null && pendingEndMs.value !== null) {
+    setCustomRange(pendingStartMs.value, pendingEndMs.value)
+  }
+
+  pendingServiceName.value = ''
+  pendingStartMs.value = null
+  pendingEndMs.value = null
+}
 
 // Load history from session storage
 onMounted(() => {
+  consumeTraceMetricsNavigationContext()
+
+  if (activeDatasource.value) {
+    applyTraceMetricsNavigationContext()
+  }
+
   const stored = sessionStorage.getItem(HISTORY_KEY)
   if (stored) {
     try {
@@ -318,6 +400,8 @@ watch(
     if (!datasource) {
       return
     }
+
+    applyTraceMetricsNavigationContext()
 
     if ((datasourceHealth.value[datasource.id] || 'unknown') === 'unknown') {
       checkDatasourceHealth(datasource.id, datasource.type)

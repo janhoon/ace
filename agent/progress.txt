@@ -82,3 +82,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `frontend/src/components/TraceListPanel.vue`, `frontend/src/components/TraceHeatmapPanel.vue`, `frontend/src/components/Panel.vue`, `frontend/src/components/Panel.spec.ts`, `frontend/src/components/PanelEditModal.vue`, `frontend/src/components/PanelEditModal.spec.ts`, `frontend/src/views/DashboardDetailView.vue`, `frontend/src/views/DashboardDetailView.spec.ts`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/views/ExploreTraces.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd frontend && npm run type-check && npm run test`; targeted touched-area tests also passing)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and no skill is installed)
+
+## Task TRACING-INTEGRATION-001: Tracing 7/7: Integration features (Trace to Logs, Trace to Metrics) - 2026-02-10 09:54 UTC
+- What was done: Added trace-to-logs and trace-to-metrics actions in the span details panel, wired Explore Traces to persist and navigate with trace/service/time context, and updated Explore Logs/Metrics to consume that context by prefilling query plus time range; added focused tests for the new action emits, navigation context persistence, and context prefill behavior.
+- Files changed: `frontend/src/components/TraceSpanDetailsPanel.vue`, `frontend/src/components/TraceSpanDetailsPanel.spec.ts`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/views/ExploreTraces.spec.ts`, `frontend/src/views/ExploreLogs.vue`, `frontend/src/views/ExploreLogs.spec.ts`, `frontend/src/views/Explore.vue`, `frontend/src/views/Explore.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd frontend && npm run type-check && npm run test`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and no skill is installed)

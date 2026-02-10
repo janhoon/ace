@@ -4,6 +4,7 @@ import Explore from './Explore.vue'
 
 const mockFetchDatasources = vi.hoisted(() => vi.fn())
 const mockQueryDataSource = vi.hoisted(() => vi.fn())
+const mockSetCustomRange = vi.hoisted(() => vi.fn())
 
 vi.mock('../components/TimeRangePicker.vue', () => ({
   default: {
@@ -40,6 +41,7 @@ vi.mock('../composables/useTimeRange', () => ({
   useTimeRange: () => ({
     timeRange: { value: { start: Date.now() - 3600000, end: Date.now() } },
     onRefresh: vi.fn(() => () => {}),
+    setCustomRange: mockSetCustomRange,
   })
 }))
 
@@ -93,7 +95,9 @@ import { transformToChartData } from '../composables/useProm'
 describe('Explore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     sessionStorage.clear()
+    mockSetCustomRange.mockReset()
     mockFetchDatasources.mockResolvedValue(undefined)
     mockQueryDataSource.mockResolvedValue({
       status: 'success',
@@ -216,5 +220,23 @@ describe('Explore', () => {
 
     const history = JSON.parse(sessionStorage.getItem('explore_query_history') || '[]')
     expect(history).toContain('up')
+  })
+
+  it('prefills service query and time range from trace-to-metrics context', async () => {
+    localStorage.setItem('trace_metrics_navigation', JSON.stringify({
+      serviceName: 'payments',
+      startMs: 1_700_000_000_000,
+      endMs: 1_700_000_300_000,
+      createdAt: Date.now(),
+    }))
+
+    const wrapper = mount(Explore)
+    await flushPromises()
+
+    expect((wrapper.find('#promql-query-input').element as HTMLTextAreaElement).value).toContain(
+      'service="payments"',
+    )
+    expect(mockSetCustomRange).toHaveBeenCalledWith(1_700_000_000_000, 1_700_000_300_000)
+    expect(localStorage.getItem('trace_metrics_navigation')).toBeNull()
   })
 })

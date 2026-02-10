@@ -713,7 +713,7 @@
         "Navigate to service dashboard with time range",
         "Optional: Exemplars in metric graphs"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "TRACING-AUTO-INSTRUMENT-001",

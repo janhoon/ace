@@ -6,6 +6,7 @@ const mockFetchDatasources = vi.hoisted(() => vi.fn())
 const mockQueryDataSource = vi.hoisted(() => vi.fn())
 const mockFetchDataSourceLabels = vi.hoisted(() => vi.fn())
 const mockStreamDataSourceLogs = vi.hoisted(() => vi.fn())
+const mockSetCustomRange = vi.hoisted(() => vi.fn())
 
 vi.mock('../components/TimeRangePicker.vue', () => ({
   default: {
@@ -60,6 +61,7 @@ vi.mock('../composables/useTimeRange', () => ({
   useTimeRange: () => ({
     timeRange: { value: { start: Date.now() - 3600000, end: Date.now() } },
     onRefresh: vi.fn(() => () => {}),
+    setCustomRange: mockSetCustomRange,
   })
 }))
 
@@ -117,7 +119,9 @@ vi.mock('../api/datasources', () => ({
 describe('ExploreLogs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     sessionStorage.clear()
+    mockSetCustomRange.mockReset()
     mockFetchDatasources.mockResolvedValue(undefined)
     mockFetchDataSourceLabels.mockResolvedValue(['service_name', 'container_id'])
     mockStreamDataSourceLogs.mockResolvedValue(undefined)
@@ -290,5 +294,24 @@ describe('ExploreLogs', () => {
     const queryBuilder = wrapper.findComponent({ name: 'LogQLQueryBuilder' })
     expect(mockFetchDataSourceLabels).toHaveBeenCalledWith('ds-1')
     expect(queryBuilder.props('indexedLabels')).toEqual(['service_name', 'container_id'])
+  })
+
+  it('prefills query and time range from trace-to-logs context', async () => {
+    localStorage.setItem('trace_logs_navigation', JSON.stringify({
+      traceId: 'trace-abc-123',
+      serviceName: 'checkout',
+      startMs: 1_700_000_000_000,
+      endMs: 1_700_000_300_000,
+      createdAt: Date.now(),
+    }))
+
+    const wrapper = mount(ExploreLogs)
+    await flushPromises()
+
+    expect((wrapper.find('.query-input').element as HTMLTextAreaElement).value).toBe(
+      '{service_name="checkout"} |= "trace-abc-123"',
+    )
+    expect(mockSetCustomRange).toHaveBeenCalledWith(1_700_000_000_000, 1_700_000_300_000)
+    expect(localStorage.getItem('trace_logs_navigation')).toBeNull()
   })
 })

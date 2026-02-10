@@ -137,14 +137,65 @@ describe('TraceSpanDetailsPanel', () => {
     })
 
     const actionButtons = wrapper.findAll('.action-button')
-    await actionButtons[0].trigger('click')
-    await actionButtons[1].trigger('click')
+    const copySpanButton = actionButtons.find((button) => button.text() === 'Copy span ID')
+    const copyTraceButton = actionButtons.find((button) => button.text() === 'Copy trace ID')
+    const exportButton = actionButtons.find((button) => button.text() === 'Export JSON')
+
+    expect(copySpanButton).toBeTruthy()
+    expect(copyTraceButton).toBeTruthy()
+    expect(exportButton).toBeTruthy()
+
+    await copySpanButton!.trigger('click')
+    await copyTraceButton!.trigger('click')
 
     expect(clipboardWrite).toHaveBeenNthCalledWith(1, 'span-child')
     expect(clipboardWrite).toHaveBeenNthCalledWith(2, 'trace-abc-123')
 
-    await actionButtons[2].trigger('click')
+    await exportButton!.trigger('click')
     expect(createObjectURL).toHaveBeenCalledTimes(1)
     expect(revokeObjectURL).toHaveBeenCalledTimes(1)
+  })
+
+  it('emits trace to logs and trace to metrics actions', async () => {
+    const trace = makeTrace()
+    const span = trace.spans.find((entry) => entry.spanId === 'span-child') as TraceSpan
+
+    const wrapper = mount(TraceSpanDetailsPanel, {
+      props: {
+        trace,
+        span,
+      },
+    })
+
+    const actionButtons = wrapper.findAll('.action-button')
+    const openLogsButton = actionButtons.find((button) => button.text() === 'View Logs')
+    const openMetricsButton = actionButtons.find((button) => button.text() === 'View Service Metrics')
+
+    expect(openLogsButton).toBeTruthy()
+    expect(openMetricsButton).toBeTruthy()
+
+    await openLogsButton!.trigger('click')
+    await openMetricsButton!.trigger('click')
+
+    expect(wrapper.emitted('open-trace-logs')).toEqual([
+      [
+        {
+          traceId: 'trace-abc-123',
+          serviceName: 'api',
+          startTimeUnixNano: 1_700_000_000_000_300_000,
+          endTimeUnixNano: 1_700_000_000_001_400_000,
+        },
+      ],
+    ])
+
+    expect(wrapper.emitted('open-service-metrics')).toEqual([
+      [
+        {
+          serviceName: 'api',
+          startTimeUnixNano: 1_700_000_000_000_300_000,
+          endTimeUnixNano: 1_700_000_000_001_400_000,
+        },
+      ],
+    ])
   })
 })

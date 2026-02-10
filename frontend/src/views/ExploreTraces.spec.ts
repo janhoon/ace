@@ -7,6 +7,13 @@ const mockSearchDataSourceTraces = vi.hoisted(() => vi.fn())
 const mockFetchDataSourceTrace = vi.hoisted(() => vi.fn())
 const mockFetchDataSourceTraceServices = vi.hoisted(() => vi.fn())
 const mockFetchDataSourceTraceServiceGraph = vi.hoisted(() => vi.fn())
+const mockRouterPush = vi.hoisted(() => vi.fn())
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: mockRouterPush,
+  }),
+}))
 
 vi.mock('../components/TimeRangePicker.vue', () => ({
   default: {
@@ -341,5 +348,110 @@ describe('ExploreTraces', () => {
     expect(mockFetchDataSourceTraceServiceGraph).toHaveBeenCalledWith('ds-trace-1', 'trace-from-dashboard')
     expect((wrapper.get('#trace-id-input').element as HTMLInputElement).value).toBe('trace-from-dashboard')
     expect(localStorage.getItem('dashboard_trace_navigation')).toBeNull()
+  })
+
+  it('navigates to Explore Logs with selected span trace context', async () => {
+    mockSearchDataSourceTraces.mockResolvedValue([
+      {
+        traceId: 'trace-abc',
+        rootServiceName: 'api',
+        rootOperationName: 'GET /health',
+        startTimeUnixNano: 1_700_000_000_000_000_000,
+        durationNano: 1_500_000,
+        spanCount: 5,
+        serviceCount: 2,
+        errorSpanCount: 0,
+      },
+    ])
+    mockFetchDataSourceTrace.mockResolvedValue({
+      traceId: 'trace-abc',
+      spans: [
+        {
+          spanId: 'span-1',
+          operationName: 'GET /health',
+          serviceName: 'api',
+          startTimeUnixNano: 1_700_000_000_000_000_000,
+          durationNano: 1_500_000,
+        },
+      ],
+      services: ['api'],
+      startTimeUnixNano: 1_700_000_000_000_000_000,
+      durationNano: 1_500_000,
+    })
+
+    const wrapper = mount(ExploreTraces)
+    await wrapper.find('.btn-search').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.trace-result-row').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.mock-select-span').trigger('click')
+    await flushPromises()
+
+    const logsButton = wrapper
+      .findAll('.action-button')
+      .find((button) => button.text() === 'View Logs')
+    expect(logsButton).toBeTruthy()
+
+    await logsButton!.trigger('click')
+
+    expect(mockRouterPush).toHaveBeenCalledWith('/explore/logs')
+    expect(JSON.parse(localStorage.getItem('trace_logs_navigation') || '{}')).toMatchObject({
+      traceId: 'trace-abc',
+      serviceName: 'api',
+    })
+  })
+
+  it('navigates to Explore Metrics with selected span service context', async () => {
+    mockSearchDataSourceTraces.mockResolvedValue([
+      {
+        traceId: 'trace-abc',
+        rootServiceName: 'api',
+        rootOperationName: 'GET /health',
+        startTimeUnixNano: 1_700_000_000_000_000_000,
+        durationNano: 1_500_000,
+        spanCount: 5,
+        serviceCount: 2,
+        errorSpanCount: 0,
+      },
+    ])
+    mockFetchDataSourceTrace.mockResolvedValue({
+      traceId: 'trace-abc',
+      spans: [
+        {
+          spanId: 'span-1',
+          operationName: 'GET /health',
+          serviceName: 'api',
+          startTimeUnixNano: 1_700_000_000_000_000_000,
+          durationNano: 1_500_000,
+        },
+      ],
+      services: ['api'],
+      startTimeUnixNano: 1_700_000_000_000_000_000,
+      durationNano: 1_500_000,
+    })
+
+    const wrapper = mount(ExploreTraces)
+    await wrapper.find('.btn-search').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.trace-result-row').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.mock-select-span').trigger('click')
+    await flushPromises()
+
+    const metricsButton = wrapper
+      .findAll('.action-button')
+      .find((button) => button.text() === 'View Service Metrics')
+    expect(metricsButton).toBeTruthy()
+
+    await metricsButton!.trigger('click')
+
+    expect(mockRouterPush).toHaveBeenCalledWith('/explore/metrics')
+    expect(JSON.parse(localStorage.getItem('trace_metrics_navigation') || '{}')).toMatchObject({
+      serviceName: 'api',
+    })
   })
 })

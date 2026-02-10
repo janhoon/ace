@@ -9,6 +9,17 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select-span', span: TraceSpan): void
+  (e: 'open-trace-logs', payload: {
+    traceId: string
+    serviceName: string
+    startTimeUnixNano: number
+    endTimeUnixNano: number
+  }): void
+  (e: 'open-service-metrics', payload: {
+    serviceName: string
+    startTimeUnixNano: number
+    endTimeUnixNano: number
+  }): void
 }>()
 
 const feedbackMessage = ref('')
@@ -143,6 +154,23 @@ function sanitizeFileName(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-')
 }
 
+function openTraceLogs() {
+  emit('open-trace-logs', {
+    traceId: props.trace.traceId,
+    serviceName: props.span.serviceName || '',
+    startTimeUnixNano: props.span.startTimeUnixNano,
+    endTimeUnixNano: props.span.startTimeUnixNano + props.span.durationNano,
+  })
+}
+
+function openServiceMetrics() {
+  emit('open-service-metrics', {
+    serviceName: props.span.serviceName || '',
+    startTimeUnixNano: props.span.startTimeUnixNano,
+    endTimeUnixNano: props.span.startTimeUnixNano + props.span.durationNano,
+  })
+}
+
 function exportSpanJson() {
   if (typeof document === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) {
     setFeedback('Unable to export JSON in this environment')
@@ -189,6 +217,12 @@ function exportSpanJson() {
       </button>
       <button type="button" class="action-button" @click="copyToClipboard(trace.traceId, 'Trace ID')">
         Copy trace ID
+      </button>
+      <button type="button" class="action-button" @click="openTraceLogs">
+        View Logs
+      </button>
+      <button type="button" class="action-button" @click="openServiceMetrics">
+        View Service Metrics
       </button>
       <button type="button" class="action-button" @click="exportSpanJson">
         Export JSON
