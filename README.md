@@ -85,6 +85,9 @@ Tag strategy:
    # disable load generator
    docker compose stop otel-loadgen
    ```
+   The load generator emits both single-service traces and inter-service
+   traces (`edge -> checkout -> payments/inventory -> worker`) so service
+   graph and cross-service debugging flows have realistic traffic.
 
 2. Start the backend API:
    ```bash

@@ -157,6 +157,8 @@ services:
       OTEL_LOAD_SERVICE_PREFIX: loadgen-service
       OTEL_LOAD_SERVICE_COUNT: 3
       OTEL_LOAD_ERROR_EVERY: 7
+      OTEL_LOAD_ENABLE_INTERSERVICE: "true"
+      OTEL_LOAD_INTERSERVICE_RATIO: "0.85"
     volumes:
       - ./otel-loadgen.py:/app/otel-loadgen.py:ro
     depends_on:
