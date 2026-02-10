@@ -12,8 +12,10 @@ import (
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/db"
 	"github.com/janhoon/dash/backend/internal/handlers"
+	"github.com/janhoon/dash/backend/internal/telemetry"
 	"github.com/janhoon/dash/backend/internal/valkey"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func main() {
@@ -55,6 +57,22 @@ func main() {
 		defer valkeyClient.Close()
 		log.Println("Valkey connected successfully")
 	}
+
+	telemetryShutdown := func(context.Context) error { return nil }
+	shutdownTracing, err := telemetry.Setup(context.Background())
+	if err != nil {
+		log.Printf("Warning: OpenTelemetry tracing setup failed: %v", err)
+	} else {
+		telemetryShutdown = shutdownTracing
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if shutdownErr := telemetryShutdown(shutdownCtx); shutdownErr != nil {
+			log.Printf("Warning: OpenTelemetry tracing shutdown failed: %v", shutdownErr)
+		}
+	}()
 
 	// Setup router
 	mux := http.NewServeMux()
@@ -174,8 +192,8 @@ func main() {
 	grafanaConverterHandler := handlers.NewGrafanaConverterHandler()
 	mux.HandleFunc("POST /api/convert/grafana", auth.RequireAuth(jwtManager, grafanaConverterHandler.Convert))
 
-	// Apply CORS middleware
-	handler := corsMiddleware(mux)
+	// Apply middleware
+	handler := corsMiddleware(otelhttp.NewHandler(mux, "dash-api"))
 
 	// Create server
 	server := &http.Server{

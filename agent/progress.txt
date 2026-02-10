@@ -88,3 +88,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `frontend/src/components/TraceSpanDetailsPanel.vue`, `frontend/src/components/TraceSpanDetailsPanel.spec.ts`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/views/ExploreTraces.spec.ts`, `frontend/src/views/ExploreLogs.vue`, `frontend/src/views/ExploreLogs.spec.ts`, `frontend/src/views/Explore.vue`, `frontend/src/views/Explore.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd frontend && npm run type-check && npm run test`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and no skill is installed)
+
+## Task TRACING-AUTO-INSTRUMENT-001: Auto-instrumentation: Add OpenTelemetry tracing to docker-compose - 2026-02-10 09:59 UTC
+- What was done: Added Tempo to local Docker Compose with local storage config, extended the OpenTelemetry Collector with OTLP trace ingestion and forwarding to Tempo, and instrumented the Go backend with OpenTelemetry HTTP server spans plus pgx query/batch spans using environment-driven OTEL configuration.
+- Files changed: `docker-compose.yml`, `tempo.yml`, `otel-collector.yml`, `backend/cmd/api/main.go`, `backend/internal/db/db.go`, `backend/internal/telemetry/tracing.go`, `backend/internal/telemetry/pgx_tracer.go`, `backend/go.mod`, `backend/go.sum`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd backend && go test ./...`; `docker compose config --services`)
+- Browser validation: not run (no frontend files changed)

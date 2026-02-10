@@ -4,6 +4,12 @@ extensions:
     create_directory: true
 
 receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
   filelog/docker:
     include:
       - /var/lib/docker/containers/*/*-json.log
@@ -44,6 +50,10 @@ processors:
     timeout: 1s
 
 exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
     tls:
@@ -57,6 +67,13 @@ service:
   extensions:
     - file_storage
   pipelines:
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters:
+        - otlp/tempo
     logs:
       receivers:
         - filelog/docker

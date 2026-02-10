@@ -104,6 +104,23 @@ services:
       timeout: 5s
       retries: 5
 
+  tempo:
+    <<: *json_file_logging
+    image: grafana/tempo:2.7.2
+    container_name: dash-tempo
+    command:
+      - '-config.file=/etc/tempo/tempo.yml'
+    ports:
+      - "3200:3200"
+    volumes:
+      - ./tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/var/tempo
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3200/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   otel-collector:
     <<: *json_file_logging
     image: otel/opentelemetry-collector-contrib:0.119.0
@@ -115,10 +132,15 @@ services:
       - ./otel-collector.yml:/etc/otel-collector/config.yml:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - otel_collector_data:/var/lib/otelcol
+    ports:
+      - "4317:4317"
+      - "4318:4318"
     depends_on:
       loki:
         condition: service_healthy
       victorialogs:
+        condition: service_healthy
+      tempo:
         condition: service_healthy
 
 volumes:
@@ -129,3 +151,4 @@ volumes:
   victoriametrics_data:
   victorialogs_data:
   otel_collector_data:
+  tempo_data:

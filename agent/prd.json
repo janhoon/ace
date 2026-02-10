@@ -734,7 +734,7 @@
         "Environment-based configuration",
         "Test traces visible in Tempo API"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }
