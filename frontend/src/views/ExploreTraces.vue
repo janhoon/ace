@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { AlertCircle, Check, ChevronDown, ChevronUp, Loader2, Search, Waypoints } from 'lucide-vue-next'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import TraceTimeline from '../components/TraceTimeline.vue'
+import TraceSpanDetailsPanel from '../components/TraceSpanDetailsPanel.vue'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useOrganization } from '../composables/useOrganization'
 import { useDatasource } from '../composables/useDatasource'
@@ -433,20 +434,26 @@ onUnmounted(() => {
                 <span>{{ activeTrace.services.length }} services</span>
               </div>
 
-              <TraceTimeline
-                :trace="activeTrace"
-                :selected-span-id="selectedSpan?.spanId || null"
-                @select-span="handleSelectSpan"
-              />
-
-              <div v-if="selectedSpan" class="selected-span-panel">
-                <h3>Selected span</h3>
-                <div class="selected-span-grid">
-                  <span><strong>Operation:</strong> {{ selectedSpan.operationName }}</span>
-                  <span><strong>Service:</strong> {{ selectedSpan.serviceName }}</span>
-                  <span><strong>Duration:</strong> {{ formatDurationNano(selectedSpan.durationNano) }}</span>
-                  <span><strong>Status:</strong> {{ selectedSpan.status || 'ok' }}</span>
+              <div class="trace-detail-layout">
+                <div class="timeline-main-pane">
+                  <TraceTimeline
+                    :trace="activeTrace"
+                    :selected-span-id="selectedSpan?.spanId || null"
+                    @select-span="handleSelectSpan"
+                  />
                 </div>
+
+                <TraceSpanDetailsPanel
+                  v-if="selectedSpan"
+                  :trace="activeTrace"
+                  :span="selectedSpan"
+                  @select-span="handleSelectSpan"
+                />
+
+                <aside v-else class="span-selection-placeholder">
+                  <h3>Span details</h3>
+                  <p>Select a span in the timeline to inspect attributes, logs, and relationships.</p>
+                </aside>
               </div>
             </div>
 
@@ -890,6 +897,41 @@ onUnmounted(() => {
   padding: 0.9rem;
 }
 
+.trace-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.timeline-main-pane {
+  min-width: 0;
+}
+
+.span-selection-placeholder {
+  border: 1px dashed rgba(71, 85, 105, 0.55);
+  border-radius: 12px;
+  background: rgba(12, 21, 33, 0.75);
+  padding: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.span-selection-placeholder h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-tertiary);
+}
+
+.span-selection-placeholder p {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
 .trace-summary-bar {
   display: flex;
   align-items: center;
@@ -910,35 +952,6 @@ onUnmounted(() => {
 .trace-summary-bar span {
   font-size: 0.74rem;
   color: var(--text-secondary);
-}
-
-.selected-span-panel {
-  border: 1px solid var(--border-primary);
-  border-radius: 10px;
-  padding: 0.75rem;
-  background: rgba(15, 25, 40, 0.78);
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.selected-span-panel h3 {
-  margin: 0;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.selected-span-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.selected-span-grid strong {
-  color: var(--text-primary);
 }
 
 .loading-state {
@@ -1000,16 +1013,16 @@ onUnmounted(() => {
     padding: 0.9rem;
   }
 
+  .trace-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
   .query-context-row {
     grid-template-columns: 1fr;
   }
 
   .trace-lookup-input-wrap {
     flex-direction: column;
-  }
-
-  .selected-span-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

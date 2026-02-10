@@ -652,7 +652,7 @@
         "Error indicator for failed spans",
         "Copy span/trace ID, export JSON"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "TRACING-SERVICE-GRAPH-001",

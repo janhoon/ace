@@ -64,3 +64,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `frontend/src/types/datasource.ts`, `frontend/src/api/datasources.ts`, `frontend/src/api/datasources.spec.ts`, `frontend/src/composables/useDatasource.ts`, `frontend/src/components/TraceTimeline.vue`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/views/ExploreTraces.spec.ts`, `frontend/src/router/index.ts`, `frontend/src/components/Sidebar.vue`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd frontend && npm run type-check && npm run test`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and no skill is installed)
+
+## Task TRACING-SPAN-DETAILS-001: Tracing 4/7: Span details panel - 2026-02-10 08:28 UTC
+- What was done: Replaced the inline selected-span summary with a dedicated side details panel in Explore Traces that opens from timeline span selection and includes operation/service/timing details, error status badge, parent/child span navigation, attributes table, logs/events timeline, and actions to copy span/trace IDs and export span JSON.
+- Files changed: `frontend/src/components/TraceSpanDetailsPanel.vue`, `frontend/src/components/TraceSpanDetailsPanel.spec.ts`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/views/ExploreTraces.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd frontend && npm run type-check && npm run test`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and no skill is installed)

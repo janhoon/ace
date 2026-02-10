@@ -18,7 +18,19 @@ vi.mock('../components/TraceTimeline.vue', () => ({
   default: {
     name: 'TraceTimeline',
     props: ['trace', 'selectedSpanId'],
-    template: '<div class="mock-trace-timeline">TraceTimeline Mock</div>',
+    template: `
+      <div class="mock-trace-timeline">
+        TraceTimeline Mock
+        <button
+          v-if="trace.spans.length > 0"
+          class="mock-select-span"
+          type="button"
+          @click="$emit('select-span', trace.spans[0])"
+        >
+          Select span
+        </button>
+      </div>
+    `,
   },
 }))
 
@@ -156,6 +168,17 @@ describe('ExploreTraces', () => {
           serviceName: 'api',
           startTimeUnixNano: 1_700_000_000_000_000_000,
           durationNano: 1_500_000,
+          tags: {
+            'http.method': 'GET',
+          },
+          logs: [
+            {
+              timestampUnixNano: 1_700_000_000_000_100_000,
+              fields: {
+                event: 'request.received',
+              },
+            },
+          ],
         },
       ],
       services: ['api'],
@@ -172,6 +195,13 @@ describe('ExploreTraces', () => {
 
     expect(mockFetchDataSourceTrace).toHaveBeenCalledWith('ds-trace-1', 'trace-abc')
     expect(wrapper.find('.mock-trace-timeline').exists()).toBe(true)
+
+    await wrapper.find('.mock-select-span').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.trace-span-details').exists()).toBe(true)
+    expect(wrapper.find('.trace-span-details').text()).toContain('Span details')
+    expect(wrapper.find('.trace-span-details').text()).toContain('GET /health')
   })
 
   it('shows an error when trace search fails', async () => {
