@@ -4,15 +4,23 @@ import { AlertCircle, Check, ChevronDown, ChevronUp, Loader2, Search, Waypoints 
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import TraceTimeline from '../components/TraceTimeline.vue'
 import TraceSpanDetailsPanel from '../components/TraceSpanDetailsPanel.vue'
+import TraceServiceGraph from '../components/TraceServiceGraph.vue'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useOrganization } from '../composables/useOrganization'
 import { useDatasource } from '../composables/useDatasource'
 import {
   fetchDataSourceTrace,
+  fetchDataSourceTraceServiceGraph,
   fetchDataSourceTraceServices,
   searchDataSourceTraces,
 } from '../api/datasources'
-import type { DataSourceType, Trace, TraceSpan, TraceSummary } from '../types/datasource'
+import type {
+  DataSourceType,
+  Trace,
+  TraceServiceGraph as TraceServiceGraphModel,
+  TraceSpan,
+  TraceSummary,
+} from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
 import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
 import lokiLogo from '../assets/datasources/loki-logo.svg'
@@ -47,12 +55,15 @@ const loadingSearch = ref(false)
 const loadingTrace = ref(false)
 const loadingServices = ref(false)
 const error = ref<string | null>(null)
+const serviceGraphError = ref<string | null>(null)
 
 const services = ref<string[]>([])
 const traceSummaries = ref<TraceSummary[]>([])
 const selectedTraceId = ref('')
 const activeTrace = ref<Trace | null>(null)
+const activeServiceGraph = ref<TraceServiceGraphModel | null>(null)
 const selectedSpan = ref<TraceSpan | null>(null)
+const loadingServiceGraph = ref(false)
 
 const hasTracingDatasources = computed(() => tracingDatasources.value.length > 0)
 const activeDatasource = computed(
@@ -157,12 +168,28 @@ async function loadTrace(traceId: string) {
   error.value = null
   try {
     activeTrace.value = await fetchDataSourceTrace(selectedDatasourceId.value, traceId)
+    loadingServiceGraph.value = true
+    serviceGraphError.value = null
+    try {
+      activeServiceGraph.value = await fetchDataSourceTraceServiceGraph(selectedDatasourceId.value, traceId)
+    } catch (graphError) {
+      activeServiceGraph.value = null
+      serviceGraphError.value = graphError instanceof Error
+        ? graphError.message
+        : 'Failed to fetch trace service graph'
+    } finally {
+      loadingServiceGraph.value = false
+    }
+
     selectedTraceId.value = traceId
     selectedSpan.value = null
     traceIdInput.value = traceId
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to fetch trace'
     activeTrace.value = null
+    activeServiceGraph.value = null
+    serviceGraphError.value = null
+    loadingServiceGraph.value = false
   } finally {
     loadingTrace.value = false
   }
@@ -180,6 +207,25 @@ async function lookupTraceById() {
 
 function handleSelectSpan(span: TraceSpan) {
   selectedSpan.value = span
+}
+
+function handleSelectServiceFromGraph(serviceName: string) {
+  if (!serviceName) {
+    return
+  }
+
+  selectedService.value = serviceName
+  void runSearch()
+}
+
+function handleSelectEdgeFromGraph(edge: { source: string, target: string }) {
+  if (!edge.target) {
+    return
+  }
+
+  selectedService.value = edge.target
+  query.value = `caller.service=${edge.source} callee.service=${edge.target}`
+  void runSearch()
 }
 
 watch(
@@ -213,6 +259,9 @@ watch(
   () => {
     traceSummaries.value = []
     activeTrace.value = null
+    activeServiceGraph.value = null
+    serviceGraphError.value = null
+    loadingServiceGraph.value = false
     selectedTraceId.value = ''
     selectedSpan.value = null
     void loadServices()
@@ -432,6 +481,34 @@ onUnmounted(() => {
                 <code>{{ activeTrace.traceId }}</code>
                 <span>{{ formatDurationNano(activeTrace.durationNano) }}</span>
                 <span>{{ activeTrace.services.length }} services</span>
+              </div>
+
+              <div class="service-graph-panel">
+                <div class="service-graph-header">
+                  <h3>Service dependency graph</h3>
+                  <span v-if="activeServiceGraph">{{ activeServiceGraph.edges.length }} edges</span>
+                </div>
+
+                <div v-if="loadingServiceGraph" class="loading-state compact">
+                  <Loader2 :size="16" class="icon-spin" />
+                  <span>Loading service graph...</span>
+                </div>
+
+                <div v-else-if="serviceGraphError" class="service-graph-error">
+                  <AlertCircle :size="14" />
+                  <span>{{ serviceGraphError }}</span>
+                </div>
+
+                <TraceServiceGraph
+                  v-else-if="activeServiceGraph && activeServiceGraph.nodes.length > 0"
+                  :graph="activeServiceGraph"
+                  @select-service="handleSelectServiceFromGraph"
+                  @select-edge="handleSelectEdgeFromGraph"
+                />
+
+                <div v-else class="service-graph-empty">
+                  Not enough trace data to render service dependencies.
+                </div>
               </div>
 
               <div class="trace-detail-layout">
@@ -952,6 +1029,53 @@ onUnmounted(() => {
 .trace-summary-bar span {
   font-size: 0.74rem;
   color: var(--text-secondary);
+}
+
+.service-graph-panel {
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  background: rgba(10, 18, 30, 0.7);
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.service-graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.service-graph-header h3 {
+  margin: 0;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.service-graph-header span {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.service-graph-error,
+.service-graph-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 10px;
+  border: 1px dashed rgba(71, 85, 105, 0.55);
+  background: rgba(12, 21, 33, 0.65);
+  padding: 0.7rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.service-graph-error {
+  border-color: rgba(251, 113, 133, 0.34);
+  color: #fda4af;
 }
 
 .loading-state {

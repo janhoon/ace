@@ -10,6 +10,7 @@ import {
   fetchDataSourceLabels,
   fetchDataSourceLabelValues,
   fetchDataSourceTrace,
+  fetchDataSourceTraceServiceGraph,
   searchDataSourceTraces,
   fetchDataSourceTraceServices,
 } from './datasources'
@@ -258,6 +259,53 @@ describe('datasources API', () => {
         expect.stringContaining('/api/datasources/ds-1/traces/search'),
         expect.objectContaining({ method: 'POST' }),
       )
+    })
+
+    it('fetches trace service graph from datasource', async () => {
+      const graph = {
+        nodes: [
+          {
+            serviceName: 'api',
+            requestCount: 5,
+            errorCount: 1,
+            errorRate: 0.2,
+            averageDurationNano: 1500000,
+          },
+        ],
+        edges: [
+          {
+            source: 'api',
+            target: 'postgres',
+            requestCount: 3,
+            errorCount: 1,
+            errorRate: 0.33,
+            averageDurationNano: 900000,
+          },
+        ],
+        totalRequests: 5,
+        totalErrorCount: 1,
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status: 'success', data: graph }),
+      })
+
+      const result = await fetchDataSourceTraceServiceGraph('ds-1', 'trace-1')
+      expect(result).toEqual(graph)
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/datasources/ds-1/traces/trace-1/service-graph'),
+        expect.any(Object),
+      )
+    })
+
+    it('throws when trace service graph request fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ error: 'forbidden' }),
+      })
+
+      await expect(fetchDataSourceTraceServiceGraph('ds-1', 'trace-1')).rejects.toThrow('forbidden')
     })
 
     it('fetches trace services from datasource', async () => {

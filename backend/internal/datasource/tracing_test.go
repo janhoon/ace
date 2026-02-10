@@ -119,6 +119,121 @@ func TestParseStringSlicePayload(t *testing.T) {
 	}
 }
 
+func TestBuildTraceServiceGraph_AggregatesNodesAndEdges(t *testing.T) {
+	graph := BuildTraceServiceGraph(&Trace{
+		TraceID: "trace-graph-1",
+		Spans: []TraceSpan{
+			{
+				SpanID:            "root",
+				OperationName:     "GET /orders",
+				ServiceName:       "api",
+				StartTimeUnixNano: 100,
+				DurationNano:      1200,
+			},
+			{
+				SpanID:            "db",
+				ParentSpanID:      "root",
+				OperationName:     "SELECT orders",
+				ServiceName:       "postgres",
+				StartTimeUnixNano: 200,
+				DurationNano:      300,
+				Status:            "error",
+			},
+			{
+				SpanID:            "cache",
+				ParentSpanID:      "root",
+				OperationName:     "GET cache",
+				ServiceName:       "redis",
+				StartTimeUnixNano: 250,
+				DurationNano:      200,
+			},
+		},
+	})
+
+	if graph.TotalRequests != 3 {
+		t.Fatalf("expected total requests 3, got %d", graph.TotalRequests)
+	}
+	if graph.TotalErrorCount != 1 {
+		t.Fatalf("expected total error count 1, got %d", graph.TotalErrorCount)
+	}
+
+	if len(graph.Nodes) != 3 {
+		t.Fatalf("expected 3 graph nodes, got %d", len(graph.Nodes))
+	}
+	if len(graph.Edges) != 2 {
+		t.Fatalf("expected 2 graph edges, got %d", len(graph.Edges))
+	}
+
+	nodeByName := map[string]TraceServiceNode{}
+	for _, node := range graph.Nodes {
+		nodeByName[node.ServiceName] = node
+	}
+
+	if nodeByName["api"].RequestCount != 1 {
+		t.Fatalf("expected api request count 1, got %d", nodeByName["api"].RequestCount)
+	}
+	if nodeByName["postgres"].ErrorCount != 1 {
+		t.Fatalf("expected postgres error count 1, got %d", nodeByName["postgres"].ErrorCount)
+	}
+
+	edgeByKey := map[string]TraceServiceEdge{}
+	for _, edge := range graph.Edges {
+		edgeByKey[edge.Source+"->"+edge.Target] = edge
+	}
+
+	postgresEdge, ok := edgeByKey["api->postgres"]
+	if !ok {
+		t.Fatalf("expected edge api->postgres to exist")
+	}
+	if postgresEdge.RequestCount != 1 {
+		t.Fatalf("expected api->postgres request count 1, got %d", postgresEdge.RequestCount)
+	}
+	if postgresEdge.ErrorCount != 1 {
+		t.Fatalf("expected api->postgres error count 1, got %d", postgresEdge.ErrorCount)
+	}
+}
+
+func TestBuildTraceServiceGraph_NormalizesUnknownAndSkipsSameServiceEdges(t *testing.T) {
+	graph := BuildTraceServiceGraph(&Trace{
+		TraceID: "trace-graph-2",
+		Spans: []TraceSpan{
+			{
+				SpanID:        "root",
+				ServiceName:   "",
+				DurationNano:  500,
+				OperationName: "root",
+			},
+			{
+				SpanID:        "child",
+				ParentSpanID:  "root",
+				ServiceName:   "unknown",
+				DurationNano:  250,
+				OperationName: "child",
+			},
+			{
+				SpanID:        "api-child",
+				ParentSpanID:  "api-root",
+				ServiceName:   "api",
+				DurationNano:  120,
+				OperationName: "api-child",
+			},
+			{
+				SpanID:        "api-root",
+				ServiceName:   "api",
+				DurationNano:  210,
+				OperationName: "api-root",
+			},
+		},
+	})
+
+	if len(graph.Nodes) != 2 {
+		t.Fatalf("expected 2 graph nodes, got %d", len(graph.Nodes))
+	}
+	if len(graph.Edges) != 0 {
+		t.Fatalf("expected no cross-service edges, got %d", len(graph.Edges))
+	}
+}
+
 func TestTempoClient_GetTrace(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/traces/trace-123" {

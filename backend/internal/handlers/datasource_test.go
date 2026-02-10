@@ -116,6 +116,21 @@ func TestDataSourceHandler_GetTrace_InvalidUUID(t *testing.T) {
 	}
 }
 
+func TestDataSourceHandler_TraceServiceGraph_InvalidUUID(t *testing.T) {
+	handler := &DataSourceHandler{pool: nil}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/datasources/invalid-uuid/traces/trace-1/service-graph", nil)
+	req.SetPathValue("id", "invalid-uuid")
+	req.SetPathValue("traceId", "trace-1")
+	rr := httptest.NewRecorder()
+
+	handler.TraceServiceGraph(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+}
+
 func TestDataSourceHandler_SearchTraces_InvalidUUID(t *testing.T) {
 	handler := &DataSourceHandler{pool: nil}
 

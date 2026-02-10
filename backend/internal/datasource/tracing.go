@@ -75,6 +75,191 @@ type TraceSummary struct {
 	ErrorSpanCount    int    `json:"errorSpanCount"`
 }
 
+// TraceServiceGraph is an aggregated service dependency graph for a trace.
+type TraceServiceGraph struct {
+	Nodes           []TraceServiceNode `json:"nodes"`
+	Edges           []TraceServiceEdge `json:"edges"`
+	TotalRequests   int                `json:"totalRequests"`
+	TotalErrorCount int                `json:"totalErrorCount"`
+}
+
+// TraceServiceNode represents one service in a dependency graph.
+type TraceServiceNode struct {
+	ServiceName     string  `json:"serviceName"`
+	RequestCount    int     `json:"requestCount"`
+	ErrorCount      int     `json:"errorCount"`
+	ErrorRate       float64 `json:"errorRate"`
+	AverageDuration int64   `json:"averageDurationNano"`
+}
+
+// TraceServiceEdge represents one service-to-service dependency.
+type TraceServiceEdge struct {
+	Source          string  `json:"source"`
+	Target          string  `json:"target"`
+	RequestCount    int     `json:"requestCount"`
+	ErrorCount      int     `json:"errorCount"`
+	ErrorRate       float64 `json:"errorRate"`
+	AverageDuration int64   `json:"averageDurationNano"`
+}
+
+// BuildTraceServiceGraph aggregates spans into service-level dependencies.
+func BuildTraceServiceGraph(trace *Trace) *TraceServiceGraph {
+	empty := &TraceServiceGraph{
+		Nodes: []TraceServiceNode{},
+		Edges: []TraceServiceEdge{},
+	}
+	if trace == nil || len(trace.Spans) == 0 {
+		return empty
+	}
+
+	type serviceNodeAggregate struct {
+		requestCount int
+		errorCount   int
+		durationSum  int64
+	}
+
+	type serviceEdgeAggregate struct {
+		source       string
+		target       string
+		requestCount int
+		errorCount   int
+		durationSum  int64
+	}
+
+	nodeAggregates := make(map[string]*serviceNodeAggregate)
+	edgeAggregates := make(map[string]*serviceEdgeAggregate)
+	spanByID := make(map[string]TraceSpan, len(trace.Spans))
+
+	for _, span := range trace.Spans {
+		if span.SpanID == "" {
+			continue
+		}
+		spanByID[span.SpanID] = span
+	}
+
+	totalRequests := 0
+	totalErrors := 0
+
+	for _, span := range trace.Spans {
+		serviceName := normalizeTraceServiceName(span.ServiceName)
+		spanFailed := strings.EqualFold(span.Status, "error") || hasErrorTag(span.Tags)
+		if spanFailed {
+			totalErrors++
+		}
+
+		node := nodeAggregates[serviceName]
+		if node == nil {
+			node = &serviceNodeAggregate{}
+			nodeAggregates[serviceName] = node
+		}
+
+		node.requestCount++
+		node.durationSum += max(span.DurationNano, 0)
+		if spanFailed {
+			node.errorCount++
+		}
+		totalRequests++
+
+		parentSpanID := strings.TrimSpace(span.ParentSpanID)
+		if parentSpanID == "" {
+			continue
+		}
+
+		parentSpan, ok := spanByID[parentSpanID]
+		if !ok {
+			continue
+		}
+
+		parentServiceName := normalizeTraceServiceName(parentSpan.ServiceName)
+		if parentServiceName == serviceName {
+			continue
+		}
+
+		edgeKey := parentServiceName + "\x00" + serviceName
+		edge := edgeAggregates[edgeKey]
+		if edge == nil {
+			edge = &serviceEdgeAggregate{
+				source: parentServiceName,
+				target: serviceName,
+			}
+			edgeAggregates[edgeKey] = edge
+		}
+
+		edge.requestCount++
+		edge.durationSum += max(span.DurationNano, 0)
+		if spanFailed {
+			edge.errorCount++
+		}
+	}
+
+	nodeNames := make([]string, 0, len(nodeAggregates))
+	for serviceName := range nodeAggregates {
+		nodeNames = append(nodeNames, serviceName)
+	}
+	sort.Strings(nodeNames)
+
+	nodes := make([]TraceServiceNode, 0, len(nodeNames))
+	for _, serviceName := range nodeNames {
+		aggregate := nodeAggregates[serviceName]
+		averageDuration := int64(0)
+		errorRate := 0.0
+		if aggregate.requestCount > 0 {
+			averageDuration = aggregate.durationSum / int64(aggregate.requestCount)
+			errorRate = float64(aggregate.errorCount) / float64(aggregate.requestCount)
+		}
+
+		nodes = append(nodes, TraceServiceNode{
+			ServiceName:     serviceName,
+			RequestCount:    aggregate.requestCount,
+			ErrorCount:      aggregate.errorCount,
+			ErrorRate:       errorRate,
+			AverageDuration: averageDuration,
+		})
+	}
+
+	edges := make([]TraceServiceEdge, 0, len(edgeAggregates))
+	for _, aggregate := range edgeAggregates {
+		averageDuration := int64(0)
+		errorRate := 0.0
+		if aggregate.requestCount > 0 {
+			averageDuration = aggregate.durationSum / int64(aggregate.requestCount)
+			errorRate = float64(aggregate.errorCount) / float64(aggregate.requestCount)
+		}
+
+		edges = append(edges, TraceServiceEdge{
+			Source:          aggregate.source,
+			Target:          aggregate.target,
+			RequestCount:    aggregate.requestCount,
+			ErrorCount:      aggregate.errorCount,
+			ErrorRate:       errorRate,
+			AverageDuration: averageDuration,
+		})
+	}
+
+	sort.Slice(edges, func(i, j int) bool {
+		if edges[i].Source == edges[j].Source {
+			return edges[i].Target < edges[j].Target
+		}
+		return edges[i].Source < edges[j].Source
+	})
+
+	return &TraceServiceGraph{
+		Nodes:           nodes,
+		Edges:           edges,
+		TotalRequests:   totalRequests,
+		TotalErrorCount: totalErrors,
+	}
+}
+
+func normalizeTraceServiceName(serviceName string) string {
+	trimmed := strings.TrimSpace(serviceName)
+	if trimmed == "" {
+		return "unknown"
+	}
+
+	return trimmed
+}
+
 func NewTracingClient(ds models.DataSource) (TracingClient, error) {
 	switch ds.Type {
 	case models.DataSourceTempo:

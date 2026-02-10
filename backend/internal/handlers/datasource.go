@@ -522,6 +522,80 @@ func (h *DataSourceHandler) GetTrace(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// TraceServiceGraph returns a service dependency graph for a trace.
+func (h *DataSourceHandler) TraceServiceGraph(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, `{"error":"invalid datasource id"}`, http.StatusBadRequest)
+		return
+	}
+
+	traceID := strings.TrimSpace(r.PathValue("traceId"))
+	if traceID == "" {
+		http.Error(w, `{"error":"trace id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	var ds models.DataSource
+	err = h.pool.QueryRow(ctx,
+		`SELECT id, organization_id, name, type, url, is_default, auth_type, auth_config, created_at, updated_at
+		 FROM datasources WHERE id = $1`, id,
+	).Scan(&ds.ID, &ds.OrganizationID, &ds.Name, &ds.Type, &ds.URL, &ds.IsDefault, &ds.AuthType, &ds.AuthConfig, &ds.CreatedAt, &ds.UpdatedAt)
+	if err != nil {
+		http.Error(w, `{"error":"datasource not found"}`, http.StatusNotFound)
+		return
+	}
+
+	_, err = h.checkOrgMembership(ctx, userID, ds.OrganizationID)
+	if err != nil {
+		http.Error(w, `{"error":"not a member of this organization"}`, http.StatusForbidden)
+		return
+	}
+
+	if !ds.Type.IsTraces() {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "trace endpoints are only supported for tracing datasources"})
+		return
+	}
+
+	client, err := datasource.NewTracingClient(ds)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create tracing client: " + err.Error()})
+		return
+	}
+
+	trace, err := client.GetTrace(ctx, traceID)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to fetch trace: " + err.Error()})
+		return
+	}
+
+	graph := datasource.BuildTraceServiceGraph(trace)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(struct {
+		Status string                        `json:"status"`
+		Data   *datasource.TraceServiceGraph `json:"data"`
+	}{
+		Status: "success",
+		Data:   graph,
+	})
+}
+
 // SearchTraces searches traces on a tracing datasource.
 func (h *DataSourceHandler) SearchTraces(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.GetUserID(r.Context())

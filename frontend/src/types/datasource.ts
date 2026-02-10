@@ -88,6 +88,30 @@ export interface Trace {
   durationNano: number
 }
 
+export interface TraceServiceGraphNode {
+  serviceName: string
+  requestCount: number
+  errorCount: number
+  errorRate: number
+  averageDurationNano: number
+}
+
+export interface TraceServiceGraphEdge {
+  source: string
+  target: string
+  requestCount: number
+  errorCount: number
+  errorRate: number
+  averageDurationNano: number
+}
+
+export interface TraceServiceGraph {
+  nodes: TraceServiceGraphNode[]
+  edges: TraceServiceGraphEdge[]
+  totalRequests: number
+  totalErrorCount: number
+}
+
 export interface TraceSummary {
   traceId: string
   rootServiceName?: string

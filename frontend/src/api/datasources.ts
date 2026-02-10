@@ -7,6 +7,7 @@ import type {
   DataSourceLogStreamRequest,
   LogEntry,
   Trace,
+  TraceServiceGraph,
   TraceSummary,
   TraceSearchRequest,
 } from '../types/datasource'
@@ -123,6 +124,12 @@ interface TraceSearchResponse {
   error?: string
 }
 
+interface TraceServiceGraphResponse {
+  status: 'success' | 'error'
+  data?: TraceServiceGraph
+  error?: string
+}
+
 export async function fetchDataSourceTrace(id: string, traceId: string): Promise<Trace> {
   const response = await fetch(`${API_BASE}/api/datasources/${id}/traces/${encodeURIComponent(traceId)}`, {
     headers: getAuthHeaders(),
@@ -136,6 +143,30 @@ export async function fetchDataSourceTrace(id: string, traceId: string): Promise
   const body = await response.json() as TraceResponse
   if (body.status === 'error' || !body.data) {
     throw new Error(body.error || 'Failed to fetch trace')
+  }
+
+  return body.data
+}
+
+export async function fetchDataSourceTraceServiceGraph(
+  id: string,
+  traceId: string,
+): Promise<TraceServiceGraph> {
+  const response = await fetch(
+    `${API_BASE}/api/datasources/${id}/traces/${encodeURIComponent(traceId)}/service-graph`,
+    {
+      headers: getAuthHeaders(),
+    },
+  )
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to fetch trace service graph')
+  }
+
+  const body = await response.json() as TraceServiceGraphResponse
+  if (body.status === 'error' || !body.data) {
+    throw new Error(body.error || 'Failed to fetch trace service graph')
   }
 
   return body.data

@@ -673,7 +673,7 @@
         "Click node/edge to filter traces",
         "Backend aggregates spans into service graph"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "TRACING-PANELS-001",

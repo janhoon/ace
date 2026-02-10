@@ -70,3 +70,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `frontend/src/components/TraceSpanDetailsPanel.vue`, `frontend/src/components/TraceSpanDetailsPanel.spec.ts`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/views/ExploreTraces.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd frontend && npm run type-check && npm run test`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and no skill is installed)
+
+## Task TRACING-SERVICE-GRAPH-001: Tracing 5/7: Service dependency graph visualization - 2026-02-10 09:38 UTC
+- What was done: Added backend service-graph aggregation for traces (service nodes, dependency edges, request/error rates, average duration) with a new trace service-graph API endpoint, then integrated a frontend service dependency graph panel into Explore Traces with node/edge interactions that trigger trace filtering plus error-state handling when graph loading fails.
+- Files changed: `backend/internal/datasource/tracing.go`, `backend/internal/datasource/tracing_test.go`, `backend/internal/handlers/datasource.go`, `backend/internal/handlers/datasource_test.go`, `backend/cmd/api/main.go`, `frontend/src/types/datasource.ts`, `frontend/src/api/datasources.ts`, `frontend/src/api/datasources.spec.ts`, `frontend/src/components/TraceServiceGraph.vue`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/views/ExploreTraces.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd frontend && npm run type-check && npm run test`; `cd backend && go test ./...`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and no skill is installed)

@@ -6,6 +6,7 @@ const mockFetchDatasources = vi.hoisted(() => vi.fn())
 const mockSearchDataSourceTraces = vi.hoisted(() => vi.fn())
 const mockFetchDataSourceTrace = vi.hoisted(() => vi.fn())
 const mockFetchDataSourceTraceServices = vi.hoisted(() => vi.fn())
+const mockFetchDataSourceTraceServiceGraph = vi.hoisted(() => vi.fn())
 
 vi.mock('../components/TimeRangePicker.vue', () => ({
   default: {
@@ -28,6 +29,25 @@ vi.mock('../components/TraceTimeline.vue', () => ({
           @click="$emit('select-span', trace.spans[0])"
         >
           Select span
+        </button>
+      </div>
+    `,
+  },
+}))
+
+vi.mock('../components/TraceServiceGraph.vue', () => ({
+  default: {
+    name: 'TraceServiceGraph',
+    props: ['graph'],
+    template: `
+      <div class="mock-trace-service-graph">
+        TraceServiceGraph Mock
+        <button
+          class="mock-select-service"
+          type="button"
+          @click="$emit('select-service', graph.nodes[0]?.serviceName || 'api')"
+        >
+          Select service
         </button>
       </div>
     `,
@@ -83,6 +103,7 @@ vi.mock('../api/datasources', () => ({
   searchDataSourceTraces: mockSearchDataSourceTraces,
   fetchDataSourceTrace: mockFetchDataSourceTrace,
   fetchDataSourceTraceServices: mockFetchDataSourceTraceServices,
+  fetchDataSourceTraceServiceGraph: mockFetchDataSourceTraceServiceGraph,
 }))
 
 describe('ExploreTraces', () => {
@@ -97,6 +118,20 @@ describe('ExploreTraces', () => {
       services: ['api'],
       startTimeUnixNano: 1_700_000_000_000_000_000,
       durationNano: 1_500_000,
+    })
+    mockFetchDataSourceTraceServiceGraph.mockResolvedValue({
+      nodes: [
+        {
+          serviceName: 'api',
+          requestCount: 2,
+          errorCount: 0,
+          errorRate: 0,
+          averageDurationNano: 1_200_000,
+        },
+      ],
+      edges: [],
+      totalRequests: 2,
+      totalErrorCount: 0,
     })
   })
 
@@ -194,7 +229,9 @@ describe('ExploreTraces', () => {
     await flushPromises()
 
     expect(mockFetchDataSourceTrace).toHaveBeenCalledWith('ds-trace-1', 'trace-abc')
+    expect(mockFetchDataSourceTraceServiceGraph).toHaveBeenCalledWith('ds-trace-1', 'trace-abc')
     expect(wrapper.find('.mock-trace-timeline').exists()).toBe(true)
+    expect(wrapper.find('.mock-trace-service-graph').exists()).toBe(true)
 
     await wrapper.find('.mock-select-span').trigger('click')
     await flushPromises()
@@ -202,6 +239,80 @@ describe('ExploreTraces', () => {
     expect(wrapper.find('.trace-span-details').exists()).toBe(true)
     expect(wrapper.find('.trace-span-details').text()).toContain('Span details')
     expect(wrapper.find('.trace-span-details').text()).toContain('GET /health')
+  })
+
+  it('shows service graph fetch error without breaking trace view', async () => {
+    mockSearchDataSourceTraces.mockResolvedValue([
+      {
+        traceId: 'trace-abc',
+        rootServiceName: 'api',
+        rootOperationName: 'GET /health',
+        startTimeUnixNano: 1_700_000_000_000_000_000,
+        durationNano: 1_500_000,
+        spanCount: 5,
+        serviceCount: 2,
+        errorSpanCount: 0,
+      },
+    ])
+    mockFetchDataSourceTraceServiceGraph.mockRejectedValue(new Error('graph fetch failed'))
+
+    const wrapper = mount(ExploreTraces)
+    await wrapper.find('.btn-search').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.trace-result-row').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.service-graph-error').exists()).toBe(true)
+    expect(wrapper.find('.service-graph-error').text()).toContain('graph fetch failed')
+    expect(wrapper.find('.mock-trace-timeline').exists()).toBe(true)
+  })
+
+  it('filters traces when selecting a service from graph', async () => {
+    mockSearchDataSourceTraces
+      .mockResolvedValueOnce([
+        {
+          traceId: 'trace-abc',
+          rootServiceName: 'api',
+          rootOperationName: 'GET /health',
+          startTimeUnixNano: 1_700_000_000_000_000_000,
+          durationNano: 1_500_000,
+          spanCount: 5,
+          serviceCount: 2,
+          errorSpanCount: 0,
+        },
+      ])
+      .mockResolvedValue([])
+
+    mockFetchDataSourceTraceServiceGraph.mockResolvedValue({
+      nodes: [
+        {
+          serviceName: 'api',
+          requestCount: 3,
+          errorCount: 0,
+          errorRate: 0,
+          averageDurationNano: 1_000_000,
+        },
+      ],
+      edges: [],
+      totalRequests: 3,
+      totalErrorCount: 0,
+    })
+
+    const wrapper = mount(ExploreTraces)
+    await wrapper.find('.btn-search').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.trace-result-row').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.mock-select-service').trigger('click')
+    await flushPromises()
+
+    expect(mockSearchDataSourceTraces).toHaveBeenLastCalledWith(
+      'ds-trace-1',
+      expect.objectContaining({ service: 'api' }),
+    )
   })
 
   it('shows an error when trace search fails', async () => {
