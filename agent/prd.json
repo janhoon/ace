@@ -693,7 +693,7 @@
         "Both panels configurable in dashboard editor",
         "Click trace to open timeline view"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "TRACING-INTEGRATION-001",

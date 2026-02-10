@@ -29,6 +29,15 @@ import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
 import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 
+interface TraceNavigationContext {
+  datasourceId?: string
+  traceId?: string
+  createdAt?: number
+}
+
+const TRACE_NAVIGATION_CONTEXT_KEY = 'dashboard_trace_navigation'
+const TRACE_NAVIGATION_MAX_AGE_MS = 5 * 60 * 1000
+
 const { timeRange } = useTimeRange()
 const { currentOrg } = useOrganization()
 const { tracingDatasources, fetchDatasources } = useDatasource()
@@ -64,6 +73,8 @@ const activeTrace = ref<Trace | null>(null)
 const activeServiceGraph = ref<TraceServiceGraphModel | null>(null)
 const selectedSpan = ref<TraceSpan | null>(null)
 const loadingServiceGraph = ref(false)
+const pendingTraceDatasourceId = ref('')
+const pendingTraceId = ref('')
 
 const hasTracingDatasources = computed(() => tracingDatasources.value.length > 0)
 const activeDatasource = computed(
@@ -228,6 +239,57 @@ function handleSelectEdgeFromGraph(edge: { source: string, target: string }) {
   void runSearch()
 }
 
+function consumeTraceNavigationContext() {
+  let rawContext: string | null = null
+  try {
+    rawContext = localStorage.getItem(TRACE_NAVIGATION_CONTEXT_KEY)
+    localStorage.removeItem(TRACE_NAVIGATION_CONTEXT_KEY)
+  } catch {
+    return
+  }
+
+  if (!rawContext) {
+    return
+  }
+
+  try {
+    const parsed = JSON.parse(rawContext) as TraceNavigationContext
+    if (!parsed.traceId || typeof parsed.traceId !== 'string') {
+      return
+    }
+
+    if (typeof parsed.createdAt === 'number') {
+      const ageMs = Date.now() - parsed.createdAt
+      if (ageMs > TRACE_NAVIGATION_MAX_AGE_MS) {
+        return
+      }
+    }
+
+    pendingTraceId.value = parsed.traceId.trim()
+    pendingTraceDatasourceId.value = typeof parsed.datasourceId === 'string'
+      ? parsed.datasourceId.trim()
+      : ''
+  } catch {
+    // Ignore malformed navigation context.
+  }
+}
+
+async function tryLoadPendingTrace() {
+  if (!pendingTraceId.value || !selectedDatasourceId.value) {
+    return
+  }
+
+  if (pendingTraceDatasourceId.value && pendingTraceDatasourceId.value !== selectedDatasourceId.value) {
+    return
+  }
+
+  const traceId = pendingTraceId.value
+  pendingTraceId.value = ''
+  pendingTraceDatasourceId.value = ''
+  traceIdInput.value = traceId
+  await loadTrace(traceId)
+}
+
 watch(
   tracingDatasources,
   (sources) => {
@@ -238,6 +300,15 @@ watch(
 
     const hasSelected = sources.some((ds) => ds.id === selectedDatasourceId.value)
     if (!hasSelected) {
+      const pendingDatasource = pendingTraceDatasourceId.value
+        ? sources.find((ds) => ds.id === pendingTraceDatasourceId.value)
+        : null
+
+      if (pendingDatasource) {
+        selectedDatasourceId.value = pendingDatasource.id
+        return
+      }
+
       const defaultDatasource = sources.find((ds) => ds.is_default)
       selectedDatasourceId.value = defaultDatasource?.id || sources[0].id
     }
@@ -256,7 +327,7 @@ watch(
 
 watch(
   selectedDatasourceId,
-  () => {
+  async () => {
     traceSummaries.value = []
     activeTrace.value = null
     activeServiceGraph.value = null
@@ -264,12 +335,16 @@ watch(
     loadingServiceGraph.value = false
     selectedTraceId.value = ''
     selectedSpan.value = null
-    void loadServices()
+
+    await loadServices()
+    await tryLoadPendingTrace()
   },
   { immediate: true },
 )
 
 onMounted(() => {
+  consumeTraceNavigationContext()
+  void tryLoadPendingTrace()
   document.addEventListener('click', handleDocumentClick)
   if (currentOrg.value) {
     fetchDatasources(currentOrg.value.id)

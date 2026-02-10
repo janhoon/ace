@@ -109,6 +109,7 @@ vi.mock('../api/datasources', () => ({
 describe('ExploreTraces', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     mockFetchDatasources.mockResolvedValue(undefined)
     mockFetchDataSourceTraceServices.mockResolvedValue(['api', 'worker'])
     mockSearchDataSourceTraces.mockResolvedValue([])
@@ -324,5 +325,21 @@ describe('ExploreTraces', () => {
 
     expect(wrapper.find('.query-error').exists()).toBe(true)
     expect(wrapper.find('.query-error').text()).toContain('search failed')
+  })
+
+  it('auto-loads trace from dashboard navigation context', async () => {
+    localStorage.setItem('dashboard_trace_navigation', JSON.stringify({
+      datasourceId: 'ds-trace-1',
+      traceId: 'trace-from-dashboard',
+      createdAt: Date.now(),
+    }))
+
+    const wrapper = mount(ExploreTraces)
+    await flushPromises()
+
+    expect(mockFetchDataSourceTrace).toHaveBeenCalledWith('ds-trace-1', 'trace-from-dashboard')
+    expect(mockFetchDataSourceTraceServiceGraph).toHaveBeenCalledWith('ds-trace-1', 'trace-from-dashboard')
+    expect((wrapper.get('#trace-id-input').element as HTMLInputElement).value).toBe('trace-from-dashboard')
+    expect(localStorage.getItem('dashboard_trace_navigation')).toBeNull()
   })
 })

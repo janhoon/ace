@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { X, Plus, Trash2 } from 'lucide-vue-next'
 import type { Panel } from '../types/panel'
-import type { DataSource } from '../types/datasource'
+import { isTracingType } from '../types/datasource'
 import { createPanel, updatePanel } from '../api/panels'
 import { useDatasource } from '../composables/useDatasource'
 import { useOrganization } from '../composables/useOrganization'
@@ -96,6 +96,14 @@ const statThresholds = ref<Threshold[]>(
     ? (props.panel.query.thresholds as Threshold[])
     : []
 )
+const traceService = ref(
+  typeof props.panel?.query?.service === 'string' ? props.panel.query.service : ''
+)
+const traceLimit = ref(
+  typeof props.panel?.query?.limit === 'number' && Number.isFinite(props.panel.query.limit)
+    ? Math.max(1, Math.min(200, Math.floor(props.panel.query.limit)))
+    : 50
+)
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -103,6 +111,33 @@ const error = ref<string | null>(null)
 const isGaugeType = computed(() => panelType.value === 'gauge')
 const isPieType = computed(() => panelType.value === 'pie')
 const isStatType = computed(() => panelType.value === 'stat')
+const isTracePanelType = computed(
+  () => panelType.value === 'trace_list' || panelType.value === 'trace_heatmap'
+)
+const availableDatasources = computed(() => {
+  if (isTracePanelType.value) {
+    return datasources.value.filter((datasource) => isTracingType(datasource.type))
+  }
+
+  return datasources.value
+})
+
+watch(
+  [panelType, datasources],
+  () => {
+    if (isTracePanelType.value) {
+      if (!availableDatasources.value.some((datasource) => datasource.id === selectedDatasourceId.value)) {
+        selectedDatasourceId.value = availableDatasources.value[0]?.id || ''
+      }
+      return
+    }
+
+    if (selectedDatasourceId.value && !datasources.value.some((datasource) => datasource.id === selectedDatasourceId.value)) {
+      selectedDatasourceId.value = ''
+    }
+  },
+  { immediate: true }
+)
 
 function addThreshold() {
   const lastValue = gaugeThresholds.value.length > 0
@@ -132,14 +167,36 @@ async function handleSubmit() {
     return
   }
 
+  if (isTracePanelType.value && !selectedDatasourceId.value) {
+    error.value = 'Tracing datasource is required for trace panels'
+    return
+  }
+
   // Build query config
   const query: Record<string, unknown> = {}
 
   if (selectedDatasourceId.value) {
     query.datasource_id = selectedDatasourceId.value
-    query.expr = promqlQuery.value.trim()
-  } else if (promqlQuery.value.trim()) {
-    query.promql = promqlQuery.value.trim()
+  }
+
+  const trimmedQuery = promqlQuery.value.trim()
+  if (trimmedQuery) {
+    if (selectedDatasourceId.value) {
+      query.expr = trimmedQuery
+    } else {
+      query.promql = trimmedQuery
+    }
+  }
+
+  if (isTracePanelType.value) {
+    const trimmedService = traceService.value.trim()
+    if (trimmedService) {
+      query.service = trimmedService
+    }
+    const normalizedTraceLimit = Number.isFinite(traceLimit.value)
+      ? Math.max(1, Math.min(200, Math.floor(traceLimit.value)))
+      : 50
+    query.limit = normalizedTraceLimit
   }
 
   // Add gauge-specific config if gauge type is selected
@@ -232,6 +289,8 @@ async function handleSubmit() {
               <option value="stat">Stat</option>
               <option value="table">Table</option>
               <option value="logs">Logs</option>
+              <option value="trace_list">Trace List</option>
+              <option value="trace_heatmap">Trace Heatmap</option>
             </select>
           </div>
         </div>
@@ -239,19 +298,50 @@ async function handleSubmit() {
         <div v-if="datasources.length > 0" class="form-group">
           <label for="datasource">Data Source</label>
           <select id="datasource" v-model="selectedDatasourceId" :disabled="loading">
-            <option value="">Default (Prometheus)</option>
-            <option v-for="ds in datasources" :key="ds.id" :value="ds.id">
+            <option v-if="!isTracePanelType" value="">Default (Prometheus)</option>
+            <option v-else value="">Select tracing datasource</option>
+            <option v-for="ds in availableDatasources" :key="ds.id" :value="ds.id">
               {{ ds.name }} ({{ ds.type }})
             </option>
           </select>
         </div>
 
         <div class="form-group query-builder-group">
-          <label>Query</label>
+          <label>{{ isTracePanelType ? 'Trace Search Query' : 'Query' }}</label>
           <QueryBuilder
             v-model="promqlQuery"
             :disabled="loading"
           />
+        </div>
+
+        <div v-if="isTracePanelType" class="trace-config">
+          <div class="config-header">
+            <h4>Trace Panel Options</h4>
+          </div>
+
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label for="trace-service-filter">Service Filter (optional)</label>
+              <input
+                id="trace-service-filter"
+                v-model="traceService"
+                type="text"
+                placeholder="api-service"
+                :disabled="loading"
+              />
+            </div>
+            <div class="form-group">
+              <label for="trace-limit">Max traces</label>
+              <input
+                id="trace-limit"
+                v-model.number="traceLimit"
+                type="number"
+                min="1"
+                max="200"
+                :disabled="loading"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Gauge Configuration -->
@@ -706,6 +796,7 @@ form {
 }
 
 /* Gauge configuration styles */
+.trace-config,
 .gauge-config {
   border-top: 1px solid var(--border-primary);
   padding-top: 1.25rem;

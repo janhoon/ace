@@ -2,25 +2,28 @@
 import { computed, ref, watch } from 'vue'
 import { Pencil, Trash2, AlertCircle, BarChart3 } from 'lucide-vue-next'
 import type { Panel } from '../types/panel'
-import type { LogEntry } from '../types/datasource'
+import type { LogEntry, TraceSummary } from '../types/datasource'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useProm } from '../composables/useProm'
-import { queryDataSource } from '../api/datasources'
-import LineChart, { type ChartSeries } from './LineChart.vue'
+import { queryDataSource, searchDataSourceTraces } from '../api/datasources'
+import LineChart from './LineChart.vue'
 import BarChart from './BarChart.vue'
 import GaugeChart, { type Threshold } from './GaugeChart.vue'
 import PieChart, { type PieDataItem } from './PieChart.vue'
 import StatPanel, { type DataPoint } from './StatPanel.vue'
 import TablePanel from './TablePanel.vue'
 import LogViewer from './LogViewer.vue'
+import TraceListPanel from './TraceListPanel.vue'
+import TraceHeatmapPanel from './TraceHeatmapPanel.vue'
 
 const props = defineProps<{
   panel: Panel
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   edit: [panel: Panel]
   delete: [panel: Panel]
+  'open-trace': [payload: { datasourceId: string, traceId: string }]
 }>()
 
 const { timeRange, onRefresh } = useTimeRange()
@@ -53,15 +56,51 @@ const { chartData: promChartData, loading: promLoading, error: promError, fetch:
 const dsLoading = ref(false)
 const dsError = ref<string | null>(null)
 const dsLogs = ref<LogEntry[]>([])
+const dsTraceSummaries = ref<TraceSummary[]>([])
 const dsChartData = ref<{ series: { name: string; data: { timestamp: number; value: number }[] }[] }>({ series: [] })
 
+const traceServiceFilter = computed(() => {
+  return typeof props.panel.query?.service === 'string' ? props.panel.query.service : ''
+})
+
+const traceSearchLimit = computed(() => {
+  const rawLimit = props.panel.query?.limit
+  if (typeof rawLimit !== 'number' || !Number.isFinite(rawLimit)) {
+    return 50
+  }
+
+  return Math.max(1, Math.min(200, Math.floor(rawLimit)))
+})
+
 async function fetchDatasourceData() {
-  if (!datasourceId.value || !queryExpr.value) return
+  if (!datasourceId.value) return
+
+  const isTracePanel = props.panel.type === 'trace_list' || props.panel.type === 'trace_heatmap'
 
   dsLoading.value = true
   dsError.value = null
 
   try {
+    if (isTracePanel) {
+      dsTraceSummaries.value = await searchDataSourceTraces(datasourceId.value, {
+        query: queryExpr.value.trim() || undefined,
+        service: traceServiceFilter.value || undefined,
+        start: startRef.value,
+        end: endRef.value,
+        limit: traceSearchLimit.value,
+      })
+      dsLogs.value = []
+      dsChartData.value = { series: [] }
+      return
+    }
+
+    if (!queryExpr.value) {
+      dsLogs.value = []
+      dsTraceSummaries.value = []
+      dsChartData.value = { series: [] }
+      return
+    }
+
     const result = await queryDataSource(datasourceId.value, {
       query: queryExpr.value,
       start: startRef.value,
@@ -72,14 +111,17 @@ async function fetchDatasourceData() {
 
     if (result.status === 'error') {
       dsError.value = result.error || 'Query failed'
+      dsTraceSummaries.value = []
       return
     }
 
     if (result.resultType === 'logs' && result.data?.logs) {
       dsLogs.value = result.data.logs
+      dsTraceSummaries.value = []
       dsChartData.value = { series: [] }
     } else if (result.data?.result) {
       dsLogs.value = []
+      dsTraceSummaries.value = []
       dsChartData.value = {
         series: result.data.result.map((r) => {
           const labelParts: string[] = []
@@ -100,14 +142,16 @@ async function fetchDatasourceData() {
     }
   } catch (e) {
     dsError.value = e instanceof Error ? e.message : 'Query failed'
+    dsTraceSummaries.value = []
   } finally {
     dsLoading.value = false
   }
 }
 
 // Fetch datasource data when params change
-watch([datasourceId, queryExpr, startRef, endRef], () => {
-  if (datasourceId.value && queryExpr.value) {
+watch([datasourceId, queryExpr, traceServiceFilter, traceSearchLimit, startRef, endRef], () => {
+  const isTracePanel = props.panel.type === 'trace_list' || props.panel.type === 'trace_heatmap'
+  if (datasourceId.value && (isTracePanel || queryExpr.value)) {
     fetchDatasourceData()
   }
 }, { immediate: true })
@@ -117,6 +161,7 @@ const loading = computed(() => datasourceId.value ? dsLoading.value : promLoadin
 const error = computed(() => datasourceId.value ? dsError.value : promError.value)
 const chartData = computed(() => datasourceId.value ? dsChartData.value : promChartData.value)
 const logEntries = computed(() => dsLogs.value)
+const traceSummaries = computed(() => dsTraceSummaries.value)
 
 function refetch() {
   if (datasourceId.value) {
@@ -219,7 +264,6 @@ const statConfig = computed(() => {
   }
 })
 
-const hasQuery = computed(() => !!queryExpr.value)
 const isLineChart = computed(() => props.panel.type === 'line_chart')
 const isBarChart = computed(() => props.panel.type === 'bar_chart')
 const isGaugeChart = computed(() => props.panel.type === 'gauge')
@@ -227,6 +271,26 @@ const isPieChart = computed(() => props.panel.type === 'pie')
 const isStatPanel = computed(() => props.panel.type === 'stat')
 const isTablePanel = computed(() => props.panel.type === 'table')
 const isLogPanel = computed(() => props.panel.type === 'logs')
+const isTraceListPanel = computed(() => props.panel.type === 'trace_list')
+const isTraceHeatmapPanel = computed(() => props.panel.type === 'trace_heatmap')
+const hasQuery = computed(() => {
+  if (isTraceListPanel.value || isTraceHeatmapPanel.value) {
+    return !!datasourceId.value
+  }
+
+  return !!queryExpr.value
+})
+
+function handleOpenTrace(traceId: string) {
+  if (!datasourceId.value) {
+    return
+  }
+
+  emit('open-trace', {
+    datasourceId: datasourceId.value,
+    traceId,
+  })
+}
 </script>
 
 <template>
@@ -299,7 +363,16 @@ const isLogPanel = computed(() => props.panel.type === 'logs')
       <div v-else-if="isLogPanel && logEntries.length > 0" class="chart-container">
         <LogViewer :logs="logEntries" />
       </div>
-      <div v-else-if="chartSeries.length === 0 && logEntries.length === 0" class="panel-state panel-no-data">
+      <div v-else-if="isTraceListPanel && traceSummaries.length > 0" class="chart-container">
+        <TraceListPanel :traces="traceSummaries" @open-trace="handleOpenTrace" />
+      </div>
+      <div v-else-if="isTraceHeatmapPanel && traceSummaries.length > 0" class="chart-container">
+        <TraceHeatmapPanel :traces="traceSummaries" @open-trace="handleOpenTrace" />
+      </div>
+      <div
+        v-else-if="chartSeries.length === 0 && logEntries.length === 0 && traceSummaries.length === 0"
+        class="panel-state panel-no-data"
+      >
         <AlertCircle :size="48" class="icon-warning" />
         <p class="text-muted">No data available</p>
       </div>

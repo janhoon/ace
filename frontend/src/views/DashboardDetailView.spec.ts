@@ -153,6 +153,7 @@ describe('DashboardDetailView', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-02-02T12:00:00Z'))
     mockCurrentOrg.value.role = 'admin'
+    localStorage.clear()
   })
 
   afterEach(() => {
@@ -272,5 +273,21 @@ describe('DashboardDetailView', () => {
 
     expect(wrapper.find('.state-container').exists()).toBe(true)
     expect(wrapper.text()).toContain('No panels yet')
+  })
+
+  it('navigates to traces explorer when a trace row is selected from panel', async () => {
+    const wrapper = mount(DashboardDetailView)
+    await flushPromises()
+
+    const panel = wrapper.findComponent({ name: 'Panel' })
+    panel.vm.$emit('open-trace', { datasourceId: 'ds-trace-1', traceId: 'trace-abc' })
+    await flushPromises()
+
+    expect(mockPush).toHaveBeenCalledWith('/explore/traces')
+    expect(JSON.parse(localStorage.getItem('dashboard_trace_navigation') || '{}')).toEqual({
+      datasourceId: 'ds-trace-1',
+      traceId: 'trace-abc',
+      createdAt: Date.now(),
+    })
   })
 })

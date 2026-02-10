@@ -36,6 +36,7 @@ interface DashboardViewSettings {
 }
 
 const DASHBOARD_VIEW_SETTINGS_KEY = 'dashboard_view_settings'
+const TRACE_NAVIGATION_CONTEXT_KEY = 'dashboard_trace_navigation'
 
 const dashboardSettings = ref<DashboardViewSettings>({
   timeRangePreset: '1h',
@@ -212,6 +213,23 @@ function openDashboardSettings() {
   router.push(`/dashboards/${dashboardId}/settings/general`)
 }
 
+function openTraceTimeline(payload: { datasourceId: string, traceId: string }) {
+  try {
+    localStorage.setItem(
+      TRACE_NAVIGATION_CONTEXT_KEY,
+      JSON.stringify({
+        datasourceId: payload.datasourceId,
+        traceId: payload.traceId,
+        createdAt: Date.now(),
+      }),
+    )
+  } catch {
+    // Ignore localStorage write issues; navigation still works.
+  }
+
+  router.push('/explore/traces')
+}
+
 // Handle layout changes (drag/resize)
 function onLayoutUpdated(newLayout: LayoutItem[]) {
   // Update local panels state with new positions
@@ -379,6 +397,7 @@ onUnmounted(() => {
             :panel="getPanelById(item.i)!"
             @edit="openEditPanel"
             @delete="confirmDeletePanel"
+            @open-trace="openTraceTimeline"
           />
         </GridItem>
       </GridLayout>

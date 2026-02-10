@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { computed } from 'vue'
 import Panel from './Panel.vue'
+
+const mockQueryDataSource = vi.hoisted(() => vi.fn())
+const mockSearchDataSourceTraces = vi.hoisted(() => vi.fn())
 
 // Mock state that can be controlled per test
 let mockLoading = false
@@ -32,12 +35,44 @@ vi.mock('../composables/useProm', () => ({
   }),
 }))
 
+vi.mock('../api/datasources', () => ({
+  queryDataSource: mockQueryDataSource,
+  searchDataSourceTraces: mockSearchDataSourceTraces,
+}))
+
 // Mock LineChart component
 vi.mock('./LineChart.vue', () => ({
   default: {
     name: 'LineChart',
     props: ['series'],
     template: '<div class="mock-line-chart">LineChart Mock</div>',
+  },
+}))
+
+vi.mock('./TraceListPanel.vue', () => ({
+  default: {
+    name: 'TraceListPanel',
+    props: ['traces'],
+    template: `
+      <div class="mock-trace-list-panel">
+        <button
+          v-if="traces.length > 0"
+          class="mock-open-trace"
+          type="button"
+          @click="$emit('open-trace', traces[0].traceId)"
+        >
+          Open trace
+        </button>
+      </div>
+    `,
+  },
+}))
+
+vi.mock('./TraceHeatmapPanel.vue', () => ({
+  default: {
+    name: 'TraceHeatmapPanel',
+    props: ['traces'],
+    template: '<div class="mock-trace-heatmap-panel">TraceHeatmapPanel Mock</div>',
   },
 }))
 
@@ -57,6 +92,12 @@ describe('Panel', () => {
     mockLoading = false
     mockError = null
     mockChartSeries = []
+    mockQueryDataSource.mockResolvedValue({
+      status: 'success',
+      resultType: 'metrics',
+      data: { resultType: 'matrix', result: [] },
+    })
+    mockSearchDataSourceTraces.mockResolvedValue([])
     vi.clearAllMocks()
   })
 
@@ -173,5 +214,98 @@ describe('Panel', () => {
 
     expect(wrapper.find('.panel-no-data').exists()).toBe(true)
     expect(wrapper.text()).toContain('No data')
+  })
+
+  it('renders trace list panel for trace_list type', async () => {
+    mockSearchDataSourceTraces.mockResolvedValue([
+      {
+        traceId: 'trace-1',
+        startTimeUnixNano: 1_700_000_000_000_000_000,
+        durationNano: 1_500_000,
+        spanCount: 5,
+        serviceCount: 2,
+        errorSpanCount: 0,
+      },
+    ])
+
+    const tracePanel = {
+      ...mockPanel,
+      type: 'trace_list',
+      query: { datasource_id: 'ds-trace-1', expr: 'service=api', limit: 20 },
+    }
+
+    const wrapper = mount(Panel, {
+      props: { panel: tracePanel },
+    })
+    await flushPromises()
+
+    expect(mockSearchDataSourceTraces).toHaveBeenCalledWith(
+      'ds-trace-1',
+      expect.objectContaining({
+        query: 'service=api',
+        limit: 20,
+      }),
+    )
+    expect(wrapper.find('.mock-trace-list-panel').exists()).toBe(true)
+  })
+
+  it('emits open-trace event for trace list rows', async () => {
+    mockSearchDataSourceTraces.mockResolvedValue([
+      {
+        traceId: 'trace-1',
+        startTimeUnixNano: 1_700_000_000_000_000_000,
+        durationNano: 1_500_000,
+        spanCount: 5,
+        serviceCount: 2,
+        errorSpanCount: 0,
+      },
+    ])
+
+    const tracePanel = {
+      ...mockPanel,
+      type: 'trace_list',
+      query: { datasource_id: 'ds-trace-1' },
+    }
+
+    const wrapper = mount(Panel, {
+      props: { panel: tracePanel },
+    })
+    await flushPromises()
+
+    await wrapper.find('.mock-open-trace').trigger('click')
+
+    expect(wrapper.emitted('open-trace')).toEqual([
+      [{ datasourceId: 'ds-trace-1', traceId: 'trace-1' }],
+    ])
+  })
+
+  it('renders trace heatmap panel for trace_heatmap type', async () => {
+    mockSearchDataSourceTraces.mockResolvedValue([
+      {
+        traceId: 'trace-2',
+        startTimeUnixNano: 1_700_000_000_000_000_000,
+        durationNano: 2_000_000,
+        spanCount: 6,
+        serviceCount: 2,
+        errorSpanCount: 1,
+      },
+    ])
+
+    const tracePanel = {
+      ...mockPanel,
+      type: 'trace_heatmap',
+      query: { datasource_id: 'ds-trace-1', service: 'api' },
+    }
+
+    const wrapper = mount(Panel, {
+      props: { panel: tracePanel },
+    })
+    await flushPromises()
+
+    expect(mockSearchDataSourceTraces).toHaveBeenCalledWith(
+      'ds-trace-1',
+      expect.objectContaining({ service: 'api' }),
+    )
+    expect(wrapper.find('.mock-trace-heatmap-panel').exists()).toBe(true)
   })
 })
