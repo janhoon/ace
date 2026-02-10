@@ -58,13 +58,41 @@ func (c *TempoClient) GetTrace(ctx context.Context, traceID string) (*Trace, err
 }
 
 func (c *TempoClient) SearchTraces(ctx context.Context, req TraceSearchRequest) ([]TraceSummary, error) {
-	params := buildTraceSearchParams(req)
+	params := buildTempoTraceSearchParams(req)
 	payload, err := doTracingRequest(ctx, c.httpClient, c.datasource, http.MethodGet, "/api/search?"+params.Encode(), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	return parseTraceSearchResponse(payload)
+}
+
+func buildTempoTraceSearchParams(req TraceSearchRequest) url.Values {
+	params := buildTraceSearchParams(req)
+
+	if strings.TrimSpace(req.Query) != "" {
+		return params
+	}
+
+	traceQLFilters := make([]string, 0, 1)
+	if service := strings.TrimSpace(req.Service); service != "" {
+		traceQLFilters = append(traceQLFilters, `.service.name = "`+escapeTraceQLString(service)+`"`)
+	}
+
+	query := "{}"
+	if len(traceQLFilters) > 0 {
+		query = "{ " + strings.Join(traceQLFilters, " && ") + " }"
+	}
+
+	params.Set("q", query)
+	params.Set("query", query)
+
+	return params
+}
+
+func escapeTraceQLString(value string) string {
+	replacer := strings.NewReplacer(`\\`, `\\\\`, `"`, `\\"`)
+	return replacer.Replace(value)
 }
 
 func (c *TempoClient) Services(ctx context.Context) ([]string, error) {

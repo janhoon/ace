@@ -552,6 +552,8 @@ func parseTempoBatchesTrace(tracePayload []byte) (*Trace, error) {
 			continue
 		}
 
+		batchServiceName := extractServiceNameFromResource(batchMap["resource"])
+
 		processServiceByID := map[string]string{}
 		if rawProcesses, ok := batchMap["processes"].(map[string]interface{}); ok {
 			for processID, rawProcess := range rawProcesses {
@@ -563,143 +565,68 @@ func parseTempoBatchesTrace(tracePayload []byte) (*Trace, error) {
 			}
 		}
 
-		rawSpans, ok := batchMap["spans"].([]interface{})
-		if !ok {
-			continue
-		}
-
-		for _, rawSpan := range rawSpans {
-			spanMap, ok := rawSpan.(map[string]interface{})
+		appendSpan := func(rawSpan map[string]interface{}) {
+			traceSpan, spanTraceID, ok := parseTempoSpan(rawSpan, processServiceByID, batchServiceName)
 			if !ok {
-				continue
+				return
 			}
 
-			spanTraceID := anyToString(firstNonNil(spanMap["traceID"], spanMap["traceId"]))
 			if traceID == "" {
 				traceID = spanTraceID
 			}
 
-			spanID := anyToString(firstNonNil(spanMap["spanID"], spanMap["spanId"]))
-			operationName := anyToString(spanMap["operationName"])
-			processID := anyToString(firstNonNil(spanMap["processID"], spanMap["processId"]))
-
-			serviceName := processServiceByID[processID]
-			if serviceName == "" {
-				if rawProcess, ok := spanMap["process"].(map[string]interface{}); ok {
-					serviceName = anyToString(rawProcess["serviceName"])
-				}
-			}
-			if serviceName != "" {
-				servicesSet[serviceName] = struct{}{}
+			if traceSpan.ServiceName != "" {
+				servicesSet[traceSpan.ServiceName] = struct{}{}
 			}
 
-			startUnixNano, ok := anyToInt64(firstNonNil(spanMap["startTimeUnixNano"], spanMap["startTimeUnixNanos"]))
-			if !ok {
-				if startMicros, microsOK := anyToInt64(spanMap["startTime"]); microsOK {
-					startUnixNano = startMicros * 1000
+			if traceSpan.StartTimeUnixNano > 0 {
+				if spanIndex == 0 || traceSpan.StartTimeUnixNano < startMin {
+					startMin = traceSpan.StartTimeUnixNano
 				}
-			}
 
-			durationNano, ok := anyToInt64(firstNonNil(spanMap["durationNano"], spanMap["durationNanos"]))
-			if !ok {
-				if durationMicros, microsOK := anyToInt64(spanMap["duration"]); microsOK {
-					durationNano = durationMicros * 1000
-				}
-			}
-
-			if startUnixNano > 0 {
-				if spanIndex == 0 || startUnixNano < startMin {
-					startMin = startUnixNano
-				}
-				endUnixNano := startUnixNano + durationNano
+				endUnixNano := traceSpan.StartTimeUnixNano + max(traceSpan.DurationNano, 1)
 				if spanIndex == 0 || endUnixNano > endMax {
 					endMax = endUnixNano
 				}
 			}
 
-			parentSpanID := ""
-			if rawReferences, ok := spanMap["references"].([]interface{}); ok {
-				for _, rawRef := range rawReferences {
-					refMap, ok := rawRef.(map[string]interface{})
-					if !ok {
-						continue
-					}
-					candidate := anyToString(firstNonNil(refMap["spanID"], refMap["spanId"]))
-					if candidate == "" {
-						continue
-					}
-					if parentSpanID == "" {
-						parentSpanID = candidate
-					}
-					if strings.EqualFold(anyToString(firstNonNil(refMap["refType"], refMap["referenceType"])), "CHILD_OF") {
-						parentSpanID = candidate
-						break
-					}
-				}
-			}
-
-			tags := map[string]string{}
-			if rawTags, ok := spanMap["tags"].([]interface{}); ok {
-				for _, rawTag := range rawTags {
-					tagMap, ok := rawTag.(map[string]interface{})
-					if !ok {
-						continue
-					}
-					key := anyToString(tagMap["key"])
-					if key == "" {
-						continue
-					}
-					tags[key] = anyToString(tagMap["value"])
-				}
-			}
-
-			logs := make([]TraceLog, 0)
-			if rawLogs, ok := spanMap["logs"].([]interface{}); ok {
-				for _, rawLog := range rawLogs {
-					logMap, ok := rawLog.(map[string]interface{})
-					if !ok {
-						continue
-					}
-					logTimestamp, _ := anyToInt64(firstNonNil(logMap["timestampUnixNano"], logMap["timestamp"]))
-					if logTimestamp > 0 && logTimestamp < 1_000_000_000_000 {
-						logTimestamp *= 1000
-					}
-
-					fields := map[string]string{}
-					if rawFields, ok := logMap["fields"].([]interface{}); ok {
-						for _, rawField := range rawFields {
-							fieldMap, ok := rawField.(map[string]interface{})
-							if !ok {
-								continue
-							}
-							key := anyToString(fieldMap["key"])
-							if key == "" {
-								continue
-							}
-							fields[key] = anyToString(fieldMap["value"])
-						}
-					}
-
-					logs = append(logs, TraceLog{TimestampUnixNano: logTimestamp, Fields: fields})
-				}
-			}
-
-			traceSpan := TraceSpan{
-				SpanID:            spanID,
-				ParentSpanID:      parentSpanID,
-				OperationName:     operationName,
-				ServiceName:       serviceName,
-				StartTimeUnixNano: startUnixNano,
-				DurationNano:      durationNano,
-				Tags:              tags,
-				Logs:              logs,
-			}
-			if hasErrorTag(tags) {
-				traceSpan.Status = "error"
-			}
-
 			spans = append(spans, traceSpan)
 			spanIndex++
+		}
+
+		if rawSpans, ok := batchMap["spans"].([]interface{}); ok {
+			for _, rawSpan := range rawSpans {
+				spanMap, ok := rawSpan.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				appendSpan(spanMap)
+			}
+		}
+
+		rawScopeSpans, ok := firstNonNil(batchMap["scopeSpans"], batchMap["instrumentationLibrarySpans"]).([]interface{})
+		if !ok {
+			continue
+		}
+
+		for _, rawScopeSpansEntry := range rawScopeSpans {
+			scopeMap, ok := rawScopeSpansEntry.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			rawScopeSpansList, ok := scopeMap["spans"].([]interface{})
+			if !ok {
+				continue
+			}
+
+			for _, rawSpan := range rawScopeSpansList {
+				spanMap, ok := rawSpan.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				appendSpan(spanMap)
+			}
 		}
 	}
 
@@ -725,6 +652,275 @@ func parseTempoBatchesTrace(tracePayload []byte) (*Trace, error) {
 		StartTimeUnixNano: startMin,
 		DurationNano:      duration,
 	}, nil
+}
+
+func parseTempoSpan(rawSpan map[string]interface{}, processServiceByID map[string]string, defaultServiceName string) (TraceSpan, string, bool) {
+	spanTraceID := anyToString(firstNonNil(rawSpan["traceID"], rawSpan["traceId"]))
+	spanID := anyToString(firstNonNil(rawSpan["spanID"], rawSpan["spanId"]))
+	if spanID == "" {
+		return TraceSpan{}, "", false
+	}
+
+	operationName := anyToString(firstNonNil(rawSpan["operationName"], rawSpan["name"]))
+	processID := anyToString(firstNonNil(rawSpan["processID"], rawSpan["processId"]))
+
+	serviceName := processServiceByID[processID]
+	if serviceName == "" {
+		if rawProcess, ok := rawSpan["process"].(map[string]interface{}); ok {
+			serviceName = anyToString(rawProcess["serviceName"])
+		}
+	}
+	if serviceName == "" {
+		if attributeService := parseOTLPAttributes(rawSpan["attributes"])["service.name"]; attributeService != "" {
+			serviceName = attributeService
+		}
+	}
+	if serviceName == "" {
+		serviceName = defaultServiceName
+	}
+
+	startUnixNano, ok := anyToInt64(firstNonNil(rawSpan["startTimeUnixNano"], rawSpan["startTimeUnixNanos"]))
+	if !ok {
+		if startMicros, microsOK := anyToInt64(rawSpan["startTime"]); microsOK {
+			startUnixNano = startMicros * 1000
+		}
+	}
+
+	durationNano, ok := anyToInt64(firstNonNil(rawSpan["durationNano"], rawSpan["durationNanos"]))
+	if !ok {
+		if durationMicros, microsOK := anyToInt64(rawSpan["duration"]); microsOK {
+			durationNano = durationMicros * 1000
+		}
+	}
+
+	if endUnixNano, endOK := anyToInt64(firstNonNil(rawSpan["endTimeUnixNano"], rawSpan["endTimeUnixNanos"])); endOK && endUnixNano > startUnixNano {
+		durationNano = endUnixNano - startUnixNano
+	}
+
+	parentSpanID := anyToString(firstNonNil(rawSpan["parentSpanID"], rawSpan["parentSpanId"]))
+	if parentSpanID == "" {
+		if rawReferences, ok := rawSpan["references"].([]interface{}); ok {
+			for _, rawRef := range rawReferences {
+				refMap, ok := rawRef.(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				candidate := anyToString(firstNonNil(refMap["spanID"], refMap["spanId"]))
+				if candidate == "" {
+					continue
+				}
+
+				if parentSpanID == "" {
+					parentSpanID = candidate
+				}
+
+				if strings.EqualFold(anyToString(firstNonNil(refMap["refType"], refMap["referenceType"])), "CHILD_OF") {
+					parentSpanID = candidate
+					break
+				}
+			}
+		}
+	}
+
+	tags := map[string]string{}
+	if rawTags, ok := rawSpan["tags"].([]interface{}); ok {
+		for _, rawTag := range rawTags {
+			tagMap, ok := rawTag.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			key := anyToString(tagMap["key"])
+			if key == "" {
+				continue
+			}
+			tags[key] = anyToString(tagMap["value"])
+		}
+	}
+
+	for key, value := range parseOTLPAttributes(rawSpan["attributes"]) {
+		tags[key] = value
+	}
+
+	logs := make([]TraceLog, 0)
+	if rawLogs, ok := rawSpan["logs"].([]interface{}); ok {
+		for _, rawLog := range rawLogs {
+			logMap, ok := rawLog.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			logTimestamp, _ := anyToInt64(firstNonNil(logMap["timestampUnixNano"], logMap["timestamp"]))
+			if logTimestamp > 0 && logTimestamp < 1_000_000_000_000 {
+				logTimestamp *= 1000
+			}
+
+			fields := map[string]string{}
+			if rawFields, ok := logMap["fields"].([]interface{}); ok {
+				for _, rawField := range rawFields {
+					fieldMap, ok := rawField.(map[string]interface{})
+					if !ok {
+						continue
+					}
+
+					key := anyToString(fieldMap["key"])
+					if key == "" {
+						continue
+					}
+					fields[key] = anyToString(fieldMap["value"])
+				}
+			}
+
+			logs = append(logs, TraceLog{TimestampUnixNano: logTimestamp, Fields: fields})
+		}
+	}
+
+	if rawEvents, ok := rawSpan["events"].([]interface{}); ok {
+		for _, rawEvent := range rawEvents {
+			eventMap, ok := rawEvent.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			eventTimestamp, _ := anyToInt64(firstNonNil(eventMap["timeUnixNano"], eventMap["timestampUnixNano"], eventMap["timestamp"]))
+			if eventTimestamp > 0 && eventTimestamp < 1_000_000_000_000 {
+				eventTimestamp *= 1000
+			}
+
+			fields := parseOTLPAttributes(eventMap["attributes"])
+			if eventName := anyToString(eventMap["name"]); eventName != "" {
+				fields["event.name"] = eventName
+			}
+
+			logs = append(logs, TraceLog{TimestampUnixNano: eventTimestamp, Fields: fields})
+		}
+	}
+
+	traceSpan := TraceSpan{
+		SpanID:            spanID,
+		ParentSpanID:      parentSpanID,
+		OperationName:     operationName,
+		ServiceName:       serviceName,
+		StartTimeUnixNano: startUnixNano,
+		DurationNano:      max(durationNano, 0),
+		Tags:              tags,
+		Logs:              logs,
+	}
+
+	if hasErrorTag(tags) || statusIsError(rawSpan["status"]) {
+		traceSpan.Status = "error"
+	}
+
+	return traceSpan, spanTraceID, true
+}
+
+func parseOTLPAttributes(rawAttributes interface{}) map[string]string {
+	attributes := map[string]string{}
+
+	rawList, ok := rawAttributes.([]interface{})
+	if !ok {
+		return attributes
+	}
+
+	for _, rawAttr := range rawList {
+		attrMap, ok := rawAttr.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		key := anyToString(attrMap["key"])
+		if key == "" {
+			continue
+		}
+
+		attributes[key] = parseOTLPAnyValue(attrMap["value"])
+	}
+
+	return attributes
+}
+
+func parseOTLPAnyValue(rawValue interface{}) string {
+	if rawValue == nil {
+		return ""
+	}
+
+	valueMap, ok := rawValue.(map[string]interface{})
+	if !ok {
+		return anyToString(rawValue)
+	}
+
+	if value := anyToString(valueMap["stringValue"]); value != "" {
+		return value
+	}
+	if value := anyToString(valueMap["boolValue"]); value != "" {
+		return value
+	}
+	if value := anyToString(valueMap["intValue"]); value != "" {
+		return value
+	}
+	if value := anyToString(valueMap["doubleValue"]); value != "" {
+		return value
+	}
+	if value := anyToString(valueMap["bytesValue"]); value != "" {
+		return value
+	}
+
+	if rawArrayValue, ok := valueMap["arrayValue"].(map[string]interface{}); ok {
+		if rawValues, ok := rawArrayValue["values"].([]interface{}); ok {
+			parts := make([]string, 0, len(rawValues))
+			for _, rawEntry := range rawValues {
+				parts = append(parts, parseOTLPAnyValue(rawEntry))
+			}
+			return strings.Join(parts, ",")
+		}
+	}
+
+	if rawKVListValue, ok := valueMap["kvlistValue"].(map[string]interface{}); ok {
+		entries := parseOTLPAttributes(rawKVListValue["values"])
+		if len(entries) == 0 {
+			return ""
+		}
+
+		keys := make([]string, 0, len(entries))
+		for key := range entries {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		parts := make([]string, 0, len(keys))
+		for _, key := range keys {
+			parts = append(parts, key+"="+entries[key])
+		}
+
+		return strings.Join(parts, ",")
+	}
+
+	return ""
+}
+
+func statusIsError(rawStatus interface{}) bool {
+	statusMap, ok := rawStatus.(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	if code, ok := anyToInt64(statusMap["code"]); ok {
+		return code == 2
+	}
+
+	codeText := strings.ToUpper(anyToString(statusMap["code"]))
+	return strings.Contains(codeText, "ERROR")
+}
+
+func extractServiceNameFromResource(rawResource interface{}) string {
+	resourceMap, ok := rawResource.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	attributes := parseOTLPAttributes(resourceMap["attributes"])
+	return attributes["service.name"]
 }
 
 func parseTraceSearchResponse(payload []byte) ([]TraceSummary, error) {
@@ -765,10 +961,8 @@ func parseTempoTraceSearch(payload []byte) ([]TraceSummary, error) {
 			durationNano = int64(durationMs * float64(time.Millisecond))
 		}
 
-		spanCount := 0
-		if rawSpanSet, ok := traceMap["spanSet"].([]interface{}); ok {
-			spanCount = len(rawSpanSet)
-		}
+		spanCount := parseTempoTraceSearchSpanCount(traceMap)
+		serviceCount, errorSpanCount := parseTempoTraceSearchServiceStats(traceMap)
 
 		traces = append(traces, TraceSummary{
 			TraceID:           traceID,
@@ -777,8 +971,8 @@ func parseTempoTraceSearch(payload []byte) ([]TraceSummary, error) {
 			StartTimeUnixNano: startTimeUnixNano,
 			DurationNano:      durationNano,
 			SpanCount:         spanCount,
-			ServiceCount:      0,
-			ErrorSpanCount:    0,
+			ServiceCount:      serviceCount,
+			ErrorSpanCount:    errorSpanCount,
 		})
 	}
 
@@ -787,6 +981,74 @@ func parseTempoTraceSearch(payload []byte) ([]TraceSummary, error) {
 	}
 
 	return traces, nil
+}
+
+func parseTempoTraceSearchSpanCount(traceMap map[string]interface{}) int {
+	if spanCount, ok := parseTempoSpanSetCount(traceMap["spanSet"]); ok {
+		return spanCount
+	}
+
+	rawSpanSets, ok := traceMap["spanSets"].([]interface{})
+	if !ok {
+		return 0
+	}
+
+	maxSpanCount := 0
+	for _, rawSpanSet := range rawSpanSets {
+		spanCount, ok := parseTempoSpanSetCount(rawSpanSet)
+		if ok && spanCount > maxSpanCount {
+			maxSpanCount = spanCount
+		}
+	}
+
+	return maxSpanCount
+}
+
+func parseTempoSpanSetCount(rawSpanSet interface{}) (int, bool) {
+	if rawSpanSet == nil {
+		return 0, false
+	}
+
+	if rawSpanList, ok := rawSpanSet.([]interface{}); ok {
+		return len(rawSpanList), true
+	}
+
+	spanSetMap, ok := rawSpanSet.(map[string]interface{})
+	if !ok {
+		return 0, false
+	}
+
+	if matched, ok := anyToInt64(spanSetMap["matched"]); ok {
+		return max(int(matched), 0), true
+	}
+
+	rawSpanList, ok := spanSetMap["spans"].([]interface{})
+	if !ok {
+		return 0, false
+	}
+
+	return len(rawSpanList), true
+}
+
+func parseTempoTraceSearchServiceStats(traceMap map[string]interface{}) (int, int) {
+	rawServiceStats, ok := traceMap["serviceStats"].(map[string]interface{})
+	if !ok || len(rawServiceStats) == 0 {
+		return 0, 0
+	}
+
+	errorSpanCount := 0
+	for _, rawStats := range rawServiceStats {
+		statsMap, ok := rawStats.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if errors, ok := anyToInt64(firstNonNil(statsMap["errorCount"], statsMap["errorSpanCount"], statsMap["errors"])); ok {
+			errorSpanCount += max(int(errors), 0)
+		}
+	}
+
+	return len(rawServiceStats), errorSpanCount
 }
 
 func parseJaegerTraceSearch(payload []byte) ([]TraceSummary, error) {

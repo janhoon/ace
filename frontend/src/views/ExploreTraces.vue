@@ -58,7 +58,7 @@ const TRACE_NAVIGATION_MAX_AGE_MS = 5 * 60 * 1000
 const TRACE_TO_X_PADDING_MS = 5 * 60 * 1000
 
 const router = useRouter()
-const { timeRange } = useTimeRange()
+const { timeRange, isCustomRange, onRefresh } = useTimeRange()
 const { currentOrg } = useOrganization()
 const { tracingDatasources, fetchDatasources } = useDatasource()
 
@@ -95,6 +95,8 @@ const selectedSpan = ref<TraceSpan | null>(null)
 const loadingServiceGraph = ref(false)
 const pendingTraceDatasourceId = ref('')
 const pendingTraceId = ref('')
+const hasSearched = ref(false)
+let unsubscribeRefresh: (() => void) | null = null
 
 const hasTracingDatasources = computed(() => tracingDatasources.value.length > 0)
 const activeDatasource = computed(
@@ -167,12 +169,26 @@ async function runSearch() {
     return
   }
 
+  hasSearched.value = true
   loadingSearch.value = true
   error.value = null
 
   try {
-    const start = Math.floor(timeRange.value.start / 1000)
-    const end = Math.floor(timeRange.value.end / 1000)
+    let start: number
+    let end: number
+
+    const isCustom = isCustomRange?.value ?? true
+    if (isCustom) {
+      start = Math.floor(timeRange.value.start / 1000)
+      end = Math.floor(timeRange.value.end / 1000)
+    } else {
+      const windowDurationSeconds = Math.max(
+        1,
+        Math.floor((timeRange.value.end - timeRange.value.start) / 1000),
+      )
+      end = Math.floor(Date.now() / 1000)
+      start = end - windowDurationSeconds
+    }
 
     traceSummaries.value = await searchDataSourceTraces(selectedDatasourceId.value, {
       query: query.value.trim() || undefined,
@@ -419,6 +435,7 @@ watch(
     loadingServiceGraph.value = false
     selectedTraceId.value = ''
     selectedSpan.value = null
+    hasSearched.value = false
 
     await loadServices()
     await tryLoadPendingTrace()
@@ -430,6 +447,18 @@ onMounted(() => {
   consumeTraceNavigationContext()
   void tryLoadPendingTrace()
   document.addEventListener('click', handleDocumentClick)
+  if (typeof onRefresh === 'function') {
+    unsubscribeRefresh = onRefresh(() => {
+      if (
+        hasSearched.value
+        && selectedDatasourceId.value
+        && !loadingSearch.value
+        && !loadingTrace.value
+      ) {
+        void runSearch()
+      }
+    })
+  }
   if (currentOrg.value) {
     fetchDatasources(currentOrg.value.id)
   }
@@ -437,6 +466,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick)
+  if (unsubscribeRefresh) {
+    unsubscribeRefresh()
+  }
 })
 </script>
 

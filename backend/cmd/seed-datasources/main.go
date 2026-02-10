@@ -24,6 +24,7 @@ var defaultConnectors = []connector{
 	{Name: "VictoriaMetrics", Type: "victoriametrics", URL: "http://localhost:8428"},
 	{Name: "Loki", Type: "loki", URL: "http://localhost:3100"},
 	{Name: "Victoria Logs", Type: "victorialogs", URL: "http://localhost:9428"},
+	{Name: "Tempo", Type: "tempo", URL: "http://localhost:3200"},
 }
 
 func main() {

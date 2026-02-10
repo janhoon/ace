@@ -150,6 +150,7 @@ func main() {
 		{Name: "VictoriaMetrics", Type: "victoriametrics", URL: "http://localhost:8428"},
 		{Name: "Loki", Type: "loki", URL: "http://localhost:3100"},
 		{Name: "Victoria Logs", Type: "victorialogs", URL: "http://localhost:9428"},
+		{Name: "Tempo", Type: "tempo", URL: "http://localhost:3200"},
 	}
 
 	for _, connector := range defaultConnectors {
@@ -175,7 +176,7 @@ func main() {
 	fmt.Printf("  Organization: %s (%s)\n", *orgName, orgID)
 	fmt.Printf("  Slug:         %s\n", slug)
 	fmt.Printf("  Role:         admin\n")
-	fmt.Println("  Connectors:   4 default datasources seeded")
+	fmt.Printf("  Connectors:   %d default datasources seeded\n", len(defaultConnectors))
 	for _, connector := range defaultConnectors {
 		fmt.Printf("    - %s (%s): %s\n", connector.Name, connector.Type, connector.URL)
 	}

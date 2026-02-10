@@ -23,6 +23,10 @@ help:
 	@printf "                 Defaults: EMAIL=admin@admin.com PASSWORD=Admin1234 ORG=default\n"
 	@printf "  make seed-datasources [ORG=...]\n"
 	@printf "                 Seeds default connectors into existing ORG (default=default)\n"
+	@printf "  make otel-load-start Start continuous OTel trace load generator (Compose profile)\n"
+	@printf "  make otel-load-stop  Stop continuous OTel trace load generator\n"
+	@printf "  make otel-load-logs  Follow continuous OTel trace load generator logs\n"
+	@printf "  make otel-load-status Show continuous OTel trace load generator status\n"
 	@printf "  make frontend  Start Vite frontend dev server\n"
 	@printf "  make test      Run backend and frontend test suites\n"
 	@printf "  make frontend-lint Run frontend lint checks (Biome + Knip)\n"
@@ -107,6 +111,18 @@ seed-datasources:
 		exit 1; \
 	fi; \
 	cd backend && "$$GO_BIN" run ./cmd/seed-datasources -org "$(ORG)"
+
+otel-load-start:
+	@docker compose --profile otel-load up -d otel-loadgen
+
+otel-load-stop:
+	@docker compose stop otel-loadgen
+
+otel-load-logs:
+	@docker compose logs -f otel-loadgen
+
+otel-load-status:
+	@docker compose ps otel-loadgen
 
 frontend:
 	@cd frontend && npm run dev

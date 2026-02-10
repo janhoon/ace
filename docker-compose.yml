@@ -143,6 +143,27 @@ services:
       tempo:
         condition: service_healthy
 
+  otel-loadgen:
+    <<: *json_file_logging
+    image: python:3.12-alpine
+    container_name: dash-otel-loadgen
+    profiles:
+      - otel-load
+    command: ["python", "/app/otel-loadgen.py"]
+    environment:
+      OTEL_LOAD_TARGET: http://otel-collector:4318/v1/traces
+      OTEL_LOAD_INTERVAL_SEC: 1
+      OTEL_LOAD_TRACES_PER_BATCH: 8
+      OTEL_LOAD_SERVICE_PREFIX: loadgen-service
+      OTEL_LOAD_SERVICE_COUNT: 3
+      OTEL_LOAD_ERROR_EVERY: 7
+    volumes:
+      - ./otel-loadgen.py:/app/otel-loadgen.py:ro
+    depends_on:
+      otel-collector:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   valkey_data:

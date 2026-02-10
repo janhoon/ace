@@ -60,6 +60,51 @@ func TestParseTrace_TempoBatchesFormat(t *testing.T) {
 	}
 }
 
+func TestParseTrace_TempoBatchesOTLPSpansFormat(t *testing.T) {
+	payload := []byte(`{"batches":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"checkout"}}]},"scopeSpans":[{"scope":{"name":"seed"},"spans":[{"traceId":"trace-otlp","spanId":"root","name":"checkout.flow","startTimeUnixNano":"1700000000000000000","endTimeUnixNano":"1700000000009000000","attributes":[{"key":"http.method","value":{"stringValue":"POST"}},{"key":"seed.index","value":{"intValue":"0"}}]},{"traceId":"trace-otlp","spanId":"child","parentSpanId":"root","name":"db.query","startTimeUnixNano":"1700000000002000000","endTimeUnixNano":"1700000000005000000","attributes":[{"key":"db.system","value":{"stringValue":"postgres"}}],"status":{"code":"STATUS_CODE_ERROR"}}]}]}]}`)
+
+	trace, err := parseTrace(payload)
+	if err != nil {
+		t.Fatalf("parseTrace returned error: %v", err)
+	}
+
+	if trace.TraceID != "trace-otlp" {
+		t.Fatalf("expected trace id trace-otlp, got %q", trace.TraceID)
+	}
+
+	if len(trace.Spans) != 2 {
+		t.Fatalf("expected 2 spans, got %d", len(trace.Spans))
+	}
+
+	if trace.Spans[0].ServiceName != "checkout" {
+		t.Fatalf("expected root service checkout, got %q", trace.Spans[0].ServiceName)
+	}
+
+	if trace.Spans[0].OperationName != "checkout.flow" {
+		t.Fatalf("expected root operation checkout.flow, got %q", trace.Spans[0].OperationName)
+	}
+
+	if trace.Spans[0].Tags["http.method"] != "POST" {
+		t.Fatalf("expected root tag http.method=POST, got %q", trace.Spans[0].Tags["http.method"])
+	}
+
+	if trace.Spans[1].ParentSpanID != "root" {
+		t.Fatalf("expected child parent root, got %q", trace.Spans[1].ParentSpanID)
+	}
+
+	if trace.Spans[1].Status != "error" {
+		t.Fatalf("expected child status error, got %q", trace.Spans[1].Status)
+	}
+
+	if trace.Spans[1].DurationNano != 3000000 {
+		t.Fatalf("expected child duration 3000000, got %d", trace.Spans[1].DurationNano)
+	}
+
+	if !slices.Equal(trace.Services, []string{"checkout"}) {
+		t.Fatalf("expected services [checkout], got %#v", trace.Services)
+	}
+}
+
 func TestParseTraceSearchResponse_TempoFormat(t *testing.T) {
 	payload := []byte(`{"traces":[{"traceID":"trace-tempo","rootServiceName":"frontend","rootTraceName":"GET /api","startTimeUnixNano":"1700000000000000000","durationMs":12.5,"spanSet":[{},{}]}]}`)
 
@@ -79,6 +124,35 @@ func TestParseTraceSearchResponse_TempoFormat(t *testing.T) {
 	}
 	if traces[0].DurationNano <= 0 {
 		t.Fatalf("expected positive duration, got %d", traces[0].DurationNano)
+	}
+}
+
+func TestParseTraceSearchResponse_TempoSpanSetObjectFormat(t *testing.T) {
+	payload := []byte(`{"traces":[{"traceID":"trace-live","rootServiceName":"loadgen-service-1","rootTraceName":"http.request","startTimeUnixNano":"1700000000000000000","durationMs":93,"spanSet":{"matched":3,"spans":[{},{},{}]},"serviceStats":{"loadgen-service-1":{"spanCount":3,"errorCount":2}}}]}`)
+
+	traces, err := parseTraceSearchResponse(payload)
+	if err != nil {
+		t.Fatalf("parseTraceSearchResponse returned error: %v", err)
+	}
+
+	if len(traces) != 1 {
+		t.Fatalf("expected 1 trace summary, got %d", len(traces))
+	}
+
+	if traces[0].TraceID != "trace-live" {
+		t.Fatalf("expected trace id trace-live, got %q", traces[0].TraceID)
+	}
+
+	if traces[0].SpanCount != 3 {
+		t.Fatalf("expected span count 3, got %d", traces[0].SpanCount)
+	}
+
+	if traces[0].ServiceCount != 1 {
+		t.Fatalf("expected service count 1, got %d", traces[0].ServiceCount)
+	}
+
+	if traces[0].ErrorSpanCount != 2 {
+		t.Fatalf("expected error span count 2, got %d", traces[0].ErrorSpanCount)
 	}
 }
 
@@ -116,6 +190,34 @@ func TestParseStringSlicePayload(t *testing.T) {
 	}
 	if !slices.Equal(fromRaw, []string{"api", "worker"}) {
 		t.Fatalf("expected raw payload to parse, got %#v", fromRaw)
+	}
+}
+
+func TestBuildTempoTraceSearchParams_DefaultsToTraceQLMatchAll(t *testing.T) {
+	params := buildTempoTraceSearchParams(TraceSearchRequest{Limit: 25})
+
+	if got := params.Get("q"); got != "{}" {
+		t.Fatalf("expected q to be {}, got %q", got)
+	}
+
+	if got := params.Get("query"); got != "{}" {
+		t.Fatalf("expected query to be {}, got %q", got)
+	}
+
+	if got := params.Get("limit"); got != "25" {
+		t.Fatalf("expected limit to be 25, got %q", got)
+	}
+}
+
+func TestBuildTempoTraceSearchParams_BuildsServiceTraceQLWhenQueryEmpty(t *testing.T) {
+	params := buildTempoTraceSearchParams(TraceSearchRequest{Service: `api"edge`})
+
+	if got := params.Get("q"); got != `{ .service.name = "api\\"edge" }` {
+		t.Fatalf("expected escaped service traceql query, got %q", got)
+	}
+
+	if got := params.Get("query"); got != `{ .service.name = "api\\"edge" }` {
+		t.Fatalf("expected escaped service traceql query alias, got %q", got)
 	}
 }
 

@@ -74,6 +74,18 @@ Tag strategy:
    ```
    This starts the OpenTelemetry Collector, which tails Docker container logs and ships them to both Loki and Victoria Logs.
 
+   Optional: start continuous synthetic trace traffic for Tempo testing:
+   ```bash
+   # enable load generator
+   docker compose --profile otel-load up -d otel-loadgen
+
+   # watch load generator logs
+   docker compose logs -f otel-loadgen
+
+   # disable load generator
+   docker compose stop otel-loadgen
+   ```
+
 2. Start the backend API:
    ```bash
    make backend
@@ -109,9 +121,10 @@ make seed-admin
 make seed-admin EMAIL=admin@example.com PASSWORD='AdminPass123' ORG='My Company' NAME='First Admin'
 ```
 
-This also seeds four default datasources for the new organization:
+This also seeds five default datasources for the new organization:
 Prometheus (`http://localhost:9090`), VictoriaMetrics (`http://localhost:8428`),
-Loki (`http://localhost:3100`), and Victoria Logs (`http://localhost:9428`).
+Loki (`http://localhost:3100`), Victoria Logs (`http://localhost:9428`), and
+Tempo (`http://localhost:3200`).
 
 If the admin user/org already exists, seed only the default datasources:
 
