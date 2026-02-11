@@ -112,3 +112,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `frontend/src/views/LandingView.vue`, `frontend/src/views/LandingView.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd frontend && npm run type-check && npm run test`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and skill is not installed)
+
+## Task LANDING-COMPARISON-001: Landing Page: Dash vs Grafana Comparison Table - 2026-02-11 21:44 UTC
+- What was done: Added a new semantic comparison section to the landing page with an honest 10-row Dash vs Grafana table (caption + scoped headers), subtle styling that highlights Dash advantages, mobile horizontal-scroll responsiveness, and keyword-rich explanatory copy; also added JSON-LD for comparison table content plus BreadcrumbList metadata and expanded tests to validate table semantics and schema injection/removal.
+- Files changed: `frontend/src/views/LandingView.vue`, `frontend/src/views/LandingView.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd frontend && npm run type-check && npm run test`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; cannot execute required real-browser flow)

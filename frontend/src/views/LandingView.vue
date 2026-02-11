@@ -74,8 +74,53 @@ const featureListStructuredData = JSON.stringify({
   ],
 })
 
+const comparisonTableStructuredData = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Table',
+  name: 'Dash vs Grafana feature comparison',
+  about: {
+    '@type': 'SoftwareApplication',
+    name: 'Dash',
+  },
+  description:
+    'Feature comparison table between Dash and Grafana across deployment model, access control, and dashboard workflows.',
+  hasPart: [
+    { '@type': 'ListItem', position: 1, name: 'Self-hosted deployment', description: 'Dash: built for self-hosted teams. Grafana: supports cloud and self-hosted.' },
+    { '@type': 'ListItem', position: 2, name: 'Open-source code access', description: 'Dash: open source. Grafana: open source core with enterprise/cloud offerings.' },
+    { '@type': 'ListItem', position: 3, name: 'Prometheus metrics', description: 'Both Dash and Grafana support Prometheus-compatible metrics.' },
+    { '@type': 'ListItem', position: 4, name: 'Loki logs', description: 'Both Dash and Grafana support Loki log exploration.' },
+    { '@type': 'ListItem', position: 5, name: 'Tempo traces', description: 'Both Dash and Grafana support Tempo trace exploration.' },
+    { '@type': 'ListItem', position: 6, name: 'YAML dashboard workflow', description: 'Dash: first-class YAML export and import workflow. Grafana: JSON-focused export by default.' },
+    { '@type': 'ListItem', position: 7, name: 'Organization role model', description: 'Dash: simple admin/editor/viewer model. Grafana: role model varies by edition and deployment.' },
+    { '@type': 'ListItem', position: 8, name: 'SSO provider setup', description: 'Dash: org settings include provider setup. Grafana: SSO setup depends on deployment and edition.' },
+    { '@type': 'ListItem', position: 9, name: 'Dashboard import migration', description: 'Dash: includes Grafana conversion flow for migration. Grafana: native for Grafana JSON dashboards.' },
+    { '@type': 'ListItem', position: 10, name: 'Operational focus', description: 'Dash: focused scope for observability teams that want a streamlined workflow.' },
+  ],
+})
+
+const breadcrumbStructuredData = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: '/',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Dash vs Grafana Comparison',
+      item: '/#comparison',
+    },
+  ],
+})
+
 let faqSchemaElement: HTMLScriptElement | null = null
 let featureSchemaElement: HTMLScriptElement | null = null
+let comparisonSchemaElement: HTMLScriptElement | null = null
+let breadcrumbSchemaElement: HTMLScriptElement | null = null
 
 onMounted(() => {
   faqSchemaElement = document.createElement('script')
@@ -89,6 +134,18 @@ onMounted(() => {
   featureSchemaElement.text = featureListStructuredData
   featureSchemaElement.setAttribute('data-landing-features-schema', 'true')
   document.head.appendChild(featureSchemaElement)
+
+  comparisonSchemaElement = document.createElement('script')
+  comparisonSchemaElement.type = 'application/ld+json'
+  comparisonSchemaElement.text = comparisonTableStructuredData
+  comparisonSchemaElement.setAttribute('data-landing-comparison-schema', 'true')
+  document.head.appendChild(comparisonSchemaElement)
+
+  breadcrumbSchemaElement = document.createElement('script')
+  breadcrumbSchemaElement.type = 'application/ld+json'
+  breadcrumbSchemaElement.text = breadcrumbStructuredData
+  breadcrumbSchemaElement.setAttribute('data-landing-breadcrumb-schema', 'true')
+  document.head.appendChild(breadcrumbSchemaElement)
 })
 
 onBeforeUnmount(() => {
@@ -100,6 +157,16 @@ onBeforeUnmount(() => {
   if (featureSchemaElement) {
     featureSchemaElement.remove()
     featureSchemaElement = null
+  }
+
+  if (comparisonSchemaElement) {
+    comparisonSchemaElement.remove()
+    comparisonSchemaElement = null
+  }
+
+  if (breadcrumbSchemaElement) {
+    breadcrumbSchemaElement.remove()
+    breadcrumbSchemaElement = null
   }
 })
 </script>
@@ -114,6 +181,7 @@ onBeforeUnmount(() => {
       <nav class="topnav" aria-label="Landing navigation">
         <a href="#overview">Overview</a>
         <a href="#features">Features</a>
+        <a href="#comparison">Compare</a>
         <RouterLink to="/login">Sign in</RouterLink>
       </nav>
     </header>
@@ -248,6 +316,86 @@ onBeforeUnmount(() => {
             </article>
           </li>
         </ul>
+      </section>
+
+      <section id="comparison" class="content-section" aria-labelledby="comparison-title">
+        <h2 id="comparison-title">Dash vs Grafana comparison for self-hosted monitoring teams</h2>
+        <p>
+          Use this honest comparison table to evaluate how Dash and Grafana differ in deployment,
+          migration, and day-to-day observability workflows.
+        </p>
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <caption>
+              Feature comparison across dashboarding, access control, and migration workflows.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Feature</th>
+                <th scope="col">Dash</th>
+                <th scope="col">Grafana</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Deployment model</th>
+                <td class="advantage">Self-hosted first with straightforward local setup</td>
+                <td>Cloud and self-hosted options with broader product surface</td>
+              </tr>
+              <tr>
+                <th scope="row">Source model</th>
+                <td class="advantage">Open-source codebase focused on core monitoring workflows</td>
+                <td>Open-source core with enterprise and cloud offerings</td>
+              </tr>
+              <tr>
+                <th scope="row">Prometheus metrics</th>
+                <td>Native support for Prometheus-compatible metrics queries</td>
+                <td>Native support for Prometheus-compatible metrics queries</td>
+              </tr>
+              <tr>
+                <th scope="row">Loki logs</th>
+                <td>Integrated Explore flow for logs and related telemetry</td>
+                <td>Integrated Explore flow for logs and related telemetry</td>
+              </tr>
+              <tr>
+                <th scope="row">Tempo traces</th>
+                <td>Trace search and timeline views in the same app shell</td>
+                <td>Trace support through Tempo integrations and trace views</td>
+              </tr>
+              <tr>
+                <th scope="row">Dashboard migration</th>
+                <td class="advantage">Built-in Grafana conversion flow and YAML import path</td>
+                <td>Native format for existing Grafana JSON dashboards</td>
+              </tr>
+              <tr>
+                <th scope="row">Configuration as code</th>
+                <td class="advantage">YAML export and import for reproducible reviewable changes</td>
+                <td>JSON export commonly used for dashboard portability</td>
+              </tr>
+              <tr>
+                <th scope="row">Organization access control</th>
+                <td class="advantage">Admin, editor, and viewer roles are simple to apply</td>
+                <td>Role behavior varies by deployment and edition</td>
+              </tr>
+              <tr>
+                <th scope="row">SSO administration</th>
+                <td class="advantage">Provider setup available in organization settings</td>
+                <td>Provider setup depends on deployment mode and edition features</td>
+              </tr>
+              <tr>
+                <th scope="row">Operational scope</th>
+                <td class="advantage">Streamlined UX centered on monitoring and incident triage</td>
+                <td>Broad ecosystem with many plugins and product extensions</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="comparison-note">
+          Dash is a strong fit for teams that want open-source, self-hosted monitoring with
+          metrics, logs, traces, and access control in one focused workflow. Grafana remains a
+          mature option with a larger ecosystem, which can be useful when broad plugin coverage is
+          the top priority.
+        </p>
       </section>
     </main>
 
@@ -463,6 +611,65 @@ onBeforeUnmount(() => {
 .feature-card p {
   margin: 0;
   font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.comparison-table-wrap {
+  margin-top: 0.9rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  background: rgba(20, 32, 50, 0.55);
+  overflow-x: auto;
+}
+
+.comparison-table {
+  width: 100%;
+  min-width: 740px;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.comparison-table caption {
+  text-align: left;
+  padding: 0.85rem 0.95rem 0.2rem;
+  color: var(--text-tertiary);
+  font-size: 0.76rem;
+}
+
+.comparison-table th,
+.comparison-table td {
+  border-top: 1px solid var(--border-primary);
+  padding: 0.72rem 0.95rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.comparison-table thead th {
+  border-top: none;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.comparison-table tbody th {
+  width: 28%;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.comparison-table td {
+  color: var(--text-secondary);
+}
+
+.comparison-table .advantage {
+  background: rgba(44, 180, 126, 0.12);
+  color: var(--text-primary);
+}
+
+.comparison-note {
+  margin: 0.9rem 0 0;
   color: var(--text-secondary);
 }
 

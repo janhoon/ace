@@ -16,7 +16,7 @@ describe('LandingView', () => {
   afterEach(() => {
     document.head
       .querySelectorAll(
-        'script[data-landing-faq-schema="true"], script[data-landing-features-schema="true"]',
+        'script[data-landing-faq-schema="true"], script[data-landing-features-schema="true"], script[data-landing-comparison-schema="true"], script[data-landing-breadcrumb-schema="true"]',
       )
       .forEach((schemaElement) => schemaElement.remove())
   })
@@ -65,6 +65,25 @@ describe('LandingView', () => {
     wrapper.unmount()
   })
 
+  it('renders a semantic comparison table with ten feature rows', () => {
+    const wrapper = mountLanding()
+
+    const table = wrapper.get('#comparison table')
+    const bodyRows = table.findAll('tbody tr')
+
+    expect(table.get('caption').text()).toContain('Feature comparison')
+    expect(table.findAll('thead th').map((element) => element.text())).toEqual([
+      'Feature',
+      'Dash',
+      'Grafana',
+    ])
+    expect(bodyRows).toHaveLength(10)
+    expect(bodyRows[0].find('th').attributes('scope')).toBe('row')
+    expect(wrapper.text()).toContain('Dash vs Grafana comparison for self-hosted monitoring teams')
+
+    wrapper.unmount()
+  })
+
   it('adds FAQ schema to document head', () => {
     const wrapper = mountLanding()
 
@@ -92,5 +111,24 @@ describe('LandingView', () => {
     wrapper.unmount()
 
     expect(document.head.querySelector('script[data-landing-features-schema="true"]')).toBeNull()
+  })
+
+  it('adds comparison and breadcrumb schema to document head', () => {
+    const wrapper = mountLanding()
+
+    const comparisonSchema = document.head.querySelector('script[data-landing-comparison-schema="true"]')
+    const breadcrumbSchema = document.head.querySelector('script[data-landing-breadcrumb-schema="true"]')
+
+    expect(comparisonSchema).not.toBeNull()
+    expect(comparisonSchema?.textContent).toContain('"@type":"Table"')
+    expect(comparisonSchema?.textContent).toContain('Dash vs Grafana feature comparison')
+    expect(breadcrumbSchema).not.toBeNull()
+    expect(breadcrumbSchema?.textContent).toContain('"@type":"BreadcrumbList"')
+    expect(breadcrumbSchema?.textContent).toContain('Dash vs Grafana Comparison')
+
+    wrapper.unmount()
+
+    expect(document.head.querySelector('script[data-landing-comparison-schema="true"]')).toBeNull()
+    expect(document.head.querySelector('script[data-landing-breadcrumb-schema="true"]')).toBeNull()
   })
 })
