@@ -34,41 +34,50 @@ interface NavChild {
 }
 
 const navItems: NavItem[] = [
-  { id: 'dashboards', icon: LayoutDashboard, label: 'Dashboards', path: '/dashboards' },
+  { id: 'dashboards', icon: LayoutDashboard, label: 'Dashboards', path: '/app/dashboards' },
   {
     id: 'explore',
     icon: Compass,
     label: 'Explore',
-    path: '/explore/metrics',
+    path: '/app/explore/metrics',
     children: [
-      { label: 'Metrics', path: '/explore/metrics' },
-      { label: 'Logs', path: '/explore/logs' },
-      { label: 'Traces', path: '/explore/traces' },
+      { label: 'Metrics', path: '/app/explore/metrics' },
+      { label: 'Logs', path: '/app/explore/logs' },
+      { label: 'Traces', path: '/app/explore/traces' },
     ],
   },
-  { id: 'datasources', icon: Database, label: 'Data Sources', path: '/datasources' },
+  { id: 'datasources', icon: Database, label: 'Data Sources', path: '/app/datasources' },
 ]
 
+function normalizeAppPath(path: string): string {
+  if (path.startsWith('/app/')) {
+    return path.slice(4)
+  }
+  return path
+}
+
 const openNavGroups = ref<Record<string, boolean>>({
-  explore: route.path.startsWith('/explore'),
+  explore: normalizeAppPath(route.path).startsWith('/explore'),
 })
 
 // Settings path is dynamic based on current organization
 const settingsPath = computed(() => {
   if (currentOrg.value) {
-    return `/settings/org/${currentOrg.value.id}/general`
+    return `/app/settings/org/${currentOrg.value.id}/general`
   }
   return null
 })
 
 watch(() => route.path, (path) => {
-  if (path.startsWith('/explore')) {
+  if (normalizeAppPath(path).startsWith('/explore')) {
     openNavGroups.value.explore = true
   }
 })
 
 function isRouteMatch(path: string): boolean {
-  return route.path === path || route.path.startsWith(`${path}/`)
+  const currentPath = normalizeAppPath(route.path)
+  const targetPath = normalizeAppPath(path)
+  return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`)
 }
 
 function isActive(item: NavItem): boolean {

@@ -541,7 +541,7 @@ function formatDate(dateStr: string): string {
 }
 
 function openDashboard(dashboard: Dashboard) {
-  router.push(`/dashboards/${dashboard.id}`)
+  router.push(`/app/dashboards/${dashboard.id}`)
 }
 
 function normalizeSectionId(sectionId: string | null): string {

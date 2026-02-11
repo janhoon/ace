@@ -1,87 +1,215 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded, type RouteRecordRaw } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
-import DashboardsView from '../views/DashboardsView.vue'
-import DashboardDetailView from '../views/DashboardDetailView.vue'
-import DashboardSettingsView from '../views/DashboardSettingsView.vue'
-import Explore from '../views/Explore.vue'
-import ExploreLogs from '../views/ExploreLogs.vue'
-import ExploreTraces from '../views/ExploreTraces.vue'
-import OrganizationSettings from '../views/OrganizationSettings.vue'
-import DataSourceSettings from '../views/DataSourceSettings.vue'
-import LoginView from '../views/LoginView.vue'
+
+const defaultDescription =
+  'Dash is an open-source monitoring dashboard with multi-datasource support for Prometheus, Loki, Tempo, and VictoriaMetrics.'
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'landing',
+    component: () => import('../views/LandingView.vue'),
+    meta: {
+      public: true,
+      title: 'Dash | Open-Source Monitoring Dashboard',
+      description: defaultDescription,
+    },
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/LoginView.vue'),
+    meta: {
+      public: true,
+      title: 'Sign in | Dash',
+      description: 'Sign in to Dash to manage dashboards, alerts, and observability workflows.',
+    },
+  },
+  {
+    path: '/app',
+    redirect: {
+      path: '/app/dashboards',
+    },
+  },
+  {
+    path: '/app/dashboards',
+    name: 'dashboards',
+    component: () => import('../views/DashboardsView.vue'),
+    alias: '/dashboards',
+    meta: {
+      appLayout: 'app',
+      title: 'Dashboards | Dash',
+      description: 'Browse and organize dashboards in Dash.',
+    },
+  },
+  {
+    path: '/app/dashboards/:id',
+    name: 'dashboard-detail',
+    component: () => import('../views/DashboardDetailView.vue'),
+    alias: '/dashboards/:id',
+    meta: {
+      appLayout: 'app',
+      title: 'Dashboard | Dash',
+      description: 'Inspect, configure, and monitor dashboard panels in Dash.',
+    },
+  },
+  {
+    path: '/app/dashboards/:id/settings',
+    redirect: to => ({
+      path: `/app/dashboards/${to.params.id}/settings/general`,
+      query: to.query,
+    }),
+  },
+  {
+    path: '/dashboards/:id/settings',
+    redirect: to => ({
+      path: `/app/dashboards/${to.params.id}/settings/general`,
+      query: to.query,
+    }),
+  },
+  {
+    path: '/app/dashboards/:id/settings/:section',
+    name: 'dashboard-settings',
+    component: () => import('../views/DashboardSettingsView.vue'),
+    alias: '/dashboards/:id/settings/:section',
+    meta: {
+      appLayout: 'app',
+      title: 'Dashboard Settings | Dash',
+      description: 'Configure dashboard settings, YAML, and permissions.',
+    },
+  },
+  {
+    path: '/app/explore',
+    redirect: {
+      path: '/app/explore/metrics',
+    },
+  },
+  {
+    path: '/explore',
+    redirect: {
+      path: '/app/explore/metrics',
+    },
+  },
+  {
+    path: '/app/explore/metrics',
+    name: 'explore-metrics',
+    component: () => import('../views/Explore.vue'),
+    alias: '/explore/metrics',
+    meta: {
+      appLayout: 'app',
+      title: 'Explore Metrics | Dash',
+      description: 'Query and visualize metrics from connected datasources.',
+    },
+  },
+  {
+    path: '/app/explore/logs',
+    name: 'explore-logs',
+    component: () => import('../views/ExploreLogs.vue'),
+    alias: '/explore/logs',
+    meta: {
+      appLayout: 'app',
+      title: 'Explore Logs | Dash',
+      description: 'Search and analyze logs with Dash Explore.',
+    },
+  },
+  {
+    path: '/app/explore/traces',
+    name: 'explore-traces',
+    component: () => import('../views/ExploreTraces.vue'),
+    alias: '/explore/traces',
+    meta: {
+      appLayout: 'app',
+      title: 'Explore Traces | Dash',
+      description: 'Investigate trace timelines, spans, and service dependencies.',
+    },
+  },
+  {
+    path: '/app/settings/org/:id',
+    redirect: to => ({
+      path: `/app/settings/org/${to.params.id}/general`,
+      query: to.query,
+    }),
+  },
+  {
+    path: '/settings/org/:id',
+    redirect: to => ({
+      path: `/app/settings/org/${to.params.id}/general`,
+      query: to.query,
+    }),
+  },
+  {
+    path: '/app/settings/org/:id/:section',
+    name: 'org-settings',
+    component: () => import('../views/OrganizationSettings.vue'),
+    alias: '/settings/org/:id/:section',
+    meta: {
+      appLayout: 'app',
+      title: 'Organization Settings | Dash',
+      description: 'Manage organization profile, members, groups, and authentication providers.',
+    },
+  },
+  {
+    path: '/app/datasources',
+    name: 'datasources',
+    component: () => import('../views/DataSourceSettings.vue'),
+    alias: '/datasources',
+    meta: {
+      appLayout: 'app',
+      title: 'Data Sources | Dash',
+      description: 'Configure and test datasources for metrics, logs, and traces.',
+    },
+  },
+  {
+    path: '/convert/grafana',
+    redirect: {
+      path: '/app/dashboards',
+      query: {
+        newDashboardMode: 'grafana',
+      },
+    },
+  },
+]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    {
-      path: '/login',
-      name: 'login',
-      component: LoginView,
-      meta: { public: true }
-    },
-    {
-      path: '/',
-      redirect: '/dashboards'
-    },
-    {
-      path: '/dashboards',
-      name: 'dashboards',
-      component: DashboardsView
-    },
-    {
-      path: '/dashboards/:id',
-      name: 'dashboard-detail',
-      component: DashboardDetailView
-    },
-    {
-      path: '/dashboards/:id/settings',
-      redirect: to => `/dashboards/${to.params.id}/settings/general`
-    },
-    {
-      path: '/dashboards/:id/settings/:section',
-      name: 'dashboard-settings',
-      component: DashboardSettingsView
-    },
-    {
-      path: '/explore',
-      name: 'explore',
-      redirect: '/explore/metrics'
-    },
-    {
-      path: '/explore/metrics',
-      name: 'explore-metrics',
-      component: Explore
-    },
-    {
-      path: '/explore/logs',
-      name: 'explore-logs',
-      component: ExploreLogs
-    },
-    {
-      path: '/explore/traces',
-      name: 'explore-traces',
-      component: ExploreTraces
-    },
-    {
-      path: '/settings/org/:id',
-      redirect: to => `/settings/org/${to.params.id}/general`
-    },
-    {
-      path: '/settings/org/:id/:section',
-      name: 'org-settings',
-      component: OrganizationSettings
-    },
-    {
-      path: '/datasources',
-      name: 'datasources',
-      component: DataSourceSettings
-    },
-    {
-      path: '/convert/grafana',
-      redirect: '/dashboards?newDashboardMode=grafana'
-    }
-  ]
+  routes,
 })
+
+function upsertMetaTag(attribute: 'name' | 'property', key: string, content: string) {
+  const selector = `meta[${attribute}="${key}"]`
+  let tag = document.querySelector(selector)
+  if (!tag) {
+    tag = document.createElement('meta')
+    tag.setAttribute(attribute, key)
+    document.head.append(tag)
+  }
+  tag.setAttribute('content', content)
+}
+
+function upsertCanonical(url: string) {
+  let canonical = document.querySelector('link[rel="canonical"]')
+  if (!canonical) {
+    canonical = document.createElement('link')
+    canonical.setAttribute('rel', 'canonical')
+    document.head.append(canonical)
+  }
+  canonical.setAttribute('href', url)
+}
+
+function applySeoMetadata(to: RouteLocationNormalizedLoaded) {
+  const title = typeof to.meta.title === 'string' ? to.meta.title : 'Dash'
+  const description = typeof to.meta.description === 'string' ? to.meta.description : defaultDescription
+  const url = `${window.location.origin}${to.fullPath}`
+
+  document.title = title
+  upsertMetaTag('name', 'description', description)
+  upsertMetaTag('property', 'og:title', title)
+  upsertMetaTag('property', 'og:description', description)
+  upsertMetaTag('property', 'og:url', url)
+  upsertMetaTag('name', 'twitter:title', title)
+  upsertMetaTag('name', 'twitter:description', description)
+  upsertCanonical(url)
+}
 
 // Navigation guard for authentication
 router.beforeEach(async (to, _from, next) => {
@@ -96,7 +224,7 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.public) {
     // If authenticated and going to login, redirect to dashboards
     if (isAuthenticated.value && to.name === 'login') {
-      next('/dashboards')
+      next('/app/dashboards')
       return
     }
     next()
@@ -110,6 +238,10 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   next()
+})
+
+router.afterEach((to) => {
+  applySeoMetadata(to)
 })
 
 export default router

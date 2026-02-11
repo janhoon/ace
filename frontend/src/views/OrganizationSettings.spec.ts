@@ -277,10 +277,10 @@ describe('OrganizationSettings', () => {
     expect(wrapper.text()).toContain('Single Sign-On')
 
     await membersLink.trigger('click')
-    expect(mockPush).toHaveBeenCalledWith('/settings/org/org-1/members')
+    expect(mockPush).toHaveBeenCalledWith('/app/settings/org/org-1/members')
 
     await groupsLink.trigger('click')
-    expect(mockPush).toHaveBeenCalledWith('/settings/org/org-1/groups')
+    expect(mockPush).toHaveBeenCalledWith('/app/settings/org/org-1/groups')
   })
 
   it('redirects invalid sections to general', async () => {
@@ -289,7 +289,7 @@ describe('OrganizationSettings', () => {
     const wrapper = mount(OrganizationSettings)
     await flushPromises()
 
-    expect(mockReplace).toHaveBeenCalledWith('/settings/org/org-1/general')
+    expect(mockReplace).toHaveBeenCalledWith('/app/settings/org/org-1/general')
     expect(wrapper.text()).toContain('Single Sign-On')
   })
 

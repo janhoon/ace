@@ -8,7 +8,7 @@ vi.mock('vue-router', () => ({
     template: '<div data-testid="router-view">Router View</div>'
   },
   useRoute: () => ({
-    path: '/dashboards',
+    path: '/app/dashboards',
     params: {}
   }),
   useRouter: () => ({

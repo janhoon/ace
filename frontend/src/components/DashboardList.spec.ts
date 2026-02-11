@@ -170,7 +170,7 @@ describe('DashboardList', () => {
 
     await wrapper.get('[data-testid="tree-dashboard-123e4567-e89b-12d3-a456-426614174000"]').trigger('click')
 
-    expect(mockPush).toHaveBeenCalledWith('/dashboards/123e4567-e89b-12d3-a456-426614174000')
+    expect(mockPush).toHaveBeenCalledWith('/app/dashboards/123e4567-e89b-12d3-a456-426614174000')
   })
 
   it('displays empty state when no dashboards and no folders', async () => {

@@ -735,6 +735,126 @@
         "Test traces visible in Tempo API"
       ],
       "passes": true
+    },
+    {
+      "id": "LANDING-SETUP-001",
+      "name": "Landing Page: Setup & SEO Foundation",
+      "category": "Landing Page/Foundation",
+      "task_size": "medium",
+      "fizzy_ticket": 218,
+      "description": "Set up landing page route and SEO infrastructure optimized for search engines and LLM discoverability.",
+      "depends_on": [],
+      "unblocks": ["LANDING-HERO-001", "LANDING-FEATURES-001", "LANDING-COMPARISON-001", "LANDING-SCREENSHOTS-001", "LANDING-FOOTER-001"],
+      "requirements": [
+        "Create Vue route: / (root path for landing page)",
+        "Separate from authenticated dashboard (/app/*)",
+        "SEO meta tags (title, description, OG, Twitter Cards)",
+        "Structured data (JSON-LD): SoftwareApplication schema",
+        "Semantic HTML structure (proper heading hierarchy)",
+        "robots.txt and sitemap.xml",
+        "Performance optimization (lazy loading, preload)",
+        "Lighthouse SEO score > 95"
+      ],
+      "passes": true
+    },
+    {
+      "id": "LANDING-HERO-001",
+      "name": "Landing Page: Hero Section",
+      "category": "Landing Page/Content",
+      "task_size": "small",
+      "fizzy_ticket": 219,
+      "description": "Create compelling hero section with clear value proposition, optimized for both human readers and LLM parsing.",
+      "depends_on": ["LANDING-SETUP-001"],
+      "unblocks": [],
+      "requirements": [
+        "H1: 'Open-Source Monitoring Dashboard with Multi-Datasource Support'",
+        "Keyword-rich subheading about Prometheus, Loki, Tempo, VictoriaMetrics",
+        "Key features bullet list (semantic <ul>)",
+        "CTA buttons (Get Started, View Demo, GitHub)",
+        "Hero screenshot (WebP < 200KB)",
+        "FAQPage structured data for LLM Q&A",
+        "Mobile responsive layout"
+      ],
+      "passes": false
+    },
+    {
+      "id": "LANDING-FEATURES-001",
+      "name": "Landing Page: Features Section",
+      "category": "Landing Page/Content",
+      "task_size": "medium",
+      "fizzy_ticket": 220,
+      "description": "Showcase key Dash features with icons, descriptions, and keyword-rich content for SEO and LLM understanding.",
+      "depends_on": ["LANDING-SETUP-001"],
+      "unblocks": [],
+      "requirements": [
+        "6 feature cards: Multi-datasource, Self-hosted, Grafana-compatible, Alerting, SSO, Themes",
+        "SVG icons for each feature (< 5KB each)",
+        "H3 headings with keyword-rich descriptions",
+        "ItemList structured data",
+        "Responsive grid (3 cols desktop, 2 tablet, 1 mobile)",
+        "Semantic HTML with proper ARIA labels"
+      ],
+      "passes": false
+    },
+    {
+      "id": "LANDING-COMPARISON-001",
+      "name": "Landing Page: Dash vs Grafana Comparison Table",
+      "category": "Landing Page/Content",
+      "task_size": "small",
+      "fizzy_ticket": 221,
+      "description": "Create SEO-optimized comparison table showing why users should choose Dash over Grafana.",
+      "depends_on": ["LANDING-SETUP-001"],
+      "unblocks": [],
+      "requirements": [
+        "10+ feature rows comparing Dash vs Grafana",
+        "Semantic table markup (caption, scope, th/td)",
+        "Highlight Dash advantages (subtle styling)",
+        "Table structured data + Breadcrumb schema",
+        "Responsive (horizontal scroll or card view on mobile)",
+        "Keyword-rich description below table",
+        "Honest comparison (don't misrepresent Grafana)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "LANDING-SCREENSHOTS-001",
+      "name": "Landing Page: Screenshots & Demo Section",
+      "category": "Landing Page/Content",
+      "task_size": "medium",
+      "fizzy_ticket": 222,
+      "description": "Showcase Dash UI with optimized screenshots and optional interactive demo.",
+      "depends_on": ["LANDING-SETUP-001"],
+      "unblocks": [],
+      "requirements": [
+        "6+ high-quality screenshots (Dashboard, Datasources, Query Editor, Alerts, Org Settings, Dark Theme)",
+        "Descriptive alt text (keyword-rich) for each image",
+        "WebP format with JPEG fallback (< 150KB each)",
+        "Lazy loading enabled",
+        "Lightbox/modal for full-size viewing",
+        "ImageGallery structured data",
+        "Optional: Video demo with VideoObject schema"
+      ],
+      "passes": false
+    },
+    {
+      "id": "LANDING-FOOTER-001",
+      "name": "Landing Page: Footer & CTA Section",
+      "category": "Landing Page/Content",
+      "task_size": "small",
+      "fizzy_ticket": 223,
+      "description": "Create SEO-optimized footer with navigation, social links, GitHub stats, and final CTA section.",
+      "depends_on": ["LANDING-SETUP-001"],
+      "unblocks": [],
+      "requirements": [
+        "Final CTA section: 'Ready to Take Control of Your Monitoring?'",
+        "3 CTA buttons (Get Started, GitHub, Demo)",
+        "GitHub stats badges (live data from shields.io)",
+        "Footer with 4 columns (Product, Resources, Community, Legal)",
+        "Organization + SiteNavigationElement structured data",
+        "Mobile responsive (stacks columns)",
+        "Accessible (ARIA labels, keyboard nav)"
+      ],
+      "passes": false
     }
   ]
 }

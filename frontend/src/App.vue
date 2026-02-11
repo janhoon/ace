@@ -14,7 +14,7 @@ const sidebarWidth = computed(() => {
 })
 
 const showSidebar = computed(() => {
-  return isAuthenticated.value && route.name !== 'login'
+  return isAuthenticated.value && route.meta.appLayout === 'app'
 })
 </script>
 

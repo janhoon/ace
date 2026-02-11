@@ -166,7 +166,7 @@ function dashboardLoadErrorMessage(cause: unknown): string {
 }
 
 function sectionPath(section: SettingsSection): string {
-  return `/dashboards/${dashboardId.value}/settings/${section}`
+  return `/app/dashboards/${dashboardId.value}/settings/${section}`
 }
 
 function navigateToSection(section: SettingsSection) {
@@ -512,7 +512,7 @@ async function exportSettings() {
 }
 
 function goBack() {
-  router.push(`/dashboards/${dashboardId.value}`)
+  router.push(`/app/dashboards/${dashboardId.value}`)
 }
 
 watch(
