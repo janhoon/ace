@@ -775,7 +775,7 @@
         "FAQPage structured data for LLM Q&A",
         "Mobile responsive layout"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "LANDING-FEATURES-001",

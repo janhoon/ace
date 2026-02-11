@@ -1,3 +1,47 @@
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
+
+const faqStructuredData = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Which datasources does Dash support?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Dash supports Prometheus-compatible metrics, Loki logs, Tempo traces, and VictoriaMetrics backends for self-hosted monitoring workflows.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Can teams self-host Dash?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Dash is open source and designed for self-hosted deployments with role-based access control and organization-level settings.',
+      },
+    },
+  ],
+})
+
+let faqSchemaElement: HTMLScriptElement | null = null
+
+onMounted(() => {
+  faqSchemaElement = document.createElement('script')
+  faqSchemaElement.type = 'application/ld+json'
+  faqSchemaElement.text = faqStructuredData
+  faqSchemaElement.setAttribute('data-landing-faq-schema', 'true')
+  document.head.appendChild(faqSchemaElement)
+})
+
+onBeforeUnmount(() => {
+  if (faqSchemaElement) {
+    faqSchemaElement.remove()
+    faqSchemaElement = null
+  }
+})
+</script>
+
 <template>
   <div class="landing-page">
     <header class="topbar">
@@ -14,21 +58,36 @@
 
     <main>
       <section class="hero" aria-labelledby="landing-title">
-        <p class="eyebrow">Open-source observability platform</p>
-        <h1 id="landing-title">Open-Source Monitoring Dashboard with Multi-Datasource Support</h1>
-        <p class="hero-copy">
-          Dash helps teams monitor infrastructure and applications with one interface for Prometheus,
-          Loki, Tempo, and VictoriaMetrics-compatible datasources.
-        </p>
-        <ul class="feature-list">
-          <li>Monitor metrics, logs, and traces with a unified explorer workflow</li>
-          <li>Run self-hosted in your own environment with role-based access control</li>
-          <li>Import and export dashboards as YAML for reproducible configuration</li>
-        </ul>
-        <div class="hero-actions">
-          <RouterLink class="btn btn-primary" to="/app/dashboards">Open App</RouterLink>
-          <RouterLink class="btn btn-secondary" to="/login">Get Started</RouterLink>
-          <a class="btn btn-link" href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
+        <div class="hero-copy-wrap">
+          <p class="eyebrow">Open-source observability platform</p>
+          <h1 id="landing-title">Open-Source Monitoring Dashboard with Multi-Datasource Support</h1>
+          <p class="hero-copy">
+            Dash helps teams monitor infrastructure and applications with one interface for
+            Prometheus, Loki, Tempo, and VictoriaMetrics-compatible datasources.
+          </p>
+          <ul class="feature-list">
+            <li>Monitor metrics, logs, and traces with a unified explorer workflow</li>
+            <li>Run self-hosted in your own environment with role-based access control</li>
+            <li>Import and export dashboards as YAML for reproducible configuration</li>
+          </ul>
+          <div class="hero-actions">
+            <RouterLink class="btn btn-primary" to="/login">Get Started</RouterLink>
+            <a class="btn btn-secondary" href="#overview">View Demo</a>
+            <a class="btn btn-link" href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+        </div>
+        <div class="hero-visual" aria-label="Dash application preview">
+          <picture>
+            <source srcset="/images/landing-hero.webp" type="image/webp" />
+            <img
+              src="/images/landing-hero.webp"
+              alt="Dash monitoring dashboard screenshot showing metrics, logs, and traces panels"
+              width="1600"
+              height="900"
+              loading="eager"
+              decoding="async"
+            />
+          </picture>
         </div>
       </section>
 
@@ -62,6 +121,7 @@
         </div>
       </section>
     </main>
+
   </div>
 </template>
 
@@ -131,7 +191,15 @@
 }
 
 .hero {
-  padding: 2rem 1.4rem;
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.hero-copy-wrap {
+  min-width: 0;
 }
 
 .eyebrow {
@@ -151,7 +219,7 @@
 }
 
 .hero-copy {
-  max-width: 64ch;
+  max-width: 58ch;
   font-size: 0.98rem;
 }
 
@@ -196,6 +264,20 @@
 
 .btn-link {
   color: var(--text-accent);
+}
+
+.hero-visual {
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(8, 14, 24, 0.9);
+  box-shadow: var(--shadow-md);
+}
+
+.hero-visual picture,
+.hero-visual img {
+  display: block;
+  width: 100%;
 }
 
 .content-section {
@@ -247,6 +329,7 @@
 
   .hero {
     padding: 1.2rem 1rem;
+    grid-template-columns: 1fr;
   }
 
   .stack-grid {
