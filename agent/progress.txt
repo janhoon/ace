@@ -106,3 +106,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `frontend/src/views/LandingView.vue`, `frontend/src/views/LandingView.spec.ts`, `frontend/public/images/landing-hero.webp`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd frontend && npm run type-check && npm run test`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; cannot execute required real-browser flow)
+
+## Task LANDING-FEATURES-001: Landing Page: Features Section - 2026-02-11 21:42 UTC
+- What was done: Replaced the landing stack section with a dedicated features section containing six SEO keyword-rich feature cards (Multi-datasource, Self-hosted, Grafana-compatible, Alerting, SSO, Themes) with inline SVG icons, semantic list markup, ARIA labels, and responsive 3/2/1 grid behavior; also added ItemList JSON-LD structured data injection/removal lifecycle and expanded landing tests to validate the new cards and schema.
+- Files changed: `frontend/src/views/LandingView.vue`, `frontend/src/views/LandingView.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd frontend && npm run type-check && npm run test`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment; attempted `skill dev-browser` and skill is not installed)

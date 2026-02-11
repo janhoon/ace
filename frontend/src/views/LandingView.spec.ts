@@ -15,7 +15,9 @@ function mountLanding() {
 describe('LandingView', () => {
   afterEach(() => {
     document.head
-      .querySelectorAll('script[data-landing-faq-schema="true"]')
+      .querySelectorAll(
+        'script[data-landing-faq-schema="true"], script[data-landing-features-schema="true"]',
+      )
       .forEach((schemaElement) => schemaElement.remove())
   })
 
@@ -44,6 +46,25 @@ describe('LandingView', () => {
     wrapper.unmount()
   })
 
+  it('renders six feature cards in a semantic list', () => {
+    const wrapper = mountLanding()
+
+    const cards = wrapper.get('.features-grid').findAll('li.feature-card')
+
+    expect(cards).toHaveLength(6)
+    expect(wrapper.get('#feature-multi-datasource-title').text()).toContain(
+      'Prometheus, Loki, Tempo, and VictoriaMetrics',
+    )
+    expect(wrapper.get('#feature-grafana-title').text()).toContain(
+      'Grafana-compatible dashboard migration',
+    )
+    expect(wrapper.get('#feature-sso-title').text()).toContain(
+      'Single Sign-On and role-based access control',
+    )
+
+    wrapper.unmount()
+  })
+
   it('adds FAQ schema to document head', () => {
     const wrapper = mountLanding()
 
@@ -56,5 +77,20 @@ describe('LandingView', () => {
     wrapper.unmount()
 
     expect(document.head.querySelector('script[data-landing-faq-schema="true"]')).toBeNull()
+  })
+
+  it('adds feature ItemList schema to document head', () => {
+    const wrapper = mountLanding()
+
+    const schemaElement = document.head.querySelector('script[data-landing-features-schema="true"]')
+
+    expect(schemaElement).not.toBeNull()
+    expect(schemaElement?.textContent).toContain('"@type":"ItemList"')
+    expect(schemaElement?.textContent).toContain('"position":6')
+    expect(schemaElement?.textContent).toContain('Flexible themes for operations teams')
+
+    wrapper.unmount()
+
+    expect(document.head.querySelector('script[data-landing-features-schema="true"]')).toBeNull()
   })
 })

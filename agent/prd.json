@@ -794,7 +794,7 @@
         "Responsive grid (3 cols desktop, 2 tablet, 1 mobile)",
         "Semantic HTML with proper ARIA labels"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "LANDING-COMPARISON-001",

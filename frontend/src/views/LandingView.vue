@@ -24,7 +24,58 @@ const faqStructuredData = JSON.stringify({
   ],
 })
 
+const featureListStructuredData = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Dash monitoring platform features',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Multi-datasource observability',
+      description:
+        'Query Prometheus metrics, Loki logs, Tempo traces, and VictoriaMetrics data from a single monitoring dashboard.',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Self-hosted monitoring control',
+      description:
+        'Deploy Dash in your own infrastructure for secure, open-source observability without vendor lock-in.',
+    },
+    {
+      '@type': 'ListItem',
+      position: 3,
+      name: 'Grafana-compatible migration path',
+      description:
+        'Import Grafana dashboards and convert panel configurations into Dash for easier migration from legacy tooling.',
+    },
+    {
+      '@type': 'ListItem',
+      position: 4,
+      name: 'Integrated alerting workflows',
+      description:
+        'Build alert rules tied to dashboards and datasource queries so incidents can be triaged from one workflow.',
+    },
+    {
+      '@type': 'ListItem',
+      position: 5,
+      name: 'Single Sign-On administration',
+      description:
+        'Configure authentication providers and organization access controls for secure SSO onboarding.',
+    },
+    {
+      '@type': 'ListItem',
+      position: 6,
+      name: 'Flexible themes for operations teams',
+      description:
+        'Use light and dark dashboard themes tuned for day-shift and on-call monitoring sessions.',
+    },
+  ],
+})
+
 let faqSchemaElement: HTMLScriptElement | null = null
+let featureSchemaElement: HTMLScriptElement | null = null
 
 onMounted(() => {
   faqSchemaElement = document.createElement('script')
@@ -32,12 +83,23 @@ onMounted(() => {
   faqSchemaElement.text = faqStructuredData
   faqSchemaElement.setAttribute('data-landing-faq-schema', 'true')
   document.head.appendChild(faqSchemaElement)
+
+  featureSchemaElement = document.createElement('script')
+  featureSchemaElement.type = 'application/ld+json'
+  featureSchemaElement.text = featureListStructuredData
+  featureSchemaElement.setAttribute('data-landing-features-schema', 'true')
+  document.head.appendChild(featureSchemaElement)
 })
 
 onBeforeUnmount(() => {
   if (faqSchemaElement) {
     faqSchemaElement.remove()
     faqSchemaElement = null
+  }
+
+  if (featureSchemaElement) {
+    featureSchemaElement.remove()
+    featureSchemaElement = null
   }
 })
 </script>
@@ -51,7 +113,7 @@ onBeforeUnmount(() => {
       </div>
       <nav class="topnav" aria-label="Landing navigation">
         <a href="#overview">Overview</a>
-        <a href="#stack">Supported stack</a>
+        <a href="#features">Features</a>
         <RouterLink to="/login">Sign in</RouterLink>
       </nav>
     </header>
@@ -99,26 +161,93 @@ onBeforeUnmount(() => {
         </p>
       </section>
 
-      <section id="stack" class="content-section" aria-labelledby="stack-title">
-        <h2 id="stack-title">Supported observability stack</h2>
-        <div class="stack-grid" role="list" aria-label="Supported integrations">
-          <article role="listitem" class="stack-card">
-            <h3>Prometheus</h3>
-            <p>Query metrics with dashboard panels and Explore metrics tooling.</p>
-          </article>
-          <article role="listitem" class="stack-card">
-            <h3>Loki</h3>
-            <p>Run LogQL queries and inspect logs with trace-aware navigation context.</p>
-          </article>
-          <article role="listitem" class="stack-card">
-            <h3>Tempo</h3>
-            <p>Visualize trace timelines, span details, and service dependencies.</p>
-          </article>
-          <article role="listitem" class="stack-card">
-            <h3>VictoriaMetrics</h3>
-            <p>Use scalable metrics and tracing backends in self-hosted deployments.</p>
-          </article>
-        </div>
+      <section id="features" class="content-section" aria-labelledby="features-title">
+        <h2 id="features-title">Core Dash features for modern observability teams</h2>
+        <p>
+          Dash combines monitoring, alerting, and access control into a single open-source platform so teams can
+          troubleshoot incidents quickly without switching tools.
+        </p>
+        <ul class="features-grid" aria-label="Dash platform feature list">
+          <li class="feature-card">
+            <article aria-labelledby="feature-multi-datasource-title">
+              <svg viewBox="0 0 24 24" role="img" aria-label="Multi-datasource icon">
+                <path
+                  d="M4 6.5a8 3 0 1 0 16 0a8 3 0 1 0 -16 0M4 6.5v5a8 3 0 0 0 16 0v-5M4 11.5v5a8 3 0 0 0 16 0v-5"
+                />
+              </svg>
+              <h3 id="feature-multi-datasource-title">Multi-datasource monitoring with Prometheus, Loki, Tempo, and VictoriaMetrics</h3>
+              <p>
+                Query metrics, logs, and traces from one dashboard experience to reduce context switching during
+                incident response.
+              </p>
+            </article>
+          </li>
+          <li class="feature-card">
+            <article aria-labelledby="feature-self-hosted-title">
+              <svg viewBox="0 0 24 24" role="img" aria-label="Self-hosted icon">
+                <path d="M12 3l9 4.5v4.7c0 5.3-3.5 8.6-9 9.8c-5.5-1.2-9-4.5-9-9.8V7.5L12 3z" />
+                <path d="M9 12l2 2l4-4" />
+              </svg>
+              <h3 id="feature-self-hosted-title">Self-hosted observability for secure infrastructure ownership</h3>
+              <p>
+                Deploy Dash in your own environment with full control over data retention, network boundaries, and
+                operational policies.
+              </p>
+            </article>
+          </li>
+          <li class="feature-card">
+            <article aria-labelledby="feature-grafana-title">
+              <svg viewBox="0 0 24 24" role="img" aria-label="Grafana migration icon">
+                <path d="M4 6h9v12H4z" />
+                <path d="M11 9h9v12h-9z" />
+                <path d="M7 10h3M7 13h3M14 13h3M14 16h3" />
+              </svg>
+              <h3 id="feature-grafana-title">Grafana-compatible dashboard migration and import workflows</h3>
+              <p>
+                Bring existing Grafana JSON into Dash, preview conversion results, and continue iterating without
+                rebuilding dashboards from scratch.
+              </p>
+            </article>
+          </li>
+          <li class="feature-card">
+            <article aria-labelledby="feature-alerting-title">
+              <svg viewBox="0 0 24 24" role="img" aria-label="Alerting icon">
+                <path d="M12 4a5 5 0 0 1 5 5v3.5l1.6 2.7c.2.3 0 .8-.4.8H5.8c-.4 0-.6-.5-.4-.8L7 12.5V9a5 5 0 0 1 5-5z" />
+                <path d="M10 18a2 2 0 0 0 4 0" />
+              </svg>
+              <h3 id="feature-alerting-title">Alerting and on-call workflows connected to datasource queries</h3>
+              <p>
+                Configure alerts tied to dashboard panels and investigate triggered conditions directly in Explore and
+                dashboard views.
+              </p>
+            </article>
+          </li>
+          <li class="feature-card">
+            <article aria-labelledby="feature-sso-title">
+              <svg viewBox="0 0 24 24" role="img" aria-label="SSO icon">
+                <path d="M7 11a4 4 0 1 1 0-8a4 4 0 0 1 0 8zM17 21a4 4 0 1 0 0-8a4 4 0 0 0 0 8z" />
+                <path d="M10.5 8.5l3 3M13.5 15.5l3-3" />
+              </svg>
+              <h3 id="feature-sso-title">Single Sign-On and role-based access control for organization security</h3>
+              <p>
+                Enable Google or Microsoft SSO, manage members and groups, and enforce admin, editor, and viewer
+                permissions across teams.
+              </p>
+            </article>
+          </li>
+          <li class="feature-card">
+            <article aria-labelledby="feature-themes-title">
+              <svg viewBox="0 0 24 24" role="img" aria-label="Themes icon">
+                <path d="M12 3a9 9 0 1 0 9 9a7 7 0 0 1-9-9z" />
+              </svg>
+              <h3 id="feature-themes-title">Customizable light and dark themes for day-shift and on-call use</h3>
+              <p>
+                Choose themes that fit your working environment while preserving visual clarity for dense metrics,
+                logs, and tracing data.
+              </p>
+            </article>
+          </li>
+        </ul>
       </section>
     </main>
 
@@ -289,27 +418,58 @@ onBeforeUnmount(() => {
   margin-bottom: 0.65rem;
 }
 
-.stack-grid {
+.features-grid {
   margin-top: 0.9rem;
+  list-style: none;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.7rem;
 }
 
-.stack-card {
+.feature-card {
+  margin: 0;
+}
+
+.feature-card article {
+  display: grid;
+  gap: 0.55rem;
+  height: 100%;
+}
+
+.feature-card article svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: var(--text-accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.feature-card article {
   border: 1px solid var(--border-primary);
   border-radius: 12px;
   background: rgba(20, 32, 50, 0.75);
-  padding: 0.85rem;
+  padding: 0.9rem;
 }
 
-.stack-card h3 {
-  margin-bottom: 0.35rem;
-  font-size: 0.93rem;
+.feature-card h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.35;
 }
 
-.stack-card p {
-  font-size: 0.85rem;
+.feature-card p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 980px) {
+  .features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -332,7 +492,7 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
-  .stack-grid {
+  .features-grid {
     grid-template-columns: 1fr;
   }
 }
