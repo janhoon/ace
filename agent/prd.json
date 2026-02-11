@@ -834,7 +834,7 @@
         "ImageGallery structured data",
         "Optional: Video demo with VideoObject schema"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "LANDING-FOOTER-001",

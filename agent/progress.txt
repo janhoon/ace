@@ -118,3 +118,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `frontend/src/views/LandingView.vue`, `frontend/src/views/LandingView.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd frontend && npm run type-check && npm run test`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment; cannot execute required real-browser flow)
+
+## Task LANDING-SCREENSHOTS-001: Landing Page: Screenshots & Demo Section - 2026-02-11 21:47 UTC
+- What was done: Added a dedicated screenshots section to the landing page with six workflow cards (Dashboard, Datasources, Query Editor, Alerts, Org Settings, Dark Theme), lazy-loaded WebP images with JPEG fallback, click-to-open lightbox preview, and ImageGallery JSON-LD schema injection/cleanup for SEO; expanded landing tests to cover screenshot rendering, lazy/fallback attributes, lightbox behavior, and image gallery schema presence.
+- Files changed: `frontend/src/views/LandingView.vue`, `frontend/src/views/LandingView.spec.ts`, `frontend/public/images/landing-dashboard.webp`, `frontend/public/images/landing-dashboard.jpg`, `frontend/public/images/landing-datasources.webp`, `frontend/public/images/landing-datasources.jpg`, `frontend/public/images/landing-query-editor.webp`, `frontend/public/images/landing-query-editor.jpg`, `frontend/public/images/landing-alerts.webp`, `frontend/public/images/landing-alerts.jpg`, `frontend/public/images/landing-org-settings.webp`, `frontend/public/images/landing-org-settings.jpg`, `frontend/public/images/landing-dark-theme.webp`, `frontend/public/images/landing-dark-theme.jpg`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd frontend && npm run type-check && npm run test`)
+- Browser validation: failing (attempted `skill dev-browser`; environment reports "Skill \"dev-browser\" not found", so real browser happy-path/failure-state validation could not be executed)

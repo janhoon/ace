@@ -1,5 +1,66 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+
+type LandingScreenshot = {
+  id: string
+  title: string
+  description: string
+  webp: string
+  jpg: string
+  alt: string
+}
+
+const screenshotGallery: LandingScreenshot[] = [
+  {
+    id: 'dashboard-overview',
+    title: 'Dashboard overview',
+    description: 'Interactive monitoring overview with metrics, logs, and traces in one dashboard.',
+    webp: '/images/landing-dashboard.webp',
+    jpg: '/images/landing-dashboard.jpg',
+    alt: 'Dash monitoring dashboard screenshot showing KPI panels, log stream, and trace timeline overview',
+  },
+  {
+    id: 'datasource-config',
+    title: 'Datasource configuration',
+    description:
+      'Configure Prometheus, Loki, Tempo, and VictoriaMetrics datasources with auth and health checks.',
+    webp: '/images/landing-datasources.webp',
+    jpg: '/images/landing-datasources.jpg',
+    alt: 'Dash datasource settings screenshot with Prometheus, Loki, Tempo, and VictoriaMetrics connection options',
+  },
+  {
+    id: 'query-editor',
+    title: 'Query editor',
+    description: 'Build and tune observability queries with instant result previews for incident response.',
+    webp: '/images/landing-query-editor.webp',
+    jpg: '/images/landing-query-editor.jpg',
+    alt: 'Dash query editor screenshot with datasource selector, query input, and live chart result preview',
+  },
+  {
+    id: 'alerts',
+    title: 'Alerting workflows',
+    description: 'Create alert rules tied to dashboards and investigate incidents with related telemetry.',
+    webp: '/images/landing-alerts.webp',
+    jpg: '/images/landing-alerts.jpg',
+    alt: 'Dash alerting screenshot showing alert rules list, severity indicators, and recent alert history',
+  },
+  {
+    id: 'organization-settings',
+    title: 'Organization settings',
+    description: 'Manage team members, SSO providers, and role-based permissions for secure access control.',
+    webp: '/images/landing-org-settings.webp',
+    jpg: '/images/landing-org-settings.jpg',
+    alt: 'Dash organization settings screenshot with member management, groups, and authentication providers',
+  },
+  {
+    id: 'dark-theme',
+    title: 'Dark theme experience',
+    description: 'Use low-glare dark theme layouts for clear observability during on-call and overnight work.',
+    webp: '/images/landing-dark-theme.webp',
+    jpg: '/images/landing-dark-theme.jpg',
+    alt: 'Dash dark theme screenshot showing dashboard panels with high-contrast metrics and log visualization',
+  },
+]
 
 const faqStructuredData = JSON.stringify({
   '@context': 'https://schema.org',
@@ -117,10 +178,43 @@ const breadcrumbStructuredData = JSON.stringify({
   ],
 })
 
+const imageGalleryStructuredData = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'ImageGallery',
+  name: 'Dash monitoring platform screenshot gallery',
+  description:
+    'Screenshot gallery covering Dash dashboards, datasource setup, query editor, alerts, organization settings, and dark theme.',
+  hasPart: screenshotGallery.map((screenshot, index) => ({
+    '@type': 'ImageObject',
+    position: index + 1,
+    name: screenshot.title,
+    description: screenshot.description,
+    contentUrl: screenshot.webp,
+    thumbnailUrl: screenshot.jpg,
+  })),
+})
+
 let faqSchemaElement: HTMLScriptElement | null = null
 let featureSchemaElement: HTMLScriptElement | null = null
 let comparisonSchemaElement: HTMLScriptElement | null = null
 let breadcrumbSchemaElement: HTMLScriptElement | null = null
+let imageGallerySchemaElement: HTMLScriptElement | null = null
+
+const activeScreenshot = ref<LandingScreenshot | null>(null)
+
+function openScreenshot(screenshot: LandingScreenshot) {
+  activeScreenshot.value = screenshot
+}
+
+function closeScreenshot() {
+  activeScreenshot.value = null
+}
+
+function onKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && activeScreenshot.value) {
+    closeScreenshot()
+  }
+}
 
 onMounted(() => {
   faqSchemaElement = document.createElement('script')
@@ -146,6 +240,14 @@ onMounted(() => {
   breadcrumbSchemaElement.text = breadcrumbStructuredData
   breadcrumbSchemaElement.setAttribute('data-landing-breadcrumb-schema', 'true')
   document.head.appendChild(breadcrumbSchemaElement)
+
+  imageGallerySchemaElement = document.createElement('script')
+  imageGallerySchemaElement.type = 'application/ld+json'
+  imageGallerySchemaElement.text = imageGalleryStructuredData
+  imageGallerySchemaElement.setAttribute('data-landing-image-gallery-schema', 'true')
+  document.head.appendChild(imageGallerySchemaElement)
+
+  window.addEventListener('keydown', onKeyDown)
 })
 
 onBeforeUnmount(() => {
@@ -168,6 +270,13 @@ onBeforeUnmount(() => {
     breadcrumbSchemaElement.remove()
     breadcrumbSchemaElement = null
   }
+
+  if (imageGallerySchemaElement) {
+    imageGallerySchemaElement.remove()
+    imageGallerySchemaElement = null
+  }
+
+  window.removeEventListener('keydown', onKeyDown)
 })
 </script>
 
@@ -182,6 +291,7 @@ onBeforeUnmount(() => {
         <a href="#overview">Overview</a>
         <a href="#features">Features</a>
         <a href="#comparison">Compare</a>
+        <a href="#screenshots">Screenshots</a>
         <RouterLink to="/login">Sign in</RouterLink>
       </nav>
     </header>
@@ -397,7 +507,84 @@ onBeforeUnmount(() => {
           the top priority.
         </p>
       </section>
+
+      <section id="screenshots" class="content-section" aria-labelledby="screenshots-title">
+        <h2 id="screenshots-title">Product screenshots and demo-ready UI walkthrough</h2>
+        <p>
+          Explore key Dash workflows including dashboard analysis, datasource setup, query editing,
+          alerting, organization controls, and dark theme operation.
+        </p>
+        <ul class="screenshots-grid" aria-label="Dash screenshot gallery">
+          <li
+            v-for="screenshot in screenshotGallery"
+            :key="screenshot.id"
+            class="screenshot-card"
+          >
+            <button
+              class="screenshot-trigger"
+              type="button"
+              @click="openScreenshot(screenshot)"
+            >
+              <picture>
+                <source :srcset="screenshot.webp" type="image/webp" />
+                <img
+                  :src="screenshot.jpg"
+                  :alt="screenshot.alt"
+                  width="1280"
+                  height="720"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
+              <span class="screenshot-meta">
+                <span class="screenshot-title">{{ screenshot.title }}</span>
+                <span class="screenshot-description">{{ screenshot.description }}</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </section>
     </main>
+
+    <div
+      v-if="activeScreenshot"
+      class="screenshot-lightbox"
+      role="presentation"
+      @click.self="closeScreenshot"
+    >
+      <div
+        class="screenshot-lightbox-dialog"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="`${activeScreenshot.title} screenshot preview`"
+      >
+        <button
+          class="lightbox-close"
+          type="button"
+          aria-label="Close screenshot preview"
+          @click="closeScreenshot"
+        >
+          Close
+        </button>
+        <figure>
+          <picture>
+            <source :srcset="activeScreenshot.webp" type="image/webp" />
+            <img
+              :src="activeScreenshot.jpg"
+              :alt="activeScreenshot.alt"
+              width="1280"
+              height="720"
+              loading="eager"
+              decoding="async"
+            />
+          </picture>
+          <figcaption>
+            <strong>{{ activeScreenshot.title }}</strong>
+            <span>{{ activeScreenshot.description }}</span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
 
   </div>
 </template>
@@ -673,8 +860,125 @@ onBeforeUnmount(() => {
   color: var(--text-secondary);
 }
 
+.screenshots-grid {
+  margin-top: 0.9rem;
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.screenshot-card {
+  margin: 0;
+}
+
+.screenshot-trigger {
+  width: 100%;
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  background: rgba(20, 32, 50, 0.7);
+  padding: 0.5rem;
+  display: grid;
+  gap: 0.6rem;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.screenshot-trigger picture,
+.screenshot-trigger img {
+  display: block;
+  width: 100%;
+}
+
+.screenshot-trigger picture {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-sm);
+}
+
+.screenshot-meta {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.screenshot-title {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.screenshot-description {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.screenshot-lightbox {
+  position: fixed;
+  inset: 0;
+  padding: 1rem;
+  background: rgba(3, 8, 14, 0.82);
+  display: grid;
+  place-items: center;
+  z-index: 20;
+}
+
+.screenshot-lightbox-dialog {
+  width: min(980px, 100%);
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: rgba(13, 22, 34, 0.98);
+  padding: 0.8rem;
+}
+
+.lightbox-close {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: rgba(20, 32, 50, 0.7);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  padding: 0.45rem 0.65rem;
+}
+
+.screenshot-lightbox-dialog figure {
+  margin: 0.65rem 0 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.screenshot-lightbox-dialog picture {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.screenshot-lightbox-dialog img {
+  display: block;
+  width: 100%;
+}
+
+.screenshot-lightbox-dialog figcaption {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.screenshot-lightbox-dialog figcaption strong {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
 @media (max-width: 980px) {
   .features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .screenshots-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -701,6 +1005,14 @@ onBeforeUnmount(() => {
 
   .features-grid {
     grid-template-columns: 1fr;
+  }
+
+  .screenshots-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .screenshot-lightbox {
+    padding: 0.65rem;
   }
 }
 </style>

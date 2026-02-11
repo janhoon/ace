@@ -16,7 +16,7 @@ describe('LandingView', () => {
   afterEach(() => {
     document.head
       .querySelectorAll(
-        'script[data-landing-faq-schema="true"], script[data-landing-features-schema="true"], script[data-landing-comparison-schema="true"], script[data-landing-breadcrumb-schema="true"]',
+        'script[data-landing-faq-schema="true"], script[data-landing-features-schema="true"], script[data-landing-comparison-schema="true"], script[data-landing-breadcrumb-schema="true"], script[data-landing-image-gallery-schema="true"]',
       )
       .forEach((schemaElement) => schemaElement.remove())
   })
@@ -84,6 +84,39 @@ describe('LandingView', () => {
     wrapper.unmount()
   })
 
+  it('renders six lazy-loaded screenshot cards with jpeg fallback', () => {
+    const wrapper = mountLanding()
+
+    const screenshotCards = wrapper.get('.screenshots-grid').findAll('li.screenshot-card')
+    const firstScreenshotImage = screenshotCards[0].get('img')
+
+    expect(screenshotCards).toHaveLength(6)
+    expect(firstScreenshotImage.attributes('loading')).toBe('lazy')
+    expect(firstScreenshotImage.attributes('alt')).toContain('monitoring dashboard screenshot')
+    expect(firstScreenshotImage.attributes('src')).toBe('/images/landing-dashboard.jpg')
+    expect(screenshotCards[0].get('source').attributes('srcset')).toBe('/images/landing-dashboard.webp')
+
+    wrapper.unmount()
+  })
+
+  it('opens and closes screenshot lightbox modal', async () => {
+    const wrapper = mountLanding()
+
+    const firstTrigger = wrapper.get('.screenshot-trigger')
+
+    await firstTrigger.trigger('click')
+
+    expect(wrapper.find('.screenshot-lightbox').exists()).toBe(true)
+    expect(wrapper.get('.screenshot-lightbox-dialog').attributes('role')).toBe('dialog')
+    expect(wrapper.get('.screenshot-lightbox-dialog figcaption').text()).toContain('Dashboard overview')
+
+    await wrapper.get('.lightbox-close').trigger('click')
+
+    expect(wrapper.find('.screenshot-lightbox').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
   it('adds FAQ schema to document head', () => {
     const wrapper = mountLanding()
 
@@ -130,5 +163,22 @@ describe('LandingView', () => {
 
     expect(document.head.querySelector('script[data-landing-comparison-schema="true"]')).toBeNull()
     expect(document.head.querySelector('script[data-landing-breadcrumb-schema="true"]')).toBeNull()
+  })
+
+  it('adds image gallery schema to document head', () => {
+    const wrapper = mountLanding()
+
+    const schemaElement = document.head.querySelector(
+      'script[data-landing-image-gallery-schema="true"]',
+    )
+
+    expect(schemaElement).not.toBeNull()
+    expect(schemaElement?.textContent).toContain('"@type":"ImageGallery"')
+    expect(schemaElement?.textContent).toContain('Dashboard overview')
+    expect(schemaElement?.textContent).toContain('"position":6')
+
+    wrapper.unmount()
+
+    expect(document.head.querySelector('script[data-landing-image-gallery-schema="true"]')).toBeNull()
   })
 })
