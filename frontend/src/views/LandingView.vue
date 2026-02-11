@@ -194,11 +194,28 @@ const imageGalleryStructuredData = JSON.stringify({
   })),
 })
 
+const organizationStructuredData = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Dash',
+  url: 'https://github.com/janhoon/dash',
+  sameAs: ['https://github.com/janhoon/dash'],
+})
+
+const siteNavigationStructuredData = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'SiteNavigationElement',
+  name: ['Overview', 'Features', 'Comparison', 'Screenshots', 'Get Started'],
+  url: ['/#overview', '/#features', '/#comparison', '/#screenshots', '/login'],
+})
+
 let faqSchemaElement: HTMLScriptElement | null = null
 let featureSchemaElement: HTMLScriptElement | null = null
 let comparisonSchemaElement: HTMLScriptElement | null = null
 let breadcrumbSchemaElement: HTMLScriptElement | null = null
 let imageGallerySchemaElement: HTMLScriptElement | null = null
+let organizationSchemaElement: HTMLScriptElement | null = null
+let siteNavigationSchemaElement: HTMLScriptElement | null = null
 
 const activeScreenshot = ref<LandingScreenshot | null>(null)
 
@@ -247,6 +264,18 @@ onMounted(() => {
   imageGallerySchemaElement.setAttribute('data-landing-image-gallery-schema', 'true')
   document.head.appendChild(imageGallerySchemaElement)
 
+  organizationSchemaElement = document.createElement('script')
+  organizationSchemaElement.type = 'application/ld+json'
+  organizationSchemaElement.text = organizationStructuredData
+  organizationSchemaElement.setAttribute('data-landing-organization-schema', 'true')
+  document.head.appendChild(organizationSchemaElement)
+
+  siteNavigationSchemaElement = document.createElement('script')
+  siteNavigationSchemaElement.type = 'application/ld+json'
+  siteNavigationSchemaElement.text = siteNavigationStructuredData
+  siteNavigationSchemaElement.setAttribute('data-landing-site-nav-schema', 'true')
+  document.head.appendChild(siteNavigationSchemaElement)
+
   window.addEventListener('keydown', onKeyDown)
 })
 
@@ -274,6 +303,16 @@ onBeforeUnmount(() => {
   if (imageGallerySchemaElement) {
     imageGallerySchemaElement.remove()
     imageGallerySchemaElement = null
+  }
+
+  if (organizationSchemaElement) {
+    organizationSchemaElement.remove()
+    organizationSchemaElement = null
+  }
+
+  if (siteNavigationSchemaElement) {
+    siteNavigationSchemaElement.remove()
+    siteNavigationSchemaElement = null
   }
 
   window.removeEventListener('keydown', onKeyDown)
@@ -544,7 +583,107 @@ onBeforeUnmount(() => {
           </li>
         </ul>
       </section>
+
+      <section id="cta" class="content-section final-cta" aria-labelledby="cta-title">
+        <h2 id="cta-title">Ready to Take Control of Your Monitoring?</h2>
+        <p>
+          Launch Dash in your own environment, connect your observability stack, and give every team a shared
+          dashboard workflow for metrics, logs, and traces.
+        </p>
+        <div class="final-cta-actions">
+          <RouterLink class="btn btn-primary" to="/login">Get Started</RouterLink>
+          <a class="btn btn-secondary" href="#overview">Demo</a>
+          <a class="btn btn-link" href="https://github.com/janhoon/dash" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+        <div class="github-badges" aria-label="GitHub stats badges">
+          <a
+            class="badge-link"
+            href="https://github.com/janhoon/dash/stargazers"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Dash GitHub stars"
+          >
+            <img
+              src="https://img.shields.io/github/stars/janhoon/dash?style=flat-square&label=GitHub%20Stars"
+              alt="GitHub stars badge"
+              loading="lazy"
+              decoding="async"
+            />
+          </a>
+          <a
+            class="badge-link"
+            href="https://github.com/janhoon/dash/network/members"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Dash GitHub forks"
+          >
+            <img
+              src="https://img.shields.io/github/forks/janhoon/dash?style=flat-square&label=GitHub%20Forks"
+              alt="GitHub forks badge"
+              loading="lazy"
+              decoding="async"
+            />
+          </a>
+          <a
+            class="badge-link"
+            href="https://github.com/janhoon/dash/commits/main"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Dash latest commit activity"
+          >
+            <img
+              src="https://img.shields.io/github/last-commit/janhoon/dash?style=flat-square&label=Last%20Commit"
+              alt="GitHub last commit badge"
+              loading="lazy"
+              decoding="async"
+            />
+          </a>
+        </div>
+      </section>
     </main>
+
+    <footer class="landing-footer" aria-label="Footer navigation">
+      <h2 class="sr-only">Footer links</h2>
+      <div class="footer-grid">
+        <section class="footer-column" aria-labelledby="footer-product-title">
+          <h3 id="footer-product-title">Product</h3>
+          <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#comparison">Dash vs Grafana</a></li>
+            <li><a href="#screenshots">Screenshots</a></li>
+          </ul>
+        </section>
+        <section class="footer-column" aria-labelledby="footer-resources-title">
+          <h3 id="footer-resources-title">Resources</h3>
+          <ul>
+            <li><a href="https://github.com/janhoon/dash#readme" target="_blank" rel="noreferrer">Documentation</a></li>
+            <li><a href="https://github.com/janhoon/dash/releases" target="_blank" rel="noreferrer">Releases</a></li>
+            <li><a href="https://github.com/janhoon/dash/issues" target="_blank" rel="noreferrer">Issue tracker</a></li>
+            <li><a href="https://github.com/janhoon/dash/discussions" target="_blank" rel="noreferrer">Discussions</a></li>
+          </ul>
+        </section>
+        <section class="footer-column" aria-labelledby="footer-community-title">
+          <h3 id="footer-community-title">Community</h3>
+          <ul>
+            <li><a href="https://github.com/janhoon/dash" target="_blank" rel="noreferrer">GitHub</a></li>
+            <li><a href="https://github.com/janhoon?tab=followers" target="_blank" rel="noreferrer">Follow maintainer</a></li>
+            <li><a href="https://github.com/janhoon/dash/stargazers" target="_blank" rel="noreferrer">Star the project</a></li>
+            <li><a href="https://github.com/janhoon/dash/fork" target="_blank" rel="noreferrer">Contribute a fork</a></li>
+          </ul>
+        </section>
+        <section class="footer-column" aria-labelledby="footer-legal-title">
+          <h3 id="footer-legal-title">Legal</h3>
+          <ul>
+            <li><a href="https://github.com/janhoon/dash/security" target="_blank" rel="noreferrer">Security policy</a></li>
+            <li><a href="https://github.com/janhoon/dash/blob/main/SECURITY.md" target="_blank" rel="noreferrer">Security disclosure</a></li>
+            <li><a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noreferrer">Privacy notice</a></li>
+            <li><a href="https://docs.github.com/en/site-policy/github-terms/github-terms-of-service" target="_blank" rel="noreferrer">Terms of service</a></li>
+          </ul>
+        </section>
+      </div>
+      <p class="footer-meta">Built with open-source tooling for modern observability teams.</p>
+    </footer>
 
     <div
       v-if="activeScreenshot"
@@ -973,12 +1112,116 @@ onBeforeUnmount(() => {
   font-size: 0.92rem;
 }
 
+.final-cta {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.final-cta h2 {
+  margin: 0;
+}
+
+.final-cta p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.final-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.github-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.badge-link {
+  display: inline-flex;
+}
+
+.badge-link img {
+  display: block;
+  height: 20px;
+}
+
+.landing-footer {
+  max-width: 1080px;
+  margin: 0.95rem auto 0;
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(14, 23, 36, 0.92), rgba(12, 20, 32, 0.9));
+  box-shadow: var(--shadow-sm);
+  padding: 1.2rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.footer-column h3 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+
+.footer-column ul {
+  margin: 0.65rem 0 0;
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.footer-column a {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  text-decoration: none;
+}
+
+.footer-column a:hover,
+.footer-column a:focus-visible {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.footer-meta {
+  margin: 1rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border-primary);
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+}
+
 @media (max-width: 980px) {
   .features-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .screenshots-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1008,6 +1251,10 @@ onBeforeUnmount(() => {
   }
 
   .screenshots-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-grid {
     grid-template-columns: 1fr;
   }
 

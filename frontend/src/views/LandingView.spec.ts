@@ -16,7 +16,7 @@ describe('LandingView', () => {
   afterEach(() => {
     document.head
       .querySelectorAll(
-        'script[data-landing-faq-schema="true"], script[data-landing-features-schema="true"], script[data-landing-comparison-schema="true"], script[data-landing-breadcrumb-schema="true"], script[data-landing-image-gallery-schema="true"]',
+        'script[data-landing-faq-schema="true"], script[data-landing-features-schema="true"], script[data-landing-comparison-schema="true"], script[data-landing-breadcrumb-schema="true"], script[data-landing-image-gallery-schema="true"], script[data-landing-organization-schema="true"], script[data-landing-site-nav-schema="true"]',
       )
       .forEach((schemaElement) => schemaElement.remove())
   })
@@ -117,6 +117,29 @@ describe('LandingView', () => {
     wrapper.unmount()
   })
 
+  it('renders final CTA section and footer columns', () => {
+    const wrapper = mountLanding()
+
+    expect(wrapper.get('#cta-title').text()).toBe('Ready to Take Control of Your Monitoring?')
+    expect(wrapper.get('.final-cta-actions').text()).toContain('Get Started')
+    expect(wrapper.get('.final-cta-actions').text()).toContain('Demo')
+    expect(wrapper.get('.final-cta-actions').text()).toContain('GitHub')
+
+    const badges = wrapper.get('.github-badges').findAll('img')
+
+    expect(badges).toHaveLength(3)
+    expect(badges[0].attributes('src')).toContain('img.shields.io/github/stars/janhoon/dash')
+
+    const footerColumnTitles = wrapper
+      .get('.footer-grid')
+      .findAll('h3')
+      .map((element) => element.text())
+
+    expect(footerColumnTitles).toEqual(['Product', 'Resources', 'Community', 'Legal'])
+
+    wrapper.unmount()
+  })
+
   it('adds FAQ schema to document head', () => {
     const wrapper = mountLanding()
 
@@ -180,5 +203,28 @@ describe('LandingView', () => {
     wrapper.unmount()
 
     expect(document.head.querySelector('script[data-landing-image-gallery-schema="true"]')).toBeNull()
+  })
+
+  it('adds organization and site navigation schema to document head', () => {
+    const wrapper = mountLanding()
+
+    const organizationSchema = document.head.querySelector(
+      'script[data-landing-organization-schema="true"]',
+    )
+    const siteNavigationSchema = document.head.querySelector(
+      'script[data-landing-site-nav-schema="true"]',
+    )
+
+    expect(organizationSchema).not.toBeNull()
+    expect(organizationSchema?.textContent).toContain('"@type":"Organization"')
+    expect(organizationSchema?.textContent).toContain('janhoon/dash')
+    expect(siteNavigationSchema).not.toBeNull()
+    expect(siteNavigationSchema?.textContent).toContain('"@type":"SiteNavigationElement"')
+    expect(siteNavigationSchema?.textContent).toContain('"Get Started"')
+
+    wrapper.unmount()
+
+    expect(document.head.querySelector('script[data-landing-organization-schema="true"]')).toBeNull()
+    expect(document.head.querySelector('script[data-landing-site-nav-schema="true"]')).toBeNull()
   })
 })

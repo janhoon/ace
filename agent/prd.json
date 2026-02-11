@@ -854,7 +854,7 @@
         "Mobile responsive (stacks columns)",
         "Accessible (ARIA labels, keyboard nav)"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }
