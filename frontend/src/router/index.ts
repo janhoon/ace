@@ -7,12 +7,8 @@ const defaultDescription =
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'landing',
-    component: () => import('../views/LandingView.vue'),
-    meta: {
-      public: true,
-      title: 'Dash | Open-Source Monitoring Dashboard',
-      description: defaultDescription,
+    redirect: {
+      path: '/app/dashboards',
     },
   },
   {
