@@ -898,7 +898,7 @@
         "API Key: phc_OIBFMDJkbcFUzDEYYUpGELUNGuD9shBLFUnMKyyhsui",
         "Config: POSTHOG_HOST=https://eu.posthog.com"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "POSTHOG-FRONTEND-001",

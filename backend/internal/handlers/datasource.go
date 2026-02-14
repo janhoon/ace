@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/janhoon/dash/backend/internal/analytics"
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/datasource"
 	"github.com/janhoon/dash/backend/internal/models"
@@ -102,6 +103,19 @@ func (h *DataSourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf(`{"error":"failed to create datasource: %s"}`, err.Error()), http.StatusInternalServerError)
 		return
 	}
+
+	analytics.Track(r.Context(), analytics.Event{
+		DistinctID: userID.String(),
+		Name:       "datasource_created",
+		OptOut:     analytics.RequestOptedOut(r),
+		Properties: map[string]any{
+			"user_id":         userID.String(),
+			"organization_id": orgID.String(),
+			"datasource_id":   ds.ID.String(),
+			"datasource_type": ds.Type,
+			"is_default":      ds.IsDefault,
+		},
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -258,6 +272,18 @@ func (h *DataSourceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	analytics.Track(r.Context(), analytics.Event{
+		DistinctID: userID.String(),
+		Name:       "datasource_updated",
+		OptOut:     analytics.RequestOptedOut(r),
+		Properties: map[string]any{
+			"user_id":         userID.String(),
+			"organization_id": orgID.String(),
+			"datasource_id":   ds.ID.String(),
+			"datasource_type": ds.Type,
+		},
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ds)
 }
@@ -305,6 +331,17 @@ func (h *DataSourceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"datasource not found"}`, http.StatusNotFound)
 		return
 	}
+
+	analytics.Track(r.Context(), analytics.Event{
+		DistinctID: userID.String(),
+		Name:       "datasource_deleted",
+		OptOut:     analytics.RequestOptedOut(r),
+		Properties: map[string]any{
+			"user_id":         userID.String(),
+			"organization_id": orgID.String(),
+			"datasource_id":   id.String(),
+		},
+	})
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -387,6 +424,19 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 	// Execute query via client
 	client, err := datasource.NewClient(ds)
 	if err != nil {
+		analytics.Track(r.Context(), analytics.Event{
+			DistinctID: userID.String(),
+			Name:       "datasource_query_failed",
+			OptOut:     analytics.RequestOptedOut(r),
+			Properties: map[string]any{
+				"user_id":         userID.String(),
+				"organization_id": ds.OrganizationID.String(),
+				"datasource_id":   ds.ID.String(),
+				"datasource_type": ds.Type,
+				"error":           err.Error(),
+			},
+		})
+
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
 		return
@@ -394,10 +444,38 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 
 	result, err := client.Query(ctx, queryReq.Query, start, end, step, queryReq.Limit)
 	if err != nil {
+		analytics.Track(r.Context(), analytics.Event{
+			DistinctID: userID.String(),
+			Name:       "datasource_query_failed",
+			OptOut:     analytics.RequestOptedOut(r),
+			Properties: map[string]any{
+				"user_id":         userID.String(),
+				"organization_id": ds.OrganizationID.String(),
+				"datasource_id":   ds.ID.String(),
+				"datasource_type": ds.Type,
+				"query_length":    len(queryReq.Query),
+				"error":           err.Error(),
+			},
+		})
+
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "query failed: " + err.Error()})
 		return
 	}
+
+	analytics.Track(r.Context(), analytics.Event{
+		DistinctID: userID.String(),
+		Name:       "datasource_query_executed",
+		OptOut:     analytics.RequestOptedOut(r),
+		Properties: map[string]any{
+			"user_id":         userID.String(),
+			"organization_id": ds.OrganizationID.String(),
+			"datasource_id":   ds.ID.String(),
+			"datasource_type": ds.Type,
+			"query_length":    len(queryReq.Query),
+			"limit":           queryReq.Limit,
+		},
+	})
 
 	json.NewEncoder(w).Encode(result)
 }
@@ -436,11 +514,36 @@ func (h *DataSourceHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := datasource.TestConnection(ctx, ds); err != nil {
+		analytics.Track(r.Context(), analytics.Event{
+			DistinctID: userID.String(),
+			Name:       "datasource_connection_test_failed",
+			OptOut:     analytics.RequestOptedOut(r),
+			Properties: map[string]any{
+				"user_id":         userID.String(),
+				"organization_id": ds.OrganizationID.String(),
+				"datasource_id":   ds.ID.String(),
+				"datasource_type": ds.Type,
+				"error":           err.Error(),
+			},
+		})
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadGateway)
 		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "connection test failed: " + err.Error()})
 		return
 	}
+
+	analytics.Track(r.Context(), analytics.Event{
+		DistinctID: userID.String(),
+		Name:       "datasource_connection_test_succeeded",
+		OptOut:     analytics.RequestOptedOut(r),
+		Properties: map[string]any{
+			"user_id":         userID.String(),
+			"organization_id": ds.OrganizationID.String(),
+			"datasource_id":   ds.ID.String(),
+			"datasource_type": ds.Type,
+		},
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(struct {

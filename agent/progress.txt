@@ -130,3 +130,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `frontend/src/views/LandingView.vue`, `frontend/src/views/LandingView.spec.ts`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd frontend && npm run type-check && npm run test`)
 - Browser validation: failing (`skill dev-browser` is unavailable in this environment: "Skill \"dev-browser\" not found")
+
+## Task POSTHOG-BACKEND-001: PostHog Backend Integration - Go API Setup - 2026-02-14 13:39 UTC
+- What was done: Added a new backend analytics service abstraction with PostHog SDK initialization/config (`POSTHOG_API_KEY`, `POSTHOG_HOST`, `POSTHOG_ENABLED`), event tracking, feature-flag evaluation with TTL caching, PII controls (email hashing + credential redaction), and request-level opt-out controls; then wired tracking into auth, dashboard, and datasource handlers for login/logout/signup, dashboard CRUD/view events, datasource lifecycle + connection tests, and datasource query success/failure events.
+- Files changed: `backend/internal/analytics/service.go`, `backend/internal/analytics/service_test.go`, `backend/internal/handlers/auth.go`, `backend/internal/handlers/dashboards.go`, `backend/internal/handlers/datasource.go`, `backend/cmd/api/main.go`, `backend/go.mod`, `backend/go.sum`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd backend && go test ./...`)
+- Browser validation: not run (no frontend files changed)

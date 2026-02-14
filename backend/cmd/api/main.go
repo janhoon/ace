@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/janhoon/dash/backend/internal/analytics"
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/db"
 	"github.com/janhoon/dash/backend/internal/handlers"
@@ -71,6 +72,17 @@ func main() {
 
 		if shutdownErr := telemetryShutdown(shutdownCtx); shutdownErr != nil {
 			log.Printf("Warning: OpenTelemetry tracing shutdown failed: %v", shutdownErr)
+		}
+	}()
+
+	analyticsService, err := analytics.NewFromEnv()
+	if err != nil {
+		log.Printf("Warning: analytics disabled: %v", err)
+	}
+	analytics.SetGlobal(analyticsService)
+	defer func() {
+		if closeErr := analyticsService.Close(); closeErr != nil {
+			log.Printf("Warning: PostHog shutdown failed: %v", closeErr)
 		}
 	}()
 
