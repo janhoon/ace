@@ -893,7 +893,10 @@
         "Privacy controls and opt-out mechanism",
         "Environment config (POSTHOG_API_KEY, POSTHOG_HOST, POSTHOG_ENABLED)",
         "Unit tests with mocked PostHog client",
-        "Graceful degradation when PostHog unavailable"
+        "Graceful degradation when PostHog unavailable",
+        "PostHog Host: https://eu.posthog.com (EU region)",
+        "API Key: phc_OIBFMDJkbcFUzDEYYUpGELUNGuD9shBLFUnMKyyhsui",
+        "Config: POSTHOG_HOST=https://eu.posthog.com"
       ],
       "passes": false
     },
@@ -920,7 +923,11 @@
         "Cookie consent banner",
         "Privacy settings page",
         "DNT header respect",
-        "Environment config (VITE_POSTHOG_KEY, VITE_POSTHOG_HOST)"
+        "Environment config (VITE_POSTHOG_KEY, VITE_POSTHOG_HOST)",
+        "PostHog Host: https://eu.posthog.com (EU region)",
+        "API Key: phc_OIBFMDJkbcFUzDEYYUpGELUNGuD9shBLFUnMKyyhsui",
+        "Config: VITE_POSTHOG_HOST=https://eu.posthog.com",
+        "Config: VITE_POSTHOG_KEY=phc_OIBFMDJkbcFUzDEYYUpGELUNGuD9shBLFUnMKyyhsui"
       ],
       "passes": false
     }
