@@ -366,7 +366,7 @@
         "Add YAML editor tab to dashboard settings",
         "Integrate Monaco/CodeMirror for YAML editing",
         "Add YAML validation",
-        "Implement Grafana JSON → YAML conversion",
+        "Implement Grafana JSON \u2192 YAML conversion",
         "Add diff view for changes",
         "Wire up save handler"
       ],
@@ -744,7 +744,13 @@
       "fizzy_ticket": 218,
       "description": "Set up landing page route and SEO infrastructure optimized for search engines and LLM discoverability.",
       "depends_on": [],
-      "unblocks": ["LANDING-HERO-001", "LANDING-FEATURES-001", "LANDING-COMPARISON-001", "LANDING-SCREENSHOTS-001", "LANDING-FOOTER-001"],
+      "unblocks": [
+        "LANDING-HERO-001",
+        "LANDING-FEATURES-001",
+        "LANDING-COMPARISON-001",
+        "LANDING-SCREENSHOTS-001",
+        "LANDING-FOOTER-001"
+      ],
       "requirements": [
         "Create Vue route: / (root path for landing page)",
         "Separate from authenticated dashboard (/app/*)",
@@ -764,7 +770,9 @@
       "task_size": "small",
       "fizzy_ticket": 219,
       "description": "Create compelling hero section with clear value proposition, optimized for both human readers and LLM parsing.",
-      "depends_on": ["LANDING-SETUP-001"],
+      "depends_on": [
+        "LANDING-SETUP-001"
+      ],
       "unblocks": [],
       "requirements": [
         "H1: 'Open-Source Monitoring Dashboard with Multi-Datasource Support'",
@@ -784,7 +792,9 @@
       "task_size": "medium",
       "fizzy_ticket": 220,
       "description": "Showcase key Dash features with icons, descriptions, and keyword-rich content for SEO and LLM understanding.",
-      "depends_on": ["LANDING-SETUP-001"],
+      "depends_on": [
+        "LANDING-SETUP-001"
+      ],
       "unblocks": [],
       "requirements": [
         "6 feature cards: Multi-datasource, Self-hosted, Grafana-compatible, Alerting, SSO, Themes",
@@ -803,7 +813,9 @@
       "task_size": "small",
       "fizzy_ticket": 221,
       "description": "Create SEO-optimized comparison table showing why users should choose Dash over Grafana.",
-      "depends_on": ["LANDING-SETUP-001"],
+      "depends_on": [
+        "LANDING-SETUP-001"
+      ],
       "unblocks": [],
       "requirements": [
         "10+ feature rows comparing Dash vs Grafana",
@@ -823,7 +835,9 @@
       "task_size": "medium",
       "fizzy_ticket": 222,
       "description": "Showcase Dash UI with optimized screenshots and optional interactive demo.",
-      "depends_on": ["LANDING-SETUP-001"],
+      "depends_on": [
+        "LANDING-SETUP-001"
+      ],
       "unblocks": [],
       "requirements": [
         "6+ high-quality screenshots (Dashboard, Datasources, Query Editor, Alerts, Org Settings, Dark Theme)",
@@ -843,7 +857,9 @@
       "task_size": "small",
       "fizzy_ticket": 223,
       "description": "Create SEO-optimized footer with navigation, social links, GitHub stats, and final CTA section.",
-      "depends_on": ["LANDING-SETUP-001"],
+      "depends_on": [
+        "LANDING-SETUP-001"
+      ],
       "unblocks": [],
       "requirements": [
         "Final CTA section: 'Ready to Take Control of Your Monitoring?'",
@@ -855,6 +871,58 @@
         "Accessible (ARIA labels, keyboard nav)"
       ],
       "passes": true
+    },
+    {
+      "id": "POSTHOG-BACKEND-001",
+      "name": "PostHog Backend Integration - Go API Setup",
+      "category": "Analytics/Backend",
+      "task_size": "large",
+      "fizzy_ticket": 249,
+      "description": "Integrate PostHog analytics backend SDK into the Ace Go API for server-side event tracking and feature flags.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Install PostHog Go SDK",
+        "Create analytics service abstraction layer",
+        "Track auth events (login, logout, signup)",
+        "Track dashboard operations (created, viewed, updated, deleted)",
+        "Track data source connections and tests",
+        "Track query execution and failures",
+        "Implement feature flags with caching",
+        "Add PII filtering (hash emails, redact credentials)",
+        "Privacy controls and opt-out mechanism",
+        "Environment config (POSTHOG_API_KEY, POSTHOG_HOST, POSTHOG_ENABLED)",
+        "Unit tests with mocked PostHog client",
+        "Graceful degradation when PostHog unavailable"
+      ],
+      "passes": false
+    },
+    {
+      "id": "POSTHOG-FRONTEND-001",
+      "name": "PostHog Frontend Integration - Vue 3 Setup",
+      "category": "Analytics/Frontend",
+      "task_size": "large",
+      "fizzy_ticket": 250,
+      "description": "Integrate PostHog analytics into the Ace Vue 3 frontend for client-side event tracking, session recording, and feature flags.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Install PostHog JS SDK",
+        "Create PostHog Vue plugin",
+        "Router integration for page view tracking",
+        "User identification on login/logout",
+        "Track dashboard interactions (panels added, moved, resized)",
+        "Track query builder usage",
+        "Track data source interactions",
+        "Track settings changes",
+        "Create useAnalytics and useFeatureFlag composables",
+        "Session recording with opt-in/opt-out",
+        "Cookie consent banner",
+        "Privacy settings page",
+        "DNT header respect",
+        "Environment config (VITE_POSTHOG_KEY, VITE_POSTHOG_HOST)"
+      ],
+      "passes": false
     }
   ]
 }
