@@ -929,7 +929,7 @@
         "Config: VITE_POSTHOG_HOST=https://eu.i.posthog.com",
         "Config: VITE_POSTHOG_KEY=phc_OIBFMDJkbcFUzDEYYUpGELUNGuD9shBLFUnMKyyhsui"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

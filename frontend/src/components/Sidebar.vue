@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass, LogOut, Database, ChevronDown } from 'lucide-vue-next'
+import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass, LogOut, Database, ChevronDown, Shield } from 'lucide-vue-next'
 import OrganizationDropdown from './OrganizationDropdown.vue'
 import CreateOrganizationModal from './CreateOrganizationModal.vue'
 import { useOrganization } from '../composables/useOrganization'
@@ -67,6 +67,8 @@ const settingsPath = computed(() => {
   }
   return null
 })
+
+const privacySettingsPath = '/app/settings/privacy'
 
 watch(() => route.path, (path) => {
   if (normalizeAppPath(path).startsWith('/explore')) {
@@ -209,6 +211,16 @@ defineExpose({ isExpanded })
           <Settings :size="20" />
           <span v-if="isVisuallyExpanded" class="nav-label">Settings</span>
           <span v-else class="nav-tooltip">Settings</span>
+        </button>
+        <button
+          class="nav-item"
+          :class="{ active: isRouteMatch(privacySettingsPath) }"
+          @click="navigate(privacySettingsPath)"
+          :title="isVisuallyExpanded ? undefined : 'Privacy'"
+        >
+          <Shield :size="20" />
+          <span v-if="isVisuallyExpanded" class="nav-label">Privacy</span>
+          <span v-else class="nav-tooltip">Privacy</span>
         </button>
         <div v-if="isVisuallyExpanded && user" class="user-info">
           <span class="user-email">{{ user.email }}</span>

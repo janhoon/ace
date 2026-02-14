@@ -156,6 +156,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/settings/privacy',
+    name: 'privacy-settings',
+    component: () => import('../views/PrivacySettingsView.vue'),
+    alias: '/settings/privacy',
+    meta: {
+      appLayout: 'app',
+      title: 'Privacy Settings | Dash',
+      description: 'Manage analytics, consent, session recording, and feature flag preferences.',
+    },
+  },
+  {
     path: '/convert/grafana',
     redirect: {
       path: '/app/dashboards',

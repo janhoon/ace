@@ -12,6 +12,7 @@ import PanelEditModal from '../components/PanelEditModal.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useOrganization } from '../composables/useOrganization'
+import { trackEvent } from '../analytics'
 
 const route = useRoute()
 const router = useRouter()
@@ -97,6 +98,9 @@ let saveLayoutTimeout: number | null = null
 async function fetchDashboard() {
   try {
     dashboard.value = await getDashboard(dashboardId)
+    trackEvent('dashboard_viewed', {
+      dashboard_id: dashboardId,
+    })
   } catch (e) {
     dashboard.value = null
     panels.value = []
@@ -164,12 +168,19 @@ function openAddPanel() {
   editingPanel.value = null
   showPanelModal.value = true
   pauseAutoRefresh()
+  trackEvent('dashboard_panel_add_opened', {
+    dashboard_id: dashboardId,
+  })
 }
 
 function openEditPanel(panel: PanelType) {
   editingPanel.value = panel
   showPanelModal.value = true
   pauseAutoRefresh()
+  trackEvent('dashboard_panel_edit_opened', {
+    dashboard_id: dashboardId,
+    panel_id: panel.id,
+  })
 }
 
 function closePanelModal() {
@@ -179,6 +190,14 @@ function closePanelModal() {
 }
 
 function onPanelSaved() {
+  const wasEdit = Boolean(editingPanel.value)
+  const panelId = editingPanel.value?.id
+
+  trackEvent(wasEdit ? 'dashboard_panel_updated' : 'dashboard_panel_added', {
+    dashboard_id: dashboardId,
+    panel_id: panelId,
+  })
+
   closePanelModal()
   fetchPanels()
 }
@@ -186,6 +205,10 @@ function onPanelSaved() {
 function confirmDeletePanel(panel: PanelType) {
   deletingPanel.value = panel
   showDeleteConfirm.value = true
+  trackEvent('dashboard_panel_delete_opened', {
+    dashboard_id: dashboardId,
+    panel_id: panel.id,
+  })
 }
 
 function cancelDelete() {
@@ -198,6 +221,10 @@ async function handleDeletePanel() {
 
   try {
     await deletePanel(deletingPanel.value.id)
+    trackEvent('dashboard_panel_deleted', {
+      dashboard_id: dashboardId,
+      panel_id: deletingPanel.value.id,
+    })
     cancelDelete()
     fetchPanels()
   } catch {
@@ -210,6 +237,9 @@ function goBack() {
 }
 
 function openDashboardSettings() {
+  trackEvent('dashboard_settings_opened', {
+    dashboard_id: dashboardId,
+  })
   router.push(`/app/dashboards/${dashboardId}/settings/general`)
 }
 
@@ -232,17 +262,26 @@ function openTraceTimeline(payload: { datasourceId: string, traceId: string }) {
 
 // Handle layout changes (drag/resize)
 function onLayoutUpdated(newLayout: LayoutItem[]) {
+  let movedPanels = 0
+  let resizedPanels = 0
+
   // Update local panels state with new positions
   for (const item of newLayout) {
     const panel = panels.value.find(p => p.id === item.i)
     if (panel) {
-      const changed =
-        panel.grid_pos.x !== item.x ||
-        panel.grid_pos.y !== item.y ||
-        panel.grid_pos.w !== item.w ||
-        panel.grid_pos.h !== item.h
+      const moved = panel.grid_pos.x !== item.x || panel.grid_pos.y !== item.y
+      const resized = panel.grid_pos.w !== item.w || panel.grid_pos.h !== item.h
+      const changed = moved || resized
 
       if (changed) {
+        if (moved) {
+          movedPanels += 1
+        }
+
+        if (resized) {
+          resizedPanels += 1
+        }
+
         panel.grid_pos.x = item.x
         panel.grid_pos.y = item.y
         panel.grid_pos.w = item.w
@@ -255,6 +294,21 @@ function onLayoutUpdated(newLayout: LayoutItem[]) {
   if (saveLayoutTimeout) {
     clearTimeout(saveLayoutTimeout)
   }
+
+  if (movedPanels > 0) {
+    trackEvent('dashboard_panel_moved', {
+      dashboard_id: dashboardId,
+      panel_count: movedPanels,
+    })
+  }
+
+  if (resizedPanels > 0) {
+    trackEvent('dashboard_panel_resized', {
+      dashboard_id: dashboardId,
+      panel_count: resizedPanels,
+    })
+  }
+
   saveLayoutTimeout = window.setTimeout(() => {
     saveLayoutToDatabase(newLayout)
   }, 500)
