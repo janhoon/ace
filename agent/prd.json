@@ -366,7 +366,7 @@
         "Add YAML editor tab to dashboard settings",
         "Integrate Monaco/CodeMirror for YAML editing",
         "Add YAML validation",
-        "Implement Grafana JSON \u2192 YAML conversion",
+        "Implement Grafana JSON → YAML conversion",
         "Add diff view for changes",
         "Wire up save handler"
       ],
@@ -895,7 +895,7 @@
         "Unit tests with mocked PostHog client",
         "Graceful degradation when PostHog unavailable",
         "PostHog Host: https://eu.i.posthog.com (EU region)",
-        "API Key: phc_OIBFMDJkbcFUzDEYYUpGELUNGuD9shBLFUnMKyyhsui",
+        "API Key: TBD (create Ace App project in PostHog)",
         "Config: POSTHOG_HOST=https://eu.i.posthog.com"
       ],
       "passes": true
@@ -925,9 +925,9 @@
         "DNT header respect",
         "Environment config (VITE_POSTHOG_KEY, VITE_POSTHOG_HOST)",
         "PostHog Host: https://eu.i.posthog.com (EU region)",
-        "API Key: phc_OIBFMDJkbcFUzDEYYUpGELUNGuD9shBLFUnMKyyhsui",
+        "API Key: TBD (create Ace App project in PostHog)",
         "Config: VITE_POSTHOG_HOST=https://eu.i.posthog.com",
-        "Config: VITE_POSTHOG_KEY=phc_OIBFMDJkbcFUzDEYYUpGELUNGuD9shBLFUnMKyyhsui"
+        "Config: VITE_POSTHOG_KEY=TBD"
       ],
       "passes": true
     }
