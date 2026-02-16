@@ -296,7 +296,7 @@ jobs:
         run: cosign sign "${{ steps.vars.outputs.image_repo }}@${{ steps.build.outputs.digest }}"
 
       - name: Attest backend image provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
           subject-name: ${{ steps.vars.outputs.image_repo }}
           subject-digest: ${{ steps.build.outputs.digest }}
@@ -392,7 +392,7 @@ jobs:
         run: cosign sign "${{ steps.vars.outputs.image_repo }}@${{ steps.build.outputs.digest }}"
 
       - name: Attest frontend image provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
           subject-name: ${{ steps.vars.outputs.image_repo }}
           subject-digest: ${{ steps.build.outputs.digest }}
