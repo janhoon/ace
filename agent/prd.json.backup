@@ -1,0 +1,239 @@
+{
+  "project": "dash",
+  "version": 6,
+  "feature_selection": {
+    "mode": "auto",
+    "rules_in_order": [
+      "Only consider features where passes=false",
+      "Only consider features whose depends_on entries are all complete",
+      "Prefer features that unblock the most remaining incomplete features",
+      "Prefer security, access-control, and data-integrity work over convenience work",
+      "Use file order as the final tie-breaker"
+    ],
+    "tie_breaker": "file_order"
+  },
+  "features": [
+    {
+      "id": "ORG-FE-UI-002",
+      "name": "Center organization creation dialog",
+      "category": "Organization UX",
+      "task_size": "small",
+      "description": "Move organization creation from sideboard placement to a centered modal experience.",
+      "why_it_matters": "Creating an organization is a primary flow and should appear in a focused, expected dialog position.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Open organization creation in a centered modal on desktop",
+        "Keep mobile behavior usable (full-screen modal/sheet is acceptable)",
+        "Preserve existing create-organization validation and submit behavior",
+        "Add tests confirming the create organization flow renders as a centered modal and still submits"
+      ],
+      "steps": [
+        "Replace sideboard/sheet mounting point with shared modal container in the org creation flow",
+        "Ensure focus trap, escape close, and submit states still work",
+        "Verify trigger entry points continue opening the create dialog",
+        "Add tests in organization settings/org switcher view spec files"
+      ],
+      "acceptance_criteria": [
+        "Organization create dialog appears centered on desktop",
+        "Mobile presentation remains fully usable",
+        "Form submission and error handling match previous behavior",
+        "Tests fail if dialog reverts to sideboard placement",
+        "Happy-path create and close behaviors are covered"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views"
+      ],
+      "passes": true
+    },
+    {
+      "id": "SSO-FE-UI-002",
+      "name": "Restructure SSO settings into configure flow",
+      "category": "Organization Settings/SSO",
+      "task_size": "small",
+      "description": "Replace static provider cards with a single configure entry point and provider list.",
+      "why_it_matters": "SSO setup should match common admin workflows where providers are managed from one configuration flow.",
+      "depends_on": [],
+      "unblocks": [
+        "SSO-FE-UI-003"
+      ],
+      "requirements": [
+        "Show one primary \"Configure SSO\" entry point in organization settings",
+        "List configured providers with status and edit actions",
+        "Expose an \"Add SSO\" action for adding another provider"
+      ],
+      "steps": [
+        "Refactor OrganizationSettings SSO section into a provider-management shell",
+        "Render configured-provider rows/cards with enabled state",
+        "Gate mutation controls to org admins"
+      ],
+      "acceptance_criteria": [
+        "SSO section no longer presents only two static configuration screens",
+        "Admins can start configuration from a single flow",
+        "Existing provider update behavior is preserved"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts"
+      ],
+      "passes": true
+    },
+    {
+      "id": "SSO-FE-UI-003",
+      "name": "Add provider picker and SSO config modal/page",
+      "category": "Organization Settings/SSO",
+      "task_size": "small",
+      "description": "Implement the configure SSO interaction where admin selects a provider and then configures it.",
+      "why_it_matters": "Provider-first setup reduces confusion and supports adding multiple SSO providers over time.",
+      "depends_on": [
+        "SSO-FE-UI-002"
+      ],
+      "unblocks": [],
+      "requirements": [
+        "Open a modal/page/expanded panel from Configure SSO",
+        "Prompt for provider selection before showing provider-specific fields",
+        "Support both add-new and edit-existing provider flows",
+        "Add tests for configure SSO entry point, provider selection, and add-provider flows"
+      ],
+      "steps": [
+        "Build provider selection step in the SSO configure flow",
+        "Render provider-specific forms after selection",
+        "Submit payloads through existing SSO API helpers and refresh provider list",
+        "Extend OrganizationSettings SSO specs for new flow",
+        "Mock provider load/save endpoints for both success and error cases"
+      ],
+      "acceptance_criteria": [
+        "Admin can choose provider at configuration time",
+        "Admin can add another provider from the same configure flow",
+        "Save and validation errors are shown clearly",
+        "Provider selection and add-provider flows are covered in tests",
+        "Tests verify failure states without broken UI state"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views/OrganizationSettings.spec.ts"
+      ],
+      "passes": true
+    },
+    {
+      "id": "FOLDER-FE-UI-004",
+      "name": "Expose dashboard folder creation entry points",
+      "category": "Dashboard/Folders",
+      "task_size": "small",
+      "description": "Make folder creation clearly available from dashboard screens where users manage folders.",
+      "why_it_matters": "Folder support is incomplete if users cannot easily discover where to create folders.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Add visible \"New folder\" action in dashboards view for admin/editor",
+        "Provide empty-state CTA when no folders exist",
+        "Keep viewer experience read-only with no create control",
+        "Add frontend coverage for visible folder-create entry points and role-based control visibility"
+      ],
+      "steps": [
+        "Add folder create trigger in dashboard toolbar/header",
+        "Wire trigger to folder create modal/form and refresh list on save",
+        "Show role-appropriate visibility for create controls",
+        "Extend dashboards view/component tests for folder create CTA",
+        "Mock folder API create/list responses"
+      ],
+      "acceptance_criteria": [
+        "Admin/editor can discover and open folder creation quickly",
+        "Viewer cannot access folder create control",
+        "New folder appears in the grouped dashboard list after creation",
+        "Folder creation entry point tests pass",
+        "Role-based visibility is covered for create controls"
+      ],
+      "test_commands": [
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views src/components"
+      ],
+      "passes": true
+    },
+    {
+      "id": "CAC-001",
+      "name": "Configuration as Code (CaC) for Dashboards",
+      "category": "Dashboard/GitOps",
+      "task_size": "large",
+      "description": "Allow dashboards to be defined and managed as code (YAML/JSON files) for version control and GitOps workflows.",
+      "why_it_matters": "Teams need to version control dashboards alongside application code and deploy them via CI/CD.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Export dashboards to YAML/JSON files",
+        "Import dashboards from files (provisioning)",
+        "File-based dashboard sync (watch directory for changes)",
+        "Dashboard schema validation (JSON Schema)",
+        "CLI tool for dashboard management",
+        "Diff view for dashboard changes",
+        "Support both YAML and JSON formats"
+      ],
+      "steps": [
+        "Create dashboard schema validation (JSON Schema)",
+        "Add API endpoints: GET /api/dashboards/{id}/export, POST /api/dashboards/import",
+        "Build file watcher for provisioning directory",
+        "Implement conflict resolution (file vs database)",
+        "Create CLI tool for dashboard export/import",
+        "Add frontend conversion page with file upload and preview"
+      ],
+      "acceptance_criteria": [
+        "Dashboards can be exported to valid YAML/JSON",
+        "Dashboards can be imported from YAML/JSON files",
+        "File watcher detects changes and syncs dashboards",
+        "CLI tool can export and import dashboards",
+        "Conflicts are handled gracefully with user feedback",
+        "All panels, queries, datasources, and variables are preserved in export/import"
+      ],
+      "test_commands": [
+        "cd backend && go test ./internal/converter/...",
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views/DashboardExport"
+      ],
+      "passes": true
+    },
+    {
+      "id": "GRAFANA-CONVERTER-001",
+      "name": "Grafana Dashboard Converter",
+      "category": "Migration/Conversion",
+      "task_size": "large",
+      "description": "Convert Grafana dashboard JSON exports to Dash-compatible format for easy migration.",
+      "why_it_matters": "Users need a migration path from Grafana to Dash without manually recreating dashboards.",
+      "depends_on": [],
+      "unblocks": [],
+      "requirements": [
+        "Parse Grafana dashboard JSON format (v8-v11)",
+        "Map Grafana panel types to Dash panel types (graph → line, gauge → gauge, stat → stat, etc.)",
+        "Convert PromQL queries (maintain compatibility)",
+        "Map variables and templating",
+        "Convert time ranges and refresh intervals",
+        "Handle unsupported features gracefully (with warnings)",
+        "CLI tool: dash convert grafana.json --output dash.json",
+        "Web UI: Upload Grafana JSON, download Dash YAML/JSON"
+      ],
+      "steps": [
+        "Create backend/cmd/converter/main.go - CLI tool",
+        "Create backend/internal/converter/grafana.go - Parser and mapper",
+        "Add POST /api/convert/grafana - API endpoint (upload JSON, return Dash format)",
+        "Build frontend conversion page with file upload and preview",
+        "Add validation report showing what was converted and what was skipped",
+        "Support panel types: Graph, Gauge, Stat, Pie Chart, Logs"
+      ],
+      "acceptance_criteria": [
+        "Grafana v8-v11 dashboards can be converted successfully",
+        "All supported panel types are mapped correctly",
+        "PromQL queries are preserved",
+        "Variables and templating work in converted dashboards",
+        "Unsupported features generate clear warnings",
+        "CLI tool can convert dashboards from command line",
+        "Web UI allows upload, preview, and download of converted dashboards"
+      ],
+      "test_commands": [
+        "cd backend && go test ./internal/converter/...",
+        "cd frontend && npm run type-check",
+        "cd frontend && npm run test -- src/views/GrafanaConverter"
+      ],
+      "passes": true
+    }
+  ]
+}

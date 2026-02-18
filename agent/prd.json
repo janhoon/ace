@@ -977,7 +977,7 @@
         "go test ./backend/internal/datasource/... -run ClickHouse",
         "go test ./backend/internal/handlers/..."
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": 266,
@@ -1020,7 +1020,7 @@
       "test_commands": [
         "pnpm --filter ace-frontend test --run ClickHouse"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": 267,

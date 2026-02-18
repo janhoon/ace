@@ -57,6 +57,23 @@ vi.mock('../components/LogQLQueryBuilder.vue', () => ({
   },
 }))
 
+vi.mock('../components/ClickHouseSQLEditor.vue', () => ({
+  default: {
+    name: 'ClickHouseSQLEditor',
+    props: ['modelValue', 'signal', 'disabled'],
+    emits: ['update:modelValue'],
+    template: `
+      <textarea
+        id="clickhouse-query"
+        class="query-input clickhouse-query-input"
+        :value="modelValue"
+        :disabled="disabled"
+        @input="$emit('update:modelValue', $event.target.value)"
+      ></textarea>
+    `,
+  },
+}))
+
 vi.mock('../composables/useTimeRange', () => ({
   useTimeRange: () => ({
     timeRange: { value: { start: Date.now() - 3600000, end: Date.now() } },
@@ -95,6 +112,17 @@ vi.mock('../composables/useDatasource', async () => {
       name: 'Victoria Logs Main',
       type: 'victorialogs',
       url: 'http://localhost:9428',
+      is_default: false,
+      auth_type: 'none',
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'ds-3',
+      organization_id: 'org-1',
+      name: 'ClickHouse Logs',
+      type: 'clickhouse',
+      url: 'http://localhost:8123',
       is_default: false,
       auth_type: 'none',
       created_at: '2026-01-01T00:00:00Z',
@@ -285,6 +313,40 @@ describe('ExploreLogs', () => {
     await flushPromises()
 
     expect(wrapper.findComponent({ name: 'LogQLQueryBuilder' }).props('queryLanguage')).toBe('logsql')
+  })
+
+  it('uses ClickHouse SQL editor and passes logs signal for clickhouse datasource', async () => {
+    mockQueryDataSource.mockResolvedValue({
+      status: 'success',
+      resultType: 'logs',
+      data: {
+        resultType: 'streams',
+        logs: [],
+      },
+    })
+
+    const wrapper = mount(ExploreLogs)
+    await flushPromises()
+
+    await wrapper.find('.datasource-trigger').trigger('click')
+    const options = wrapper.findAll('.datasource-option')
+    await options[2].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'ClickHouseSQLEditor' }).exists()).toBe(true)
+    expect(wrapper.find('.btn-live').attributes('disabled')).toBeDefined()
+
+    await wrapper.find('#clickhouse-query').setValue('SELECT timestamp, message FROM logs LIMIT 10')
+    await wrapper.find('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(mockQueryDataSource).toHaveBeenLastCalledWith(
+      'ds-3',
+      expect.objectContaining({
+        query: 'SELECT timestamp, message FROM logs LIMIT 10',
+        signal: 'logs',
+      }),
+    )
   })
 
   it('passes indexed labels to the LogQL builder', async () => {

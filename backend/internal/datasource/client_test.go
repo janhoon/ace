@@ -91,6 +91,20 @@ func TestNewClient_VictoriaTraces(t *testing.T) {
 	}
 }
 
+func TestNewClient_ClickHouse(t *testing.T) {
+	ds := models.DataSource{
+		Type: models.DataSourceClickHouse,
+		URL:  "http://localhost:8123",
+	}
+	client, err := NewClient(ds)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := client.(*ClickHouseClient); !ok {
+		t.Errorf("expected ClickHouseClient, got %T", client)
+	}
+}
+
 func TestNewClient_InvalidType(t *testing.T) {
 	ds := models.DataSource{
 		Type: "invalid",

@@ -23,6 +23,10 @@ describe('datasource types', () => {
     it('returns false for tempo', () => {
       expect(isMetricsType('tempo')).toBe(false)
     })
+
+    it('returns true for clickhouse', () => {
+      expect(isMetricsType('clickhouse')).toBe(true)
+    })
   })
 
   describe('isLogsType', () => {
@@ -45,6 +49,10 @@ describe('datasource types', () => {
     it('returns false for victoriatraces', () => {
       expect(isLogsType('victoriatraces')).toBe(false)
     })
+
+    it('returns true for clickhouse', () => {
+      expect(isLogsType('clickhouse')).toBe(true)
+    })
   })
 
   describe('isTracingType', () => {
@@ -59,11 +67,23 @@ describe('datasource types', () => {
     it('returns false for loki', () => {
       expect(isTracingType('loki')).toBe(false)
     })
+
+    it('returns true for clickhouse', () => {
+      expect(isTracingType('clickhouse')).toBe(true)
+    })
   })
 
   describe('dataSourceTypeLabels', () => {
     it('has labels for all types', () => {
-      const types: DataSourceType[] = ['prometheus', 'loki', 'victorialogs', 'victoriametrics', 'tempo', 'victoriatraces']
+      const types: DataSourceType[] = [
+        'prometheus',
+        'loki',
+        'victorialogs',
+        'victoriametrics',
+        'tempo',
+        'victoriatraces',
+        'clickhouse',
+      ]
       for (const type_ of types) {
         expect(dataSourceTypeLabels[type_]).toBeDefined()
         expect(typeof dataSourceTypeLabels[type_]).toBe('string')
@@ -92,6 +112,10 @@ describe('datasource types', () => {
 
     it('returns correct label for victoriatraces', () => {
       expect(dataSourceTypeLabels.victoriatraces).toBe('VictoriaTraces')
+    })
+
+    it('returns correct label for clickhouse', () => {
+      expect(dataSourceTypeLabels.clickhouse).toBe('ClickHouse')
     })
   })
 })

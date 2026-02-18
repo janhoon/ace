@@ -34,6 +34,17 @@ vi.mock('../composables/useDatasource', async () => {
           created_at: '2026-01-01T00:00:00Z',
           updated_at: '2026-01-01T00:00:00Z',
         },
+        {
+          id: 'ds-clickhouse-1',
+          organization_id: 'org-1',
+          name: 'ClickHouse Main',
+          type: 'clickhouse',
+          url: 'http://localhost:8123',
+          is_default: false,
+          auth_type: 'none',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
       ]),
       fetchDatasources: mockFetchDatasources,
     }),
@@ -296,6 +307,51 @@ describe('PanelEditModal', () => {
         service: 'api',
         limit: 25,
       }
+    })
+  })
+
+  it('renders ClickHouse SQL editor and saves signal config', async () => {
+    vi.mocked(api.createPanel).mockResolvedValue({
+      id: 'panel-clickhouse-1',
+      dashboard_id: dashboardId,
+      title: 'ClickHouse Logs',
+      type: 'logs',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: {
+        datasource_id: 'ds-clickhouse-1',
+        expr: 'SELECT timestamp, message FROM logs LIMIT 10',
+        signal: 'logs',
+      },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    })
+
+    const wrapper = mount(PanelEditModal, {
+      props: { dashboardId },
+    })
+    await flushPromises()
+
+    await wrapper.find('#title').setValue('ClickHouse Logs')
+    await wrapper.find('#type').setValue('logs')
+    await wrapper.find('#datasource').setValue('ds-clickhouse-1')
+
+    expect(wrapper.findComponent({ name: 'ClickHouseSQLEditor' }).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'QueryBuilder' }).exists()).toBe(false)
+
+    await wrapper.find('#clickhouse-signal').setValue('logs')
+    await wrapper.find('#clickhouse-query').setValue('SELECT timestamp, message FROM logs LIMIT 10')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(api.createPanel).toHaveBeenCalledWith(dashboardId, {
+      title: 'ClickHouse Logs',
+      type: 'logs',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: {
+        datasource_id: 'ds-clickhouse-1',
+        expr: 'SELECT timestamp, message FROM logs LIMIT 10',
+        signal: 'logs',
+      },
     })
   })
 })

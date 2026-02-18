@@ -12,6 +12,7 @@ import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
 import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
 import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
+import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
 
 const { currentOrg } = useOrganization()
 const {
@@ -38,6 +39,7 @@ const formBasicPassword = ref('')
 const formBearerToken = ref('')
 const formApiKeyHeader = ref('X-API-Key')
 const formApiKeyValue = ref('')
+const formDatabase = ref('')
 const formError = ref<string | null>(null)
 const formLoading = ref(false)
 const testAllLoading = ref(false)
@@ -53,9 +55,11 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   victorialogs: victoriaLogsLogo,
   tempo: tempoLogo,
   victoriatraces: victoriaTracesLogo,
+  clickhouse: clickhouseLogo,
 }
 
-const showAuthSettings = computed(() => isTracingType(formType.value))
+const isClickHouseType = computed(() => formType.value === 'clickhouse')
+const showAuthSettings = computed(() => isTracingType(formType.value) || isClickHouseType.value)
 
 function openCreateModal() {
   editingDs.value = null
@@ -91,6 +95,7 @@ function resetAuthForm() {
   formBearerToken.value = ''
   formApiKeyHeader.value = 'X-API-Key'
   formApiKeyValue.value = ''
+  formDatabase.value = ''
 }
 
 function hydrateAuthForm(ds: DataSource) {
@@ -105,6 +110,7 @@ function hydrateAuthForm(ds: DataSource) {
   const token = authConfig.token
   const header = authConfig.header
   const value = authConfig.value
+  const database = authConfig.database
 
   if (typeof username === 'string') {
     formBasicUsername.value = username
@@ -120,6 +126,9 @@ function hydrateAuthForm(ds: DataSource) {
   }
   if (typeof value === 'string') {
     formApiKeyValue.value = value
+  }
+  if (typeof database === 'string') {
+    formDatabase.value = database
   }
 }
 
@@ -223,6 +232,18 @@ async function handleSubmit() {
 
   try {
     const authPayload = buildAuthPayload()
+    const authConfig: Record<string, unknown> = authPayload.auth_config
+      ? { ...authPayload.auth_config }
+      : {}
+
+    if (isClickHouseType.value) {
+      const database = formDatabase.value.trim()
+      if (database) {
+        authConfig.database = database
+      }
+    }
+
+    const finalAuthConfig = Object.keys(authConfig).length > 0 ? authConfig : undefined
 
     if (isEditing.value && editingDs.value) {
       await editDatasource(editingDs.value.id, {
@@ -231,7 +252,7 @@ async function handleSubmit() {
         url: formUrl.value.trim(),
         is_default: formIsDefault.value,
         auth_type: authPayload.auth_type,
-        auth_config: authPayload.auth_config,
+        auth_config: finalAuthConfig,
       })
     } else if (currentOrg.value) {
       await addDatasource(currentOrg.value.id, {
@@ -240,7 +261,7 @@ async function handleSubmit() {
         url: formUrl.value.trim(),
         is_default: formIsDefault.value,
         auth_type: authPayload.auth_type,
-        auth_config: authPayload.auth_config,
+        auth_config: finalAuthConfig,
       } as CreateDataSourceRequest)
     }
     closeModal()
@@ -274,6 +295,8 @@ function getTypeColor(type_: DataSourceType): string {
       return '#8f6dff'
     case 'victoriatraces':
       return '#5bc0be'
+    case 'clickhouse':
+      return '#ffd400'
   }
 }
 
@@ -295,6 +318,12 @@ watch(
     }
   },
 )
+
+watch(formType, (type_) => {
+  if (type_ !== 'clickhouse') {
+    formDatabase.value = ''
+  }
+})
 </script>
 
 <template>
@@ -438,6 +467,7 @@ watch(
               <option value="victorialogs">Victoria Logs (LogsQL)</option>
               <option value="tempo">Tempo (Tracing)</option>
               <option value="victoriatraces">VictoriaTraces (Tracing)</option>
+              <option value="clickhouse">ClickHouse (SQL)</option>
             </select>
           </div>
 
@@ -448,6 +478,18 @@ watch(
               v-model="formUrl"
               type="text"
               placeholder="http://localhost:9090"
+              :disabled="formLoading"
+              autocomplete="off"
+            />
+          </div>
+
+          <div v-if="isClickHouseType" class="form-group">
+            <label for="ds-database">Database (optional)</label>
+            <input
+              id="ds-database"
+              v-model="formDatabase"
+              type="text"
+              placeholder="default"
               :disabled="formLoading"
               autocomplete="off"
             />
