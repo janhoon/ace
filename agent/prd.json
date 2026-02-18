@@ -1062,7 +1062,7 @@
       "test_commands": [
         "pnpm --filter ace-frontend test --run"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

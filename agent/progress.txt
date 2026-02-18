@@ -154,3 +154,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `frontend/src/types/datasource.ts`, `frontend/src/types/datasource.spec.ts`, `frontend/src/views/DataSourceSettings.vue`, `frontend/src/components/ClickHouseSQLEditor.vue`, `frontend/src/components/ClickHouseSQLEditor.spec.ts`, `frontend/src/components/PanelEditModal.vue`, `frontend/src/components/PanelEditModal.spec.ts`, `frontend/src/views/Explore.vue`, `frontend/src/views/ExploreLogs.vue`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/assets/datasources/clickhouse-logo.svg`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd frontend && npm run type-check && npm run test`)
 - Browser validation: failing (`dev-browser` skill unavailable in this environment: "Skill \"dev-browser\" not found")
+
+## Task 267: ClickHouse Frontend Explore Views + Dashboard Panels - 2026-02-18 15:55 UTC
+- What was done: Completed ClickHouse end-to-end frontend coverage for Explore Traces and dashboard panel rendering by validating SQL trace query flow in Explore (ClickHouse editor with `signal=traces` -> grouped trace summaries -> `TraceListPanel`) and by adding dashboard panel tests for ClickHouse `logs` and `traces` signal routing so log and trace panels render through the correct renderer paths.
+- Files changed: `frontend/src/views/ExploreTraces.spec.ts`, `frontend/src/components/Panel.spec.ts`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd frontend && npm run type-check && npm run test`)
+- Browser validation: failing (required `dev-browser` skill is unavailable in this environment: "Skill \"dev-browser\" not found")
