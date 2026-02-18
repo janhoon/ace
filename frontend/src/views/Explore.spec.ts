@@ -37,6 +37,23 @@ vi.mock('../components/QueryBuilder.vue', () => ({
   }
 }))
 
+vi.mock('../components/ClickHouseSQLEditor.vue', () => ({
+  default: {
+    name: 'ClickHouseSQLEditor',
+    props: ['modelValue', 'signal', 'disabled'],
+    emits: ['update:modelValue'],
+    template: `
+      <textarea
+        id="clickhouse-query"
+        class="clickhouse-query-input"
+        :value="modelValue"
+        :disabled="disabled"
+        @input="$emit('update:modelValue', $event.target.value)"
+      ></textarea>
+    `,
+  },
+}))
+
 vi.mock('../composables/useTimeRange', () => ({
   useTimeRange: () => ({
     timeRange: { value: { start: Date.now() - 3600000, end: Date.now() } },
@@ -65,6 +82,17 @@ vi.mock('../composables/useDatasource', async () => {
       type: 'prometheus',
       url: 'http://localhost:9090',
       is_default: true,
+      auth_type: 'none',
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'ds-2',
+      organization_id: 'org-1',
+      name: 'ClickHouse Metrics',
+      type: 'clickhouse',
+      url: 'http://localhost:8123',
+      is_default: false,
       auth_type: 'none',
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
@@ -238,5 +266,39 @@ describe('Explore', () => {
     )
     expect(mockSetCustomRange).toHaveBeenCalledWith(1_700_000_000_000, 1_700_000_300_000)
     expect(localStorage.getItem('trace_metrics_navigation')).toBeNull()
+  })
+
+  it('uses ClickHouse SQL editor and sends metrics signal for clickhouse datasource', async () => {
+    mockQueryDataSource.mockResolvedValue({
+      status: 'success',
+      resultType: 'metrics',
+      data: {
+        resultType: 'matrix',
+        result: [],
+      },
+    })
+    vi.mocked(transformToChartData).mockReturnValue({ series: [] })
+
+    const wrapper = mount(Explore)
+    await flushPromises()
+
+    await wrapper.find('.datasource-trigger').trigger('click')
+    const options = wrapper.findAll('.datasource-option')
+    await options[1].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'ClickHouseSQLEditor' }).exists()).toBe(true)
+
+    await wrapper.find('#clickhouse-query').setValue('SELECT timestamp, value, metric FROM metrics LIMIT 20')
+    await wrapper.find('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(mockQueryDataSource).toHaveBeenLastCalledWith(
+      'ds-2',
+      expect.objectContaining({
+        query: 'SELECT timestamp, value, metric FROM metrics LIMIT 20',
+        signal: 'metrics',
+      }),
+    )
   })
 })
