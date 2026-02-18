@@ -148,3 +148,9 @@ Last updated: 2026-02-09 13:10 UTC
 - Files changed: `backend/internal/models/datasource.go`, `backend/internal/datasource/client.go`, `backend/internal/datasource/clickhouse.go`, `backend/internal/datasource/client_test.go`, `backend/internal/datasource/clickhouse_test.go`, `backend/internal/handlers/datasource.go`, `backend/internal/handlers/datasource_test.go`, `backend/internal/db/migrations.go`, `agent/prd.json`, `agent/progress.txt`
 - Tests: passing (`cd backend && go test ./...`)
 - Browser validation: not run (no frontend files changed)
+
+## Task 266: ClickHouse Frontend SQL Editor + Settings - 2026-02-18 14:26 UTC
+- What was done: Added ClickHouse frontend datasource support by extending datasource types/helpers/labels, added ClickHouse option and optional `Database` field persistence in data source settings, created a new `ClickHouseSQLEditor` (signal selector + SQL textarea + column guidance), and wired Panel Edit to use the SQL editor for clickhouse datasources while saving `query.signal`; also added focused unit tests for the new editor and modal integration.
+- Files changed: `frontend/src/types/datasource.ts`, `frontend/src/types/datasource.spec.ts`, `frontend/src/views/DataSourceSettings.vue`, `frontend/src/components/ClickHouseSQLEditor.vue`, `frontend/src/components/ClickHouseSQLEditor.spec.ts`, `frontend/src/components/PanelEditModal.vue`, `frontend/src/components/PanelEditModal.spec.ts`, `frontend/src/views/Explore.vue`, `frontend/src/views/ExploreLogs.vue`, `frontend/src/views/ExploreTraces.vue`, `frontend/src/assets/datasources/clickhouse-logo.svg`, `agent/prd.json`, `agent/progress.txt`
+- Tests: passing (`cd frontend && npm run type-check && npm run test`)
+- Browser validation: failing (`dev-browser` skill unavailable in this environment: "Skill \"dev-browser\" not found")

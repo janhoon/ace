@@ -17,6 +17,7 @@ import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
 import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
 import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
+import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
 
 const { timeRange, onRefresh, setCustomRange } = useTimeRange()
 const { currentOrg } = useOrganization()
@@ -29,6 +30,7 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   victorialogs: victoriaLogsLogo,
   tempo: tempoLogo,
   victoriatraces: victoriaTracesLogo,
+  clickhouse: clickhouseLogo,
 }
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'

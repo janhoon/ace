@@ -1020,7 +1020,7 @@
       "test_commands": [
         "pnpm --filter ace-frontend test --run ClickHouse"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": 267,

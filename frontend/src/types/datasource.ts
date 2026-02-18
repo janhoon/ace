@@ -5,6 +5,7 @@ export type DataSourceType =
   | 'victoriametrics'
   | 'tempo'
   | 'victoriatraces'
+  | 'clickhouse'
 
 export interface DataSource {
   id: string
@@ -147,15 +148,15 @@ export interface DataSourceQueryResult {
 }
 
 export function isMetricsType(type_: DataSourceType): boolean {
-  return type_ === 'prometheus' || type_ === 'victoriametrics'
+  return type_ === 'prometheus' || type_ === 'victoriametrics' || type_ === 'clickhouse'
 }
 
 export function isLogsType(type_: DataSourceType): boolean {
-  return type_ === 'loki' || type_ === 'victorialogs'
+  return type_ === 'loki' || type_ === 'victorialogs' || type_ === 'clickhouse'
 }
 
 export function isTracingType(type_: DataSourceType): boolean {
-  return type_ === 'tempo' || type_ === 'victoriatraces'
+  return type_ === 'tempo' || type_ === 'victoriatraces' || type_ === 'clickhouse'
 }
 
 export const dataSourceTypeLabels: Record<DataSourceType, string> = {
@@ -165,4 +166,5 @@ export const dataSourceTypeLabels: Record<DataSourceType, string> = {
   victoriametrics: 'VictoriaMetrics',
   tempo: 'Tempo',
   victoriatraces: 'VictoriaTraces',
+  clickhouse: 'ClickHouse',
 }

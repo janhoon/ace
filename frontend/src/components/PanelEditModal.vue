@@ -7,10 +7,27 @@ import { createPanel, updatePanel } from '../api/panels'
 import { useDatasource } from '../composables/useDatasource'
 import { useOrganization } from '../composables/useOrganization'
 import QueryBuilder from './QueryBuilder.vue'
+import ClickHouseSQLEditor from './ClickHouseSQLEditor.vue'
 
 interface Threshold {
   value: number
   color: string
+}
+
+type ClickHouseSignal = 'logs' | 'metrics' | 'traces'
+
+function getDefaultClickHouseSignal(panelType: string): ClickHouseSignal {
+  if (panelType === 'logs') {
+    return 'logs'
+  }
+  if (panelType === 'trace_list' || panelType === 'trace_heatmap') {
+    return 'traces'
+  }
+  return 'metrics'
+}
+
+function isClickHouseSignal(value: unknown): value is ClickHouseSignal {
+  return value === 'logs' || value === 'metrics' || value === 'traces'
 }
 
 const props = defineProps<{
@@ -40,6 +57,11 @@ const promqlQuery = ref(
     : typeof props.panel?.query?.expr === 'string'
       ? props.panel.query.expr
       : ''
+)
+const clickhouseSignal = ref<ClickHouseSignal>(
+  isClickHouseSignal(props.panel?.query?.signal)
+    ? props.panel.query.signal
+    : getDefaultClickHouseSignal(props.panel?.type || 'line_chart')
 )
 
 onMounted(() => {
@@ -114,6 +136,10 @@ const isStatType = computed(() => panelType.value === 'stat')
 const isTracePanelType = computed(
   () => panelType.value === 'trace_list' || panelType.value === 'trace_heatmap'
 )
+const selectedDatasource = computed(() => {
+  return datasources.value.find((datasource) => datasource.id === selectedDatasourceId.value) || null
+})
+const isClickHouseDatasource = computed(() => selectedDatasource.value?.type === 'clickhouse')
 const availableDatasources = computed(() => {
   if (isTracePanelType.value) {
     return datasources.value.filter((datasource) => isTracingType(datasource.type))
@@ -138,6 +164,22 @@ watch(
   },
   { immediate: true }
 )
+
+watch(
+  panelType,
+  (nextType) => {
+    if (!isClickHouseDatasource.value) {
+      return
+    }
+    clickhouseSignal.value = getDefaultClickHouseSignal(nextType)
+  },
+)
+
+watch(selectedDatasource, (nextDatasource, prevDatasource) => {
+  if (nextDatasource?.type === 'clickhouse' && prevDatasource?.type !== 'clickhouse') {
+    clickhouseSignal.value = getDefaultClickHouseSignal(panelType.value)
+  }
+})
 
 function addThreshold() {
   const lastValue = gaugeThresholds.value.length > 0
@@ -186,6 +228,10 @@ async function handleSubmit() {
     } else {
       query.promql = trimmedQuery
     }
+  }
+
+  if (isClickHouseDatasource.value) {
+    query.signal = clickhouseSignal.value
   }
 
   if (isTracePanelType.value) {
@@ -307,9 +353,24 @@ async function handleSubmit() {
         </div>
 
         <div class="form-group query-builder-group">
-          <label>{{ isTracePanelType ? 'Trace Search Query' : 'Query' }}</label>
+          <label>
+            {{
+              isClickHouseDatasource
+                ? 'SQL Query'
+                : isTracePanelType
+                  ? 'Trace Search Query'
+                  : 'Query'
+            }}
+          </label>
           <QueryBuilder
+            v-if="!isClickHouseDatasource"
             v-model="promqlQuery"
+            :disabled="loading"
+          />
+          <ClickHouseSQLEditor
+            v-else
+            v-model="promqlQuery"
+            v-model:signal="clickhouseSignal"
             :disabled="loading"
           />
         </div>
