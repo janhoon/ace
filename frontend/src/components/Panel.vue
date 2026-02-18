@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { Pencil, Trash2, AlertCircle, BarChart3 } from 'lucide-vue-next'
 import type { Panel } from '../types/panel'
-import type { LogEntry, TraceSummary } from '../types/datasource'
+import type { LogEntry, TraceSpan, TraceSummary } from '../types/datasource'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useProm } from '../composables/useProm'
 import { queryDataSource, searchDataSourceTraces } from '../api/datasources'
@@ -28,9 +28,131 @@ const emit = defineEmits<{
 
 const { timeRange, onRefresh } = useTimeRange()
 
+type ClickHouseSignal = 'logs' | 'metrics' | 'traces'
+
+function isClickHouseSignal(value: unknown): value is ClickHouseSignal {
+  return value === 'logs' || value === 'metrics' || value === 'traces'
+}
+
+function getTagValue(tags: Record<string, string> | undefined, keys: string[]): string {
+  if (!tags || Object.keys(tags).length === 0) {
+    return ''
+  }
+
+  const byNormalizedName: Record<string, string> = {}
+  for (const [key, value] of Object.entries(tags)) {
+    const normalizedKey = key.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+    if (normalizedKey && !(normalizedKey in byNormalizedName)) {
+      byNormalizedName[normalizedKey] = value
+    }
+  }
+
+  for (const key of keys) {
+    const normalizedKey = key.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+    if (normalizedKey in byNormalizedName) {
+      const value = byNormalizedName[normalizedKey].trim()
+      if (value) {
+        return value
+      }
+    }
+  }
+
+  return ''
+}
+
+function isTraceErrorSpan(span: TraceSpan): boolean {
+  if (typeof span.status === 'string' && span.status.toLowerCase() === 'error') {
+    return true
+  }
+
+  const errorTag = getTagValue(span.tags, ['error', 'otelStatusCode', 'statusCode'])
+  const normalized = errorTag.toLowerCase()
+  return normalized === 'true' || normalized === '1' || normalized === 'error'
+}
+
+function getTraceIdForSpan(span: TraceSpan): string {
+  const traceIdFromTags = getTagValue(span.tags, ['traceId', 'trace_id', 'traceid', 'otelTraceId', 'trace'])
+  if (traceIdFromTags) {
+    return traceIdFromTags
+  }
+
+  return span.spanId || 'unknown-trace'
+}
+
+function convertClickHouseSpansToTraceSummaries(spans: TraceSpan[]): TraceSummary[] {
+  const grouped = new Map<
+    string,
+    {
+      traceId: string
+      spans: TraceSpan[]
+      services: Set<string>
+      errorSpanCount: number
+      startTimeUnixNano: number
+      endTimeUnixNano: number
+    }
+  >()
+
+  for (const span of spans) {
+    const traceId = getTraceIdForSpan(span)
+    const group = grouped.get(traceId) || {
+      traceId,
+      spans: [],
+      services: new Set<string>(),
+      errorSpanCount: 0,
+      startTimeUnixNano: Number.MAX_SAFE_INTEGER,
+      endTimeUnixNano: 0,
+    }
+
+    group.spans.push(span)
+    if (span.serviceName) {
+      group.services.add(span.serviceName)
+    }
+
+    if (isTraceErrorSpan(span)) {
+      group.errorSpanCount += 1
+    }
+
+    const spanStart = Math.max(0, span.startTimeUnixNano || 0)
+    const spanEnd = spanStart + Math.max(0, span.durationNano || 0)
+    group.startTimeUnixNano = Math.min(group.startTimeUnixNano, spanStart)
+    group.endTimeUnixNano = Math.max(group.endTimeUnixNano, spanEnd)
+
+    grouped.set(traceId, group)
+  }
+
+  const summaries: TraceSummary[] = []
+  for (const group of grouped.values()) {
+    const spanIds = new Set(group.spans.map((span) => span.spanId))
+    const rootSpan = [...group.spans]
+      .sort((left, right) => left.startTimeUnixNano - right.startTimeUnixNano)
+      .find((span) => !span.parentSpanId || !spanIds.has(span.parentSpanId)) || group.spans[0]
+
+    const startTimeUnixNano =
+      group.startTimeUnixNano === Number.MAX_SAFE_INTEGER ? 0 : group.startTimeUnixNano
+    const durationNano = Math.max(0, group.endTimeUnixNano - startTimeUnixNano)
+
+    summaries.push({
+      traceId: group.traceId,
+      rootServiceName: rootSpan?.serviceName || 'unknown',
+      rootOperationName: rootSpan?.operationName || '',
+      startTimeUnixNano,
+      durationNano,
+      spanCount: group.spans.length,
+      serviceCount: group.services.size,
+      errorSpanCount: group.errorSpanCount,
+    })
+  }
+
+  return summaries.sort((left, right) => right.startTimeUnixNano - left.startTimeUnixNano)
+}
+
 // Check if panel uses a datasource-based query
 const datasourceId = computed(() => props.panel.query?.datasource_id as string | undefined)
 const queryExpr = computed(() => (props.panel.query?.promql || props.panel.query?.expr || '') as string)
+const explicitQuerySignal = computed<ClickHouseSignal | null>(() => {
+  const value = props.panel.query?.signal
+  return isClickHouseSignal(value) ? value : null
+})
 
 // Setup Prometheus query (legacy, when no datasource_id)
 const promqlQuery = computed(() => !datasourceId.value ? queryExpr.value : '')
@@ -76,19 +198,52 @@ async function fetchDatasourceData() {
   if (!datasourceId.value) return
 
   const isTracePanel = props.panel.type === 'trace_list' || props.panel.type === 'trace_heatmap'
+  const hasExplicitTraceSignal = explicitQuerySignal.value === 'traces'
 
   dsLoading.value = true
   dsError.value = null
 
   try {
     if (isTracePanel) {
-      dsTraceSummaries.value = await searchDataSourceTraces(datasourceId.value, {
-        query: queryExpr.value.trim() || undefined,
-        service: traceServiceFilter.value || undefined,
-        start: startRef.value,
-        end: endRef.value,
-        limit: traceSearchLimit.value,
-      })
+      if (hasExplicitTraceSignal) {
+        if (!queryExpr.value.trim()) {
+          dsTraceSummaries.value = []
+          dsLogs.value = []
+          dsChartData.value = { series: [] }
+          return
+        }
+
+        const traceResult = await queryDataSource(datasourceId.value, {
+          query: queryExpr.value,
+          signal: 'traces',
+          start: startRef.value,
+          end: endRef.value,
+          step: 15,
+          limit: traceSearchLimit.value,
+        })
+
+        if (traceResult.status === 'error') {
+          dsError.value = traceResult.error || 'Query failed'
+          dsTraceSummaries.value = []
+          return
+        }
+
+        if (traceResult.resultType !== 'traces') {
+          dsError.value = 'Selected datasource did not return trace results'
+          dsTraceSummaries.value = []
+          return
+        }
+
+        dsTraceSummaries.value = convertClickHouseSpansToTraceSummaries(traceResult.data?.traces || [])
+      } else {
+        dsTraceSummaries.value = await searchDataSourceTraces(datasourceId.value, {
+          query: queryExpr.value.trim() || undefined,
+          service: traceServiceFilter.value || undefined,
+          start: startRef.value,
+          end: endRef.value,
+          limit: traceSearchLimit.value,
+        })
+      }
       dsLogs.value = []
       dsChartData.value = { series: [] }
       return
@@ -103,6 +258,7 @@ async function fetchDatasourceData() {
 
     const result = await queryDataSource(datasourceId.value, {
       query: queryExpr.value,
+      signal: explicitQuerySignal.value || undefined,
       start: startRef.value,
       end: endRef.value,
       step: 15,
@@ -119,6 +275,11 @@ async function fetchDatasourceData() {
       dsLogs.value = result.data.logs
       dsTraceSummaries.value = []
       dsChartData.value = { series: [] }
+    } else if (result.resultType === 'traces' && result.data?.traces) {
+      dsLogs.value = []
+      dsChartData.value = { series: [] }
+      dsTraceSummaries.value = []
+      dsError.value = 'Trace results can only be rendered in trace panels'
     } else if (result.data?.result) {
       dsLogs.value = []
       dsTraceSummaries.value = []
@@ -149,7 +310,7 @@ async function fetchDatasourceData() {
 }
 
 // Fetch datasource data when params change
-watch([datasourceId, queryExpr, traceServiceFilter, traceSearchLimit, startRef, endRef], () => {
+watch([datasourceId, queryExpr, explicitQuerySignal, traceServiceFilter, traceSearchLimit, startRef, endRef], () => {
   const isTracePanel = props.panel.type === 'trace_list' || props.panel.type === 'trace_heatmap'
   if (datasourceId.value && (isTracePanel || queryExpr.value)) {
     fetchDatasourceData()
@@ -275,6 +436,10 @@ const isTraceListPanel = computed(() => props.panel.type === 'trace_list')
 const isTraceHeatmapPanel = computed(() => props.panel.type === 'trace_heatmap')
 const hasQuery = computed(() => {
   if (isTraceListPanel.value || isTraceHeatmapPanel.value) {
+    if (explicitQuerySignal.value === 'traces') {
+      return !!datasourceId.value && !!queryExpr.value
+    }
+
     return !!datasourceId.value
   }
 
@@ -282,7 +447,7 @@ const hasQuery = computed(() => {
 })
 
 function handleOpenTrace(traceId: string) {
-  if (!datasourceId.value) {
+  if (!datasourceId.value || explicitQuerySignal.value === 'traces') {
     return
   }
 

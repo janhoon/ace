@@ -73,19 +73,19 @@ export function useDatasource() {
 
   const metricsDatasources = computed(() =>
     datasources.value.filter(
-      (d) => d.type === 'prometheus' || d.type === 'victoriametrics',
+      (d) => d.type === 'prometheus' || d.type === 'victoriametrics' || d.type === 'clickhouse',
     ),
   )
 
   const logsDatasources = computed(() =>
     datasources.value.filter(
-      (d) => d.type === 'loki' || d.type === 'victorialogs',
+      (d) => d.type === 'loki' || d.type === 'victorialogs' || d.type === 'clickhouse',
     ),
   )
 
   const tracingDatasources = computed(() =>
     datasources.value.filter(
-      (d) => d.type === 'tempo' || d.type === 'victoriatraces',
+      (d) => d.type === 'tempo' || d.type === 'victoriatraces' || d.type === 'clickhouse',
     ),
   )
 

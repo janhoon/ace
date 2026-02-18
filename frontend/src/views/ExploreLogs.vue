@@ -4,6 +4,7 @@ import { Play, AlertCircle, History, X, Loader2, HeartPulse, CircleAlert, Chevro
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import LogViewer from '../components/LogViewer.vue'
 import LogQLQueryBuilder from '../components/LogQLQueryBuilder.vue'
+import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useOrganization } from '../composables/useOrganization'
 import { useDatasource } from '../composables/useDatasource'
@@ -86,15 +87,28 @@ function escapeForDoubleQuotedValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
+function escapeForSingleQuotedValue(value: string): string {
+  return value.replace(/'/g, "''")
+}
+
 function buildTraceLogsQuery(type_: DataSourceType, traceId: string, serviceName: string): string {
   const escapedTraceId = escapeForDoubleQuotedValue(traceId)
   const escapedServiceName = escapeForDoubleQuotedValue(serviceName)
+  const escapedTraceIdSql = escapeForSingleQuotedValue(traceId)
+  const escapedServiceNameSql = escapeForSingleQuotedValue(serviceName)
 
   if (type_ === 'loki') {
     const selector = escapedServiceName
       ? `{service_name="${escapedServiceName}"}`
       : '{job=~".+"}'
     return `${selector} |= "${escapedTraceId}"`
+  }
+
+  if (type_ === 'clickhouse') {
+    const serviceCondition = escapedServiceNameSql
+      ? `AND service_name = '${escapedServiceNameSql}'`
+      : ''
+    return `SELECT timestamp, message, level\nFROM logs\nWHERE message ILIKE '%${escapedTraceIdSql}%' ${serviceCondition}\nORDER BY timestamp DESC\nLIMIT 500`
   }
 
   if (escapedServiceName) {
@@ -567,6 +581,7 @@ async function runQuery() {
 
     const response = await queryDataSource(selectedDatasourceId.value, {
       query: query.value,
+      signal: isClickHouseDatasource.value ? 'logs' : undefined,
       start,
       end,
       step: 15,
@@ -675,6 +690,10 @@ const isLiveBusy = computed(() => liveState.value === 'connecting' || liveState.
 const activeDatasource = computed(
   () => logsDatasources.value.find(ds => ds.id === selectedDatasourceId.value) || null,
 )
+const isClickHouseDatasource = computed(() => activeDatasource.value?.type === 'clickhouse')
+const supportsLiveStreaming = computed(
+  () => activeDatasource.value?.type === 'loki' || activeDatasource.value?.type === 'victorialogs',
+)
 const queryLanguage = computed<'logql' | 'logsql'>(() => {
   if (activeDatasource.value?.type === 'victorialogs') {
     return 'logsql'
@@ -736,6 +755,9 @@ function getSmokeQuery(type_: DataSourceType): string {
   if (type_ === 'prometheus' || type_ === 'victoriametrics') {
     return 'up'
   }
+  if (type_ === 'clickhouse') {
+    return 'SELECT now() AS timestamp, \'healthcheck\' AS message LIMIT 1'
+  }
   if (type_ === 'loki') {
     return '{job=~".+"}'
   }
@@ -752,6 +774,7 @@ async function checkDatasourceHealth(datasourceId: string, type_: DataSourceType
   try {
     const healthResult = await queryDataSource(datasourceId, {
       query: getSmokeQuery(type_),
+      signal: type_ === 'clickhouse' ? 'logs' : undefined,
       start,
       end,
       step: 15,
@@ -792,6 +815,12 @@ watch(selectedDatasourceId, () => {
   clearLogHighlights()
 })
 
+watch(supportsLiveStreaming, (supports) => {
+  if (!supports && isLive.value) {
+    stopLive()
+  }
+})
+
 watch(query, (nextQuery, previousQuery) => {
   if (nextQuery !== previousQuery && isLive.value) {
     stopLive(false)
@@ -799,7 +828,7 @@ watch(query, (nextQuery, previousQuery) => {
 })
 
 watch(() => selectedDatasourceId.value, (datasourceId) => {
-  if (!datasourceId) {
+  if (!datasourceId || isClickHouseDatasource.value) {
     indexedLabels.value = []
     return
   }
@@ -893,7 +922,14 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
         </div>
 
         <div class="query-builder-wrapper">
+          <ClickHouseSQLEditor
+            v-if="isClickHouseDatasource"
+            v-model="query"
+            signal="logs"
+            :disabled="loading || !hasLogsDatasources"
+          />
           <LogQLQueryBuilder
+            v-else
             v-model="query"
             :query-language="queryLanguage"
             :datasource-id="selectedDatasourceId"
@@ -947,8 +983,9 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
           <button
             class="btn btn-live"
             :class="{ active: isLive }"
-            :disabled="loading || (!isLive && (!query.trim() || !selectedDatasourceId || !hasLogsDatasources))"
+            :disabled="loading || !supportsLiveStreaming || (!isLive && (!query.trim() || !selectedDatasourceId || !hasLogsDatasources))"
             @click="toggleLive"
+            :title="supportsLiveStreaming ? '' : 'Live streaming is only available for Loki and Victoria Logs datasources'"
           >
             <Loader2 v-if="isLiveBusy" :size="16" class="icon-spin" />
             <X v-else-if="isLive" :size="16" />
@@ -1000,8 +1037,17 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
         </div>
 
         <div v-else class="empty-state">
-          <p>Write a log query and click "Run Query" to inspect logs.</p>
-          <p class="hint-text">Examples: <code>{job=~".+"}</code>, <code>{app="api"} |= "error"</code>, <code>*</code></p>
+          <p>
+            {{
+              isClickHouseDatasource
+                ? 'Write a SQL query and click "Run Query" to inspect logs.'
+                : 'Write a log query and click "Run Query" to inspect logs.'
+            }}
+          </p>
+          <p v-if="isClickHouseDatasource" class="hint-text">
+            Examples: <code>SELECT timestamp, message, level FROM logs WHERE timestamp &gt;= toDateTime({start})</code>
+          </p>
+          <p v-else class="hint-text">Examples: <code>{job=~".+"}</code>, <code>{app="api"} |= "error"</code>, <code>*</code></p>
         </div>
       </div>
     </div>

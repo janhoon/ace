@@ -40,6 +40,7 @@ export interface UpdateDataSourceRequest {
 
 export interface DataSourceQueryRequest {
   query: string
+  signal?: 'logs' | 'metrics' | 'traces'
   start: number
   end: number
   step?: number
@@ -142,9 +143,10 @@ export interface DataSourceQueryResult {
     resultType: string
     result?: MetricResult[]
     logs?: LogEntry[]
+    traces?: TraceSpan[]
   }
   error?: string
-  resultType: 'metrics' | 'logs'
+  resultType: 'metrics' | 'logs' | 'traces'
 }
 
 export function isMetricsType(type_: DataSourceType): boolean {
