@@ -366,7 +366,7 @@
         "Add YAML editor tab to dashboard settings",
         "Integrate Monaco/CodeMirror for YAML editing",
         "Add YAML validation",
-        "Implement Grafana JSON → YAML conversion",
+        "Implement Grafana JSON \u2192 YAML conversion",
         "Add diff view for changes",
         "Wire up save handler"
       ],
@@ -930,6 +930,139 @@
         "Config: VITE_POSTHOG_KEY=TBD"
       ],
       "passes": true
+    },
+    {
+      "id": 265,
+      "name": "ClickHouse Backend Core",
+      "category": "datasource",
+      "task_size": "large",
+      "priority": "high",
+      "fizzyCard": 265,
+      "description": "Add ClickHouse as a supported datasource type. HTTP SQL interface, supports logs/metrics/traces.",
+      "why_it_matters": "ClickHouse is widely used for observability storage. Adding it enables users with ClickHouse backends to use Ace without running Loki/Prometheus/Tempo.",
+      "depends_on": [],
+      "unblocks": [
+        266,
+        267
+      ],
+      "requirements": [
+        "Add DataSourceClickHouse type to models/datasource.go",
+        "Update Valid(), IsMetrics(), IsLogs(), IsTraces() to include clickhouse",
+        "New datasource/clickhouse.go: HTTP client posting SQL to ClickHouse HTTP interface",
+        "Support basic auth and optional database config in auth_config.database",
+        "NormaliseToLogs: map rows to LogEntry[] (timestamp/message/level column detection)",
+        "NormaliseToMetrics: map rows to MetricResult[] (timestamp/value columns)",
+        "NormaliseToTraces: map rows to TraceSpan[] (OTel-compatible column names)",
+        "Query handler: route clickhouse type through new client with signal param (logs|metrics|traces)"
+      ],
+      "steps": [
+        "Add DataSourceClickHouse = \"clickhouse\" to models/datasource.go",
+        "Update Valid(), IsMetrics(), IsLogs(), IsTraces() methods",
+        "Create backend/internal/datasource/clickhouse.go with ClickHouseClient",
+        "Implement Query(ctx, sql) -> []map[string]interface{} via POST HTTP interface",
+        "Add NormaliseToLogs, NormaliseToMetrics, NormaliseToTraces helpers",
+        "Update handlers/datasource.go Query() to handle clickhouse type with signal param",
+        "Unit tests for normalisation helpers",
+        "Commit: \"feat: add ClickHouse datasource backend support (#265)\""
+      ],
+      "acceptance_criteria": [
+        "GET /api/datasources returns clickhouse as valid type",
+        "POST /api/datasources/{id}/query with signal=logs returns LogEntry[] from SQL",
+        "POST /api/datasources/{id}/query with signal=metrics returns MetricResult[] from SQL",
+        "POST /api/datasources/{id}/query with signal=traces returns TraceSpan[] from SQL",
+        "Basic auth (username/password) passes through to ClickHouse HTTP interface",
+        "Unit tests pass"
+      ],
+      "test_commands": [
+        "go test ./backend/internal/datasource/... -run ClickHouse",
+        "go test ./backend/internal/handlers/..."
+      ],
+      "passes": false
+    },
+    {
+      "id": 266,
+      "name": "ClickHouse Frontend SQL Editor + Settings",
+      "category": "datasource",
+      "task_size": "medium",
+      "priority": "high",
+      "fizzyCard": 266,
+      "description": "Frontend type registration, SQL editor component, and datasource settings for ClickHouse.",
+      "why_it_matters": "Users need a SQL-aware editor when querying ClickHouse (PromQL/LogQL are wrong editors).",
+      "depends_on": [
+        265
+      ],
+      "unblocks": [
+        267
+      ],
+      "requirements": [
+        "Add clickhouse to DataSourceType union and helper functions in types/datasource.ts",
+        "DataSourceSettings.vue: optional Database field for clickhouse type",
+        "New ClickHouseSQLEditor.vue: SQL textarea + signal type selector (logs/metrics/traces)",
+        "Placeholder SQL examples per signal type",
+        "Inline help explaining expected column naming conventions",
+        "PanelEditModal.vue: render ClickHouseSQLEditor for clickhouse datasources"
+      ],
+      "steps": [
+        "Add \"clickhouse\" to DataSourceType, update isMetricsType/isLogsType/isTracingType, add to dataSourceTypeLabels",
+        "Add optional Database input in DataSourceSettings.vue for clickhouse type",
+        "Create ClickHouseSQLEditor.vue with signal selector and SQL textarea",
+        "Wire ClickHouseSQLEditor into PanelEditModal.vue for clickhouse datasources",
+        "Unit test for ClickHouseSQLEditor",
+        "Commit: \"feat: ClickHouse SQL editor and datasource settings (#266)\""
+      ],
+      "acceptance_criteria": [
+        "ClickHouse appears in datasource type dropdown when creating/editing a datasource",
+        "Database field visible and saveable for clickhouse datasources",
+        "PanelEditModal shows SQL editor (not PromQL) for clickhouse datasources",
+        "Signal type selector switches between Logs/Metrics/Traces",
+        "Placeholder queries shown per signal type"
+      ],
+      "test_commands": [
+        "pnpm --filter ace-frontend test --run ClickHouse"
+      ],
+      "passes": false
+    },
+    {
+      "id": 267,
+      "name": "ClickHouse Frontend Explore Views + Dashboard Panels",
+      "category": "datasource",
+      "task_size": "large",
+      "priority": "high",
+      "fizzyCard": 267,
+      "description": "Integrate ClickHouse into ExploreLogs, ExploreMetrics, ExploreTraces and dashboard Panel rendering.",
+      "why_it_matters": "End-to-end ClickHouse usage requires explore and dashboard support, not just the query editor.",
+      "depends_on": [
+        265,
+        266
+      ],
+      "unblocks": [],
+      "requirements": [
+        "ExploreLogs: ClickHouseSQLEditor with signal=logs, results in LogViewer",
+        "ExploreMetrics: ClickHouseSQLEditor with signal=metrics, results in time series chart",
+        "ExploreTraces: ClickHouseSQLEditor with signal=traces, results in TraceListPanel",
+        "Dashboard Panel.vue: execute SQL with correct signal type, render in correct panel type",
+        "ClickHouse in datasource picker in all Explore views"
+      ],
+      "steps": [
+        "ExploreLogs.vue: show ClickHouseSQLEditor + LogViewer for clickhouse datasources",
+        "Explore.vue (metrics): show ClickHouseSQLEditor + chart for clickhouse datasources",
+        "ExploreTraces.vue: show ClickHouseSQLEditor + trace panels for clickhouse datasources",
+        "Panel.vue: route clickhouse query results to correct renderer based on signal type",
+        "Add clickhouse to Explore datasource type picker",
+        "E2E test with mock ClickHouse responses",
+        "Commit: \"feat: ClickHouse Explore views and dashboard panels (#267)\""
+      ],
+      "acceptance_criteria": [
+        "ExploreLogs with clickhouse datasource: run SQL -> logs appear in LogViewer",
+        "ExploreMetrics with clickhouse: run SQL -> time series chart renders",
+        "ExploreTraces with clickhouse: run SQL -> trace list renders",
+        "Dashboard panel with clickhouse datasource renders without errors",
+        "Time range picker correctly substitutes {start}/{end} in SQL queries"
+      ],
+      "test_commands": [
+        "pnpm --filter ace-frontend test --run"
+      ],
+      "passes": false
     }
   ]
 }
