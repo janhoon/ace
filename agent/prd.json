@@ -977,7 +977,7 @@
         "go test ./backend/internal/datasource/... -run ClickHouse",
         "go test ./backend/internal/handlers/..."
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": 266,

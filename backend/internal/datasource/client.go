@@ -14,11 +14,12 @@ import (
 
 // QueryRequest represents a query request body
 type QueryRequest struct {
-	Query string `json:"query"`
-	Start int64  `json:"start"` // Unix timestamp in seconds
-	End   int64  `json:"end"`   // Unix timestamp in seconds
-	Step  int64  `json:"step"`  // Step interval in seconds
-	Limit int    `json:"limit"` // Max results for log queries
+	Query  string `json:"query"`
+	Signal string `json:"signal,omitempty"`
+	Start  int64  `json:"start"` // Unix timestamp in seconds
+	End    int64  `json:"end"`   // Unix timestamp in seconds
+	Step   int64  `json:"step"`  // Step interval in seconds
+	Limit  int    `json:"limit"` // Max results for log queries
 }
 
 // StreamRequest represents a live stream request body
@@ -41,6 +42,7 @@ type QueryData struct {
 	ResultType string         `json:"resultType"`
 	Result     []MetricResult `json:"result,omitempty"`
 	Logs       []LogEntry     `json:"logs,omitempty"`
+	Traces     []TraceSpan    `json:"traces,omitempty"`
 }
 
 // MetricResult represents a single metric series (for Prometheus/VictoriaMetrics)
@@ -79,6 +81,8 @@ func NewClient(ds models.DataSource) (Client, error) {
 		return NewTempoClient(ds)
 	case models.DataSourceVictoriaTraces:
 		return NewVictoriaTracesClient(ds)
+	case models.DataSourceClickHouse:
+		return NewClickHouseClient(ds)
 	default:
 		return nil, fmt.Errorf("unsupported datasource type: %s", ds.Type)
 	}
@@ -106,6 +110,8 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 			return err
 		}
 		return client.TestConnection(ctx)
+	case models.DataSourceClickHouse:
+		return runHTTPConnectionCheck(ctx, ds, []string{"/ping", "/?query=SELECT%201", "/"})
 	default:
 		return fmt.Errorf("unsupported datasource type: %s", ds.Type)
 	}
