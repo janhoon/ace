@@ -1,4 +1,4 @@
-# Dash - Monitoring Dashboard
+# Ace - Monitoring Dashboard
 
 [![CodeQL](https://github.com/janhoon/dash/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/janhoon/dash/actions/workflows/security.yml)
 [![Lint](https://github.com/janhoon/dash/actions/workflows/lint.yml/badge.svg?branch=master)](https://github.com/janhoon/dash/actions/workflows/lint.yml)
