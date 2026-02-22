@@ -1063,6 +1063,47 @@
         "pnpm --filter ace-frontend test --run"
       ],
       "passes": true
+    },
+    {
+      "id": 356,
+      "name": "CloudWatch integration for Ace",
+      "category": "datasources",
+      "task_size": "L",
+      "priority": "high",
+      "fizzyCard": 356,
+      "description": "Implement AWS CloudWatch datasource integration across backend and frontend for Explore + Dashboard use.",
+      "why_it_matters": "CloudWatch is a core enterprise observability source and needed after ClickHouse integration.",
+      "depends_on": [
+        267
+      ],
+      "unblocks": [],
+      "requirements": [
+        "Create CloudWatch datasource type/config model",
+        "Support auth/region/log group/metric namespace inputs",
+        "Implement backend query execution path for metrics/logs",
+        "Add frontend datasource setup UX",
+        "Enable Explore and dashboard panel query/render support"
+      ],
+      "steps": [
+        "Backend: datasource schema + secure credential handling",
+        "Backend: CloudWatch query adapter/service",
+        "Frontend: datasource form + validation",
+        "Frontend: Explore hooks for CloudWatch query modes",
+        "Dashboard panel support for CloudWatch results",
+        "Tests + docs + commit"
+      ],
+      "acceptance_criteria": [
+        "CloudWatch datasource can be created and validated",
+        "Explore can run CloudWatch queries and render results",
+        "Dashboard panels can execute CloudWatch queries",
+        "Tests/typecheck/build pass"
+      ],
+      "test_commands": [
+        "pnpm --filter ace-frontend test --run",
+        "pnpm --filter ace-frontend typecheck",
+        "go test ./..."
+      ],
+      "passes": false
     }
   ]
 }
