@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/janhoon/ace/compare/v0.3.0...v0.4.0) (2026-02-22)
+
+
+### Features
+
+* add CloudWatch datasource integration across backend and frontend ([6a9330f](https://github.com/janhoon/ace/commit/6a9330f2fb47f765e33fef1a2d7d10359812c4f6))
+* add ELK Elasticsearch datasource integration ([b3eca66](https://github.com/janhoon/ace/commit/b3eca66c5e0e11f2c7d3eb6f6d788b96456534b2))
+
+
+### Documentation
+
+* clarify local logstash pipeline for ELK ([d7679bd](https://github.com/janhoon/ace/commit/d7679bdbd5099d35150b4a34a2d353f9881d44f4))
+
 ## [0.3.0](https://github.com/janhoon/ace/compare/v0.2.0...v0.3.0) (2026-02-20)
 
 
