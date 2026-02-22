@@ -1104,6 +1104,45 @@
         "go test ./..."
       ],
       "passes": false
+    },
+    {
+      "id": 357,
+      "name": "ELK integration in Ace (Elasticsearch/Logstash, no Kibana)",
+      "category": "datasources",
+      "task_size": "L",
+      "priority": "high",
+      "fizzyCard": 357,
+      "description": "Add ELK integration using Ace as the visualization/query UI instead of Kibana.",
+      "why_it_matters": "Enable teams already on Elasticsearch/Logstash to use Ace dashboards/explore without adopting Kibana.",
+      "depends_on": [
+        356
+      ],
+      "unblocks": [],
+      "requirements": [
+        "Support Elasticsearch datasource configuration",
+        "Add log query/explore support for ELK-backed indices",
+        "Dashboard compatibility for ELK query results",
+        "Document setup flow (Logstash -> Elasticsearch -> Ace)"
+      ],
+      "steps": [
+        "Backend datasource adapter for Elasticsearch",
+        "Frontend datasource setup and validation",
+        "Explore query mode for logs and aggregations",
+        "Dashboard panel integration",
+        "Tests/docs and rollout notes"
+      ],
+      "acceptance_criteria": [
+        "Elasticsearch datasource can be configured",
+        "Explore can run ELK queries and render results",
+        "Dashboards can use ELK datasource",
+        "Tests/typecheck/build pass"
+      ],
+      "test_commands": [
+        "pnpm --filter ace-frontend test --run",
+        "pnpm --filter ace-frontend typecheck",
+        "go test ./..."
+      ],
+      "passes": false
     }
   ]
 }
