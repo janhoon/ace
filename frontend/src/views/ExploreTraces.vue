@@ -33,6 +33,7 @@ import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
 import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
+import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
 
 interface TraceNavigationContext {
   datasourceId?: string
@@ -74,6 +75,7 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   tempo: tempoLogo,
   victoriatraces: victoriaTracesLogo,
   clickhouse: clickhouseLogo,
+  cloudwatch: cloudwatchLogo,
 }
 
 const selectedDatasourceId = ref('')

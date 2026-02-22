@@ -83,6 +83,8 @@ func NewClient(ds models.DataSource) (Client, error) {
 		return NewVictoriaTracesClient(ds)
 	case models.DataSourceClickHouse:
 		return NewClickHouseClient(ds)
+	case models.DataSourceCloudWatch:
+		return NewCloudWatchClient(ds)
 	default:
 		return nil, fmt.Errorf("unsupported datasource type: %s", ds.Type)
 	}
@@ -112,6 +114,12 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 		return client.TestConnection(ctx)
 	case models.DataSourceClickHouse:
 		return runHTTPConnectionCheck(ctx, ds, []string{"/ping", "/?query=SELECT%201", "/"})
+	case models.DataSourceCloudWatch:
+		client, err := NewCloudWatchClient(ds)
+		if err != nil {
+			return err
+		}
+		return client.TestConnection(ctx)
 	default:
 		return fmt.Errorf("unsupported datasource type: %s", ds.Type)
 	}

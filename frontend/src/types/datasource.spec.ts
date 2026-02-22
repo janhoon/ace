@@ -27,6 +27,10 @@ describe('datasource types', () => {
     it('returns true for clickhouse', () => {
       expect(isMetricsType('clickhouse')).toBe(true)
     })
+
+    it('returns true for cloudwatch', () => {
+      expect(isMetricsType('cloudwatch')).toBe(true)
+    })
   })
 
   describe('isLogsType', () => {
@@ -52,6 +56,10 @@ describe('datasource types', () => {
 
     it('returns true for clickhouse', () => {
       expect(isLogsType('clickhouse')).toBe(true)
+    })
+
+    it('returns true for cloudwatch', () => {
+      expect(isLogsType('cloudwatch')).toBe(true)
     })
   })
 
@@ -83,6 +91,7 @@ describe('datasource types', () => {
         'tempo',
         'victoriatraces',
         'clickhouse',
+        'cloudwatch',
       ]
       for (const type_ of types) {
         expect(dataSourceTypeLabels[type_]).toBeDefined()
@@ -116,6 +125,10 @@ describe('datasource types', () => {
 
     it('returns correct label for clickhouse', () => {
       expect(dataSourceTypeLabels.clickhouse).toBe('ClickHouse')
+    })
+
+    it('returns correct label for cloudwatch', () => {
+      expect(dataSourceTypeLabels.cloudwatch).toBe('CloudWatch')
     })
   })
 })

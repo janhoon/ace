@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Play, AlertCircle, History, X, Loader2, HeartPulse, CircleAlert, ChevronDown, ChevronUp, Check } from 'lucide-vue-next'
 import QueryBuilder from '../components/QueryBuilder.vue'
 import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
+import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import LineChart from '../components/LineChart.vue'
 import { useTimeRange } from '../composables/useTimeRange'
@@ -19,6 +20,7 @@ import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
 import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
+import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
 import type { ChartSeries } from '../components/LineChart.vue'
 
 const { timeRange, onRefresh, setCustomRange } = useTimeRange()
@@ -33,6 +35,7 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   tempo: tempoLogo,
   victoriatraces: victoriaTracesLogo,
   clickhouse: clickhouseLogo,
+  cloudwatch: cloudwatchLogo,
 }
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'
@@ -84,6 +87,20 @@ function buildServiceMetricsQuery(type_: DataSourceType, serviceName: string): s
     }
 
     return `SELECT timestamp, value, metric\nFROM metrics\nWHERE timestamp >= toDateTime({start}) AND timestamp <= toDateTime({end})\nAND service_name = '${escapedService}'\nORDER BY timestamp`
+  }
+
+  if (type_ === 'cloudwatch') {
+    return JSON.stringify(
+      {
+        namespace: 'AWS/ECS',
+        metric_name: 'CPUUtilization',
+        dimensions: serviceName ? { ServiceName: serviceName } : {},
+        stat: 'Average',
+        period: 60,
+      },
+      null,
+      2,
+    )
   }
 
   if (!serviceName) {
@@ -247,7 +264,7 @@ async function runQuery() {
 
     const response = await queryDataSource(selectedDatasourceId.value, {
       query: query.value,
-      signal: isClickHouseDatasource.value ? 'metrics' : undefined,
+      signal: isClickHouseDatasource.value || isCloudWatchDatasource.value ? 'metrics' : undefined,
       start,
       end,
       step,
@@ -329,6 +346,7 @@ const activeDatasource = computed(
   () => metricsDatasources.value.find(ds => ds.id === selectedDatasourceId.value) || null,
 )
 const isClickHouseDatasource = computed(() => activeDatasource.value?.type === 'clickhouse')
+const isCloudWatchDatasource = computed(() => activeDatasource.value?.type === 'cloudwatch')
 const activeDatasourceHealth = computed<DatasourceHealthStatus>(() => {
   if (!activeDatasource.value) {
     return 'unknown'
@@ -381,6 +399,9 @@ function getSmokeQuery(type_: DataSourceType): string {
   if (type_ === 'clickhouse') {
     return 'SELECT now() AS timestamp, toFloat64(1) AS value, \'up\' AS metric LIMIT 1'
   }
+  if (type_ === 'cloudwatch') {
+    return '{"namespace":"AWS/EC2","metric_name":"CPUUtilization","stat":"Average","period":60}'
+  }
   if (type_ === 'loki') {
     return '{job=~".+"}'
   }
@@ -397,7 +418,7 @@ async function checkDatasourceHealth(datasourceId: string, type_: DataSourceType
   try {
     const healthResult = await queryDataSource(datasourceId, {
       query: getSmokeQuery(type_),
-      signal: type_ === 'clickhouse' ? 'metrics' : undefined,
+      signal: type_ === 'clickhouse' || type_ === 'cloudwatch' ? 'metrics' : undefined,
       start,
       end,
       step: 15,
@@ -528,6 +549,13 @@ watch(selectedDatasourceId, () => {
             signal="metrics"
             :disabled="loading || !hasMetricsDatasources"
           />
+          <CloudWatchQueryEditor
+            v-else-if="isCloudWatchDatasource"
+            v-model="query"
+            signal="metrics"
+            :show-signal-selector="false"
+            :disabled="loading || !hasMetricsDatasources"
+          />
           <QueryBuilder v-else v-model="query" :disabled="loading || !hasMetricsDatasources" />
 
           <!-- History button -->
@@ -603,7 +631,7 @@ watch(selectedDatasourceId, () => {
 
         <div v-else-if="!hasMetricsDatasources" class="empty-state">
           <p>No metrics datasource configured.</p>
-          <p class="hint-text">Add a Prometheus or VictoriaMetrics datasource in Data Sources.</p>
+          <p class="hint-text">Add a Prometheus, VictoriaMetrics, or CloudWatch datasource in Data Sources.</p>
         </div>
 
         <div v-else class="empty-state">
@@ -611,11 +639,16 @@ watch(selectedDatasourceId, () => {
             {{
               isClickHouseDatasource
                 ? 'Write a SQL query and click "Run Query" to visualize your metrics.'
-                : 'Write a PromQL query and click "Run Query" to visualize your metrics.'
+                : isCloudWatchDatasource
+                  ? 'Write a CloudWatch metrics query and click "Run Query" to visualize your metrics.'
+                  : 'Write a PromQL query and click "Run Query" to visualize your metrics.'
             }}
           </p>
           <p v-if="isClickHouseDatasource" class="hint-text">
             Examples: <code>SELECT timestamp, value, metric FROM metrics WHERE timestamp &gt;= toDateTime({start})</code>
+          </p>
+          <p v-else-if="isCloudWatchDatasource" class="hint-text">
+            Example: <code>{"namespace":"AWS/EC2","metric_name":"CPUUtilization","stat":"Average","period":60}</code>
           </p>
           <p v-else class="hint-text">Examples: <code>up</code>, <code>rate(http_requests_total[5m])</code>, <code>node_cpu_seconds_total</code></p>
         </div>

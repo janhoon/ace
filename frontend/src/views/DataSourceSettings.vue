@@ -13,6 +13,7 @@ import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
 import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
+import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
 
 const { currentOrg } = useOrganization()
 const {
@@ -40,6 +41,12 @@ const formBearerToken = ref('')
 const formApiKeyHeader = ref('X-API-Key')
 const formApiKeyValue = ref('')
 const formDatabase = ref('')
+const formCloudWatchRegion = ref('')
+const formCloudWatchMetricNamespace = ref('')
+const formCloudWatchLogGroup = ref('')
+const formCloudWatchAccessKeyId = ref('')
+const formCloudWatchSecretAccessKey = ref('')
+const formCloudWatchSessionToken = ref('')
 const formError = ref<string | null>(null)
 const formLoading = ref(false)
 const testAllLoading = ref(false)
@@ -56,10 +63,12 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   tempo: tempoLogo,
   victoriatraces: victoriaTracesLogo,
   clickhouse: clickhouseLogo,
+  cloudwatch: cloudwatchLogo,
 }
 
 const isClickHouseType = computed(() => formType.value === 'clickhouse')
-const showAuthSettings = computed(() => isTracingType(formType.value) || isClickHouseType.value)
+const isCloudWatchType = computed(() => formType.value === 'cloudwatch')
+const showAuthSettings = computed(() => (isTracingType(formType.value) || isClickHouseType.value) && !isCloudWatchType.value)
 
 function openCreateModal() {
   editingDs.value = null
@@ -96,6 +105,12 @@ function resetAuthForm() {
   formApiKeyHeader.value = 'X-API-Key'
   formApiKeyValue.value = ''
   formDatabase.value = ''
+  formCloudWatchRegion.value = ''
+  formCloudWatchMetricNamespace.value = ''
+  formCloudWatchLogGroup.value = ''
+  formCloudWatchAccessKeyId.value = ''
+  formCloudWatchSecretAccessKey.value = ''
+  formCloudWatchSessionToken.value = ''
 }
 
 function hydrateAuthForm(ds: DataSource) {
@@ -111,6 +126,12 @@ function hydrateAuthForm(ds: DataSource) {
   const header = authConfig.header
   const value = authConfig.value
   const database = authConfig.database
+  const region = authConfig.region
+  const metricNamespace = authConfig.metric_namespace
+  const logGroup = authConfig.log_group
+  const accessKeyId = authConfig.access_key_id
+  const secretAccessKey = authConfig.secret_access_key
+  const sessionToken = authConfig.session_token
 
   if (typeof username === 'string') {
     formBasicUsername.value = username
@@ -129,6 +150,24 @@ function hydrateAuthForm(ds: DataSource) {
   }
   if (typeof database === 'string') {
     formDatabase.value = database
+  }
+  if (typeof region === 'string') {
+    formCloudWatchRegion.value = region
+  }
+  if (typeof metricNamespace === 'string') {
+    formCloudWatchMetricNamespace.value = metricNamespace
+  }
+  if (typeof logGroup === 'string') {
+    formCloudWatchLogGroup.value = logGroup
+  }
+  if (typeof accessKeyId === 'string') {
+    formCloudWatchAccessKeyId.value = accessKeyId
+  }
+  if (typeof secretAccessKey === 'string') {
+    formCloudWatchSecretAccessKey.value = secretAccessKey
+  }
+  if (typeof sessionToken === 'string') {
+    formCloudWatchSessionToken.value = sessionToken
   }
 }
 
@@ -170,6 +209,46 @@ async function testAllDatasources() {
 }
 
 function buildAuthPayload() {
+  if (isCloudWatchType.value) {
+    if (!formCloudWatchRegion.value.trim()) {
+      throw new Error('CloudWatch region is required')
+    }
+
+    const cloudWatchConfig: Record<string, unknown> = {
+      region: formCloudWatchRegion.value.trim(),
+    }
+
+    const metricNamespace = formCloudWatchMetricNamespace.value.trim()
+    if (metricNamespace) {
+      cloudWatchConfig.metric_namespace = metricNamespace
+    }
+
+    const logGroup = formCloudWatchLogGroup.value.trim()
+    if (logGroup) {
+      cloudWatchConfig.log_group = logGroup
+    }
+
+    const accessKeyId = formCloudWatchAccessKeyId.value.trim()
+    const secretAccessKey = formCloudWatchSecretAccessKey.value.trim()
+    if (accessKeyId || secretAccessKey) {
+      if (!accessKeyId || !secretAccessKey) {
+        throw new Error('CloudWatch access key ID and secret access key must both be provided')
+      }
+      cloudWatchConfig.access_key_id = accessKeyId
+      cloudWatchConfig.secret_access_key = secretAccessKey
+    }
+
+    const sessionToken = formCloudWatchSessionToken.value.trim()
+    if (sessionToken) {
+      cloudWatchConfig.session_token = sessionToken
+    }
+
+    return {
+      auth_type: 'none' as const,
+      auth_config: cloudWatchConfig,
+    }
+  }
+
   if (!showAuthSettings.value || formAuthType.value === 'none') {
     return {
       auth_type: 'none' as const,
@@ -222,7 +301,14 @@ async function handleSubmit() {
     formError.value = 'Name is required'
     return
   }
-  if (!formUrl.value.trim()) {
+
+  let submitURL = formUrl.value.trim()
+  if (isCloudWatchType.value && !submitURL && formCloudWatchRegion.value.trim()) {
+    submitURL = `https://monitoring.${formCloudWatchRegion.value.trim()}.amazonaws.com`
+    formUrl.value = submitURL
+  }
+
+  if (!submitURL) {
     formError.value = 'URL is required'
     return
   }
@@ -249,7 +335,7 @@ async function handleSubmit() {
       await editDatasource(editingDs.value.id, {
         name: formName.value.trim(),
         type: formType.value,
-        url: formUrl.value.trim(),
+        url: submitURL,
         is_default: formIsDefault.value,
         auth_type: authPayload.auth_type,
         auth_config: finalAuthConfig,
@@ -258,7 +344,7 @@ async function handleSubmit() {
       await addDatasource(currentOrg.value.id, {
         name: formName.value.trim(),
         type: formType.value,
-        url: formUrl.value.trim(),
+        url: submitURL,
         is_default: formIsDefault.value,
         auth_type: authPayload.auth_type,
         auth_config: finalAuthConfig,
@@ -297,6 +383,8 @@ function getTypeColor(type_: DataSourceType): string {
       return '#5bc0be'
     case 'clickhouse':
       return '#ffd400'
+    case 'cloudwatch':
+      return '#38bdf8'
   }
 }
 
@@ -323,6 +411,24 @@ watch(formType, (type_) => {
   if (type_ !== 'clickhouse') {
     formDatabase.value = ''
   }
+
+  if (type_ === 'cloudwatch') {
+    formAuthType.value = 'none'
+    if (!formCloudWatchRegion.value.trim()) {
+      formCloudWatchRegion.value = 'us-east-1'
+    }
+    if (!formUrl.value.trim()) {
+      formUrl.value = `https://monitoring.${formCloudWatchRegion.value}.amazonaws.com`
+    }
+    return
+  }
+
+  formCloudWatchRegion.value = ''
+  formCloudWatchMetricNamespace.value = ''
+  formCloudWatchLogGroup.value = ''
+  formCloudWatchAccessKeyId.value = ''
+  formCloudWatchSecretAccessKey.value = ''
+  formCloudWatchSessionToken.value = ''
 })
 </script>
 
@@ -468,6 +574,7 @@ watch(formType, (type_) => {
               <option value="tempo">Tempo (Tracing)</option>
               <option value="victoriatraces">VictoriaTraces (Tracing)</option>
               <option value="clickhouse">ClickHouse (SQL)</option>
+              <option value="cloudwatch">CloudWatch (Metrics + Logs)</option>
             </select>
           </div>
 
@@ -481,6 +588,79 @@ watch(formType, (type_) => {
               :disabled="formLoading"
               autocomplete="off"
             />
+          </div>
+
+          <div v-if="isCloudWatchType" class="form-cloudwatch-section">
+            <div class="auth-grid">
+              <div class="form-group">
+                <label for="ds-cloudwatch-region">AWS Region <span class="required">*</span></label>
+                <input
+                  id="ds-cloudwatch-region"
+                  v-model="formCloudWatchRegion"
+                  type="text"
+                  placeholder="us-east-1"
+                  :disabled="formLoading"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-group">
+                <label for="ds-cloudwatch-namespace">Metric Namespace (optional)</label>
+                <input
+                  id="ds-cloudwatch-namespace"
+                  v-model="formCloudWatchMetricNamespace"
+                  type="text"
+                  placeholder="AWS/ECS"
+                  :disabled="formLoading"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ds-cloudwatch-log-group">Default Log Group (optional)</label>
+              <input
+                id="ds-cloudwatch-log-group"
+                v-model="formCloudWatchLogGroup"
+                type="text"
+                placeholder="/aws/lambda/my-function"
+                :disabled="formLoading"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="auth-grid">
+              <div class="form-group">
+                <label for="ds-cloudwatch-access-key">Access Key ID (optional)</label>
+                <input
+                  id="ds-cloudwatch-access-key"
+                  v-model="formCloudWatchAccessKeyId"
+                  type="text"
+                  :disabled="formLoading"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-group">
+                <label for="ds-cloudwatch-secret-key">Secret Access Key (optional)</label>
+                <input
+                  id="ds-cloudwatch-secret-key"
+                  v-model="formCloudWatchSecretAccessKey"
+                  type="password"
+                  :disabled="formLoading"
+                  autocomplete="new-password"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ds-cloudwatch-session-token">Session Token (optional)</label>
+              <input
+                id="ds-cloudwatch-session-token"
+                v-model="formCloudWatchSessionToken"
+                type="password"
+                :disabled="formLoading"
+                autocomplete="new-password"
+              />
+            </div>
           </div>
 
           <div v-if="isClickHouseType" class="form-group">
@@ -987,7 +1167,8 @@ form {
   margin-bottom: 1.25rem;
 }
 
-.form-auth-section {
+.form-auth-section,
+.form-cloudwatch-section {
   padding: 0.85rem 0.95rem 0.1rem;
   margin-bottom: 1.1rem;
   border: 1px solid var(--border-primary);

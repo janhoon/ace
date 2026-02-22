@@ -105,6 +105,21 @@ func TestNewClient_ClickHouse(t *testing.T) {
 	}
 }
 
+func TestNewClient_CloudWatch(t *testing.T) {
+	ds := models.DataSource{
+		Type:       models.DataSourceCloudWatch,
+		URL:        "https://monitoring.us-east-1.amazonaws.com",
+		AuthConfig: []byte(`{"region":"us-east-1"}`),
+	}
+	client, err := NewClient(ds)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := client.(*CloudWatchClient); !ok {
+		t.Errorf("expected CloudWatchClient, got %T", client)
+	}
+}
+
 func TestNewClient_InvalidType(t *testing.T) {
 	ds := models.DataSource{
 		Type: "invalid",

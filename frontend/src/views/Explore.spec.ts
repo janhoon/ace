@@ -54,6 +54,23 @@ vi.mock('../components/ClickHouseSQLEditor.vue', () => ({
   },
 }))
 
+vi.mock('../components/CloudWatchQueryEditor.vue', () => ({
+  default: {
+    name: 'CloudWatchQueryEditor',
+    props: ['modelValue', 'signal', 'disabled'],
+    emits: ['update:modelValue'],
+    template: `
+      <textarea
+        id="cloudwatch-query"
+        class="cloudwatch-query-input"
+        :value="modelValue"
+        :disabled="disabled"
+        @input="$emit('update:modelValue', $event.target.value)"
+      ></textarea>
+    `,
+  },
+}))
+
 vi.mock('../composables/useTimeRange', () => ({
   useTimeRange: () => ({
     timeRange: { value: { start: Date.now() - 3600000, end: Date.now() } },
@@ -94,6 +111,18 @@ vi.mock('../composables/useDatasource', async () => {
       url: 'http://localhost:8123',
       is_default: false,
       auth_type: 'none',
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'ds-3',
+      organization_id: 'org-1',
+      name: 'CloudWatch Metrics',
+      type: 'cloudwatch',
+      url: 'https://monitoring.us-east-1.amazonaws.com',
+      is_default: false,
+      auth_type: 'none',
+      auth_config: { region: 'us-east-1' },
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
     },
@@ -297,6 +326,39 @@ describe('Explore', () => {
       'ds-2',
       expect.objectContaining({
         query: 'SELECT timestamp, value, metric FROM metrics LIMIT 20',
+        signal: 'metrics',
+      }),
+    )
+  })
+
+  it('uses CloudWatch editor and sends metrics signal for cloudwatch datasource', async () => {
+    mockQueryDataSource.mockResolvedValue({
+      status: 'success',
+      resultType: 'metrics',
+      data: {
+        resultType: 'matrix',
+        result: [],
+      },
+    })
+    vi.mocked(transformToChartData).mockReturnValue({ series: [] })
+
+    const wrapper = mount(Explore)
+    await flushPromises()
+
+    await wrapper.find('.datasource-trigger').trigger('click')
+    const options = wrapper.findAll('.datasource-option')
+    await options[2].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'CloudWatchQueryEditor' }).exists()).toBe(true)
+
+    await wrapper.find('#cloudwatch-query').setValue('{"namespace":"AWS/EC2","metric_name":"CPUUtilization"}')
+    await wrapper.find('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(mockQueryDataSource).toHaveBeenLastCalledWith(
+      'ds-3',
+      expect.objectContaining({
         signal: 'metrics',
       }),
     )

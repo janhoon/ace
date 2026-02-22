@@ -8,15 +8,16 @@ import { useDatasource } from '../composables/useDatasource'
 import { useOrganization } from '../composables/useOrganization'
 import QueryBuilder from './QueryBuilder.vue'
 import ClickHouseSQLEditor from './ClickHouseSQLEditor.vue'
+import CloudWatchQueryEditor from './CloudWatchQueryEditor.vue'
 
 interface Threshold {
   value: number
   color: string
 }
 
-type ClickHouseSignal = 'logs' | 'metrics' | 'traces'
+type QuerySignal = 'logs' | 'metrics' | 'traces'
 
-function getDefaultClickHouseSignal(panelType: string): ClickHouseSignal {
+function getDefaultQuerySignal(panelType: string): QuerySignal {
   if (panelType === 'logs') {
     return 'logs'
   }
@@ -26,7 +27,7 @@ function getDefaultClickHouseSignal(panelType: string): ClickHouseSignal {
   return 'metrics'
 }
 
-function isClickHouseSignal(value: unknown): value is ClickHouseSignal {
+function isQuerySignal(value: unknown): value is QuerySignal {
   return value === 'logs' || value === 'metrics' || value === 'traces'
 }
 
@@ -58,10 +59,10 @@ const promqlQuery = ref(
       ? props.panel.query.expr
       : ''
 )
-const clickhouseSignal = ref<ClickHouseSignal>(
-  isClickHouseSignal(props.panel?.query?.signal)
+const querySignal = ref<QuerySignal>(
+  isQuerySignal(props.panel?.query?.signal)
     ? props.panel.query.signal
-    : getDefaultClickHouseSignal(props.panel?.type || 'line_chart')
+    : getDefaultQuerySignal(props.panel?.type || 'line_chart')
 )
 
 onMounted(() => {
@@ -140,6 +141,16 @@ const selectedDatasource = computed(() => {
   return datasources.value.find((datasource) => datasource.id === selectedDatasourceId.value) || null
 })
 const isClickHouseDatasource = computed(() => selectedDatasource.value?.type === 'clickhouse')
+const isCloudWatchDatasource = computed(() => selectedDatasource.value?.type === 'cloudwatch')
+const isSignalDatasource = computed(() => isClickHouseDatasource.value || isCloudWatchDatasource.value)
+const cloudWatchSignal = computed<'logs' | 'metrics'>({
+  get() {
+    return querySignal.value === 'logs' ? 'logs' : 'metrics'
+  },
+  set(value) {
+    querySignal.value = value
+  },
+})
 const availableDatasources = computed(() => {
   if (isTracePanelType.value) {
     return datasources.value.filter((datasource) => isTracingType(datasource.type))
@@ -168,16 +179,20 @@ watch(
 watch(
   panelType,
   (nextType) => {
-    if (!isClickHouseDatasource.value) {
+    if (!isSignalDatasource.value) {
       return
     }
-    clickhouseSignal.value = getDefaultClickHouseSignal(nextType)
+    querySignal.value = getDefaultQuerySignal(nextType)
   },
 )
 
 watch(selectedDatasource, (nextDatasource, prevDatasource) => {
-  if (nextDatasource?.type === 'clickhouse' && prevDatasource?.type !== 'clickhouse') {
-    clickhouseSignal.value = getDefaultClickHouseSignal(panelType.value)
+  const switchedToSignalDatasource =
+    (nextDatasource?.type === 'clickhouse' || nextDatasource?.type === 'cloudwatch') &&
+    prevDatasource?.type !== nextDatasource?.type
+
+  if (switchedToSignalDatasource) {
+    querySignal.value = getDefaultQuerySignal(panelType.value)
   }
 })
 
@@ -230,8 +245,12 @@ async function handleSubmit() {
     }
   }
 
-  if (isClickHouseDatasource.value) {
-    query.signal = clickhouseSignal.value
+  if (isSignalDatasource.value) {
+    if (isCloudWatchDatasource.value && querySignal.value === 'traces') {
+      query.signal = panelType.value === 'logs' ? 'logs' : 'metrics'
+    } else {
+      query.signal = querySignal.value
+    }
   }
 
   if (isTracePanelType.value) {
@@ -357,20 +376,28 @@ async function handleSubmit() {
             {{
               isClickHouseDatasource
                 ? 'SQL Query'
-                : isTracePanelType
-                  ? 'Trace Search Query'
-                  : 'Query'
+                : isCloudWatchDatasource
+                  ? 'CloudWatch Query'
+                  : isTracePanelType
+                    ? 'Trace Search Query'
+                    : 'Query'
             }}
           </label>
           <QueryBuilder
-            v-if="!isClickHouseDatasource"
+            v-if="!isSignalDatasource"
             v-model="promqlQuery"
             :disabled="loading"
           />
           <ClickHouseSQLEditor
+            v-else-if="isClickHouseDatasource"
+            v-model="promqlQuery"
+            v-model:signal="querySignal"
+            :disabled="loading"
+          />
+          <CloudWatchQueryEditor
             v-else
             v-model="promqlQuery"
-            v-model:signal="clickhouseSignal"
+            v-model:signal="cloudWatchSignal"
             :disabled="loading"
           />
         </div>

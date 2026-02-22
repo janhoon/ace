@@ -60,7 +60,7 @@ func (h *DataSourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !req.Type.Valid() {
-		http.Error(w, `{"error":"invalid datasource type, must be one of: prometheus, loki, victorialogs, victoriametrics, tempo, victoriatraces, clickhouse"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"invalid datasource type, must be one of: prometheus, loki, victorialogs, victoriametrics, tempo, victoriatraces, clickhouse, cloudwatch"}`, http.StatusBadRequest)
 		return
 	}
 	if req.URL == "" {
@@ -450,6 +450,28 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 		}
 
 		result, err = clickHouseClient.QueryWithSignal(ctx, queryReq.Query, signal, start, end, step, queryReq.Limit)
+	} else if ds.Type == models.DataSourceCloudWatch {
+		cloudWatchClient, err := datasource.NewCloudWatchClient(ds)
+		if err != nil {
+			analytics.Track(r.Context(), analytics.Event{
+				DistinctID: userID.String(),
+				Name:       "datasource_query_failed",
+				OptOut:     analytics.RequestOptedOut(r),
+				Properties: map[string]any{
+					"user_id":         userID.String(),
+					"organization_id": ds.OrganizationID.String(),
+					"datasource_id":   ds.ID.String(),
+					"datasource_type": ds.Type,
+					"error":           err.Error(),
+				},
+			})
+
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			return
+		}
+
+		result, err = cloudWatchClient.QueryWithSignal(ctx, queryReq.Query, signal, start, end, step, queryReq.Limit)
 	} else {
 		client, err := datasource.NewClient(ds)
 		if err != nil {
@@ -1286,6 +1308,15 @@ func (h *DataSourceHandler) QueryByParams(w http.ResponseWriter, r *http.Request
 		}
 
 		result, err = clickHouseClient.QueryWithSignal(ctx, query, signal, start, end, step, limit)
+	} else if ds.Type == models.DataSourceCloudWatch {
+		cloudWatchClient, err := datasource.NewCloudWatchClient(ds)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			return
+		}
+
+		result, err = cloudWatchClient.QueryWithSignal(ctx, query, signal, start, end, step, limit)
 	} else {
 		client, err := datasource.NewClient(ds)
 		if err != nil {

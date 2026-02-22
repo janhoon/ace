@@ -28,9 +28,9 @@ const emit = defineEmits<{
 
 const { timeRange, onRefresh } = useTimeRange()
 
-type ClickHouseSignal = 'logs' | 'metrics' | 'traces'
+type QuerySignal = 'logs' | 'metrics' | 'traces'
 
-function isClickHouseSignal(value: unknown): value is ClickHouseSignal {
+function isQuerySignal(value: unknown): value is QuerySignal {
   return value === 'logs' || value === 'metrics' || value === 'traces'
 }
 
@@ -149,9 +149,25 @@ function convertClickHouseSpansToTraceSummaries(spans: TraceSpan[]): TraceSummar
 // Check if panel uses a datasource-based query
 const datasourceId = computed(() => props.panel.query?.datasource_id as string | undefined)
 const queryExpr = computed(() => (props.panel.query?.promql || props.panel.query?.expr || '') as string)
-const explicitQuerySignal = computed<ClickHouseSignal | null>(() => {
+const explicitQuerySignal = computed<QuerySignal | null>(() => {
   const value = props.panel.query?.signal
-  return isClickHouseSignal(value) ? value : null
+  return isQuerySignal(value) ? value : null
+})
+
+const inferredQuerySignal = computed<QuerySignal | undefined>(() => {
+  if (explicitQuerySignal.value) {
+    return explicitQuerySignal.value
+  }
+
+  if (props.panel.type === 'logs') {
+    return 'logs'
+  }
+
+  if (props.panel.type === 'trace_list' || props.panel.type === 'trace_heatmap') {
+    return 'traces'
+  }
+
+  return 'metrics'
 })
 
 // Setup Prometheus query (legacy, when no datasource_id)
@@ -258,7 +274,7 @@ async function fetchDatasourceData() {
 
     const result = await queryDataSource(datasourceId.value, {
       query: queryExpr.value,
-      signal: explicitQuerySignal.value || undefined,
+      signal: inferredQuerySignal.value,
       start: startRef.value,
       end: endRef.value,
       step: 15,
@@ -310,7 +326,7 @@ async function fetchDatasourceData() {
 }
 
 // Fetch datasource data when params change
-watch([datasourceId, queryExpr, explicitQuerySignal, traceServiceFilter, traceSearchLimit, startRef, endRef], () => {
+watch([datasourceId, queryExpr, explicitQuerySignal, inferredQuerySignal, traceServiceFilter, traceSearchLimit, startRef, endRef], () => {
   const isTracePanel = props.panel.type === 'trace_list' || props.panel.type === 'trace_heatmap'
   if (datasourceId.value && (isTracePanel || queryExpr.value)) {
     fetchDatasourceData()

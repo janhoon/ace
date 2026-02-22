@@ -45,6 +45,17 @@ vi.mock('../composables/useDatasource', async () => {
           created_at: '2026-01-01T00:00:00Z',
           updated_at: '2026-01-01T00:00:00Z',
         },
+        {
+          id: 'ds-cloudwatch-1',
+          organization_id: 'org-1',
+          name: 'CloudWatch Main',
+          type: 'cloudwatch',
+          url: 'https://monitoring.us-east-1.amazonaws.com',
+          is_default: false,
+          auth_type: 'none',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
       ]),
       fetchDatasources: mockFetchDatasources,
     }),
@@ -76,6 +87,23 @@ vi.mock('./MonacoQueryEditor.vue', () => ({
     props: ['modelValue', 'disabled', 'height', 'placeholder'],
     emits: ['update:modelValue', 'submit']
   }
+}))
+
+vi.mock('./CloudWatchQueryEditor.vue', () => ({
+  default: {
+    name: 'CloudWatchQueryEditor',
+    props: ['modelValue', 'signal', 'disabled'],
+    emits: ['update:modelValue', 'update:signal'],
+    template: `
+      <div class="mock-cloudwatch-editor">
+        <select id="cloudwatch-signal" :value="signal" @change="$emit('update:signal', $event.target.value)">
+          <option value="metrics">metrics</option>
+          <option value="logs">logs</option>
+        </select>
+        <textarea id="cloudwatch-query" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)"></textarea>
+      </div>
+    `,
+  },
 }))
 
 describe('PanelEditModal', () => {
@@ -350,6 +378,50 @@ describe('PanelEditModal', () => {
       query: {
         datasource_id: 'ds-clickhouse-1',
         expr: 'SELECT timestamp, message FROM logs LIMIT 10',
+        signal: 'logs',
+      },
+    })
+  })
+
+  it('renders CloudWatch editor and saves cloudwatch signal config', async () => {
+    vi.mocked(api.createPanel).mockResolvedValue({
+      id: 'panel-cloudwatch-1',
+      dashboard_id: dashboardId,
+      title: 'CloudWatch Logs',
+      type: 'logs',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: {
+        datasource_id: 'ds-cloudwatch-1',
+        expr: 'fields @timestamp, @message | limit 10',
+        signal: 'logs',
+      },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    })
+
+    const wrapper = mount(PanelEditModal, {
+      props: { dashboardId },
+    })
+    await flushPromises()
+
+    await wrapper.find('#title').setValue('CloudWatch Logs')
+    await wrapper.find('#type').setValue('logs')
+    await wrapper.find('#datasource').setValue('ds-cloudwatch-1')
+
+    expect(wrapper.findComponent({ name: 'CloudWatchQueryEditor' }).exists()).toBe(true)
+
+    await wrapper.find('#cloudwatch-signal').setValue('logs')
+    await wrapper.find('#cloudwatch-query').setValue('fields @timestamp, @message | limit 10')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(api.createPanel).toHaveBeenCalledWith(dashboardId, {
+      title: 'CloudWatch Logs',
+      type: 'logs',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: {
+        datasource_id: 'ds-cloudwatch-1',
+        expr: 'fields @timestamp, @message | limit 10',
         signal: 'logs',
       },
     })

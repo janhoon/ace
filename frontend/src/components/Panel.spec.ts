@@ -403,4 +403,42 @@ describe('Panel', () => {
     await wrapper.find('.mock-open-trace').trigger('click')
     expect(wrapper.emitted('open-trace')).toBeFalsy()
   })
+
+  it('infers logs signal for datasource log panels when signal is omitted', async () => {
+    mockQueryDataSource.mockResolvedValue({
+      status: 'success',
+      resultType: 'logs',
+      data: {
+        logs: [
+          {
+            timestamp: '2026-02-01T00:00:00Z',
+            line: 'cloudwatch log line',
+            level: 'info',
+          },
+        ],
+      },
+    })
+
+    const logsPanel = {
+      ...mockPanel,
+      type: 'logs',
+      query: {
+        datasource_id: 'ds-cloudwatch-1',
+        expr: 'fields @timestamp, @message | limit 10',
+      },
+    }
+
+    const wrapper = mount(Panel, {
+      props: { panel: logsPanel },
+    })
+    await flushPromises()
+
+    expect(mockQueryDataSource).toHaveBeenCalledWith(
+      'ds-cloudwatch-1',
+      expect.objectContaining({
+        signal: 'logs',
+      }),
+    )
+    expect(wrapper.find('.mock-log-viewer').text()).toContain('1 logs')
+  })
 })

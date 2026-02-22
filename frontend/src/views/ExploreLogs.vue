@@ -5,6 +5,7 @@ import TimeRangePicker from '../components/TimeRangePicker.vue'
 import LogViewer from '../components/LogViewer.vue'
 import LogQLQueryBuilder from '../components/LogQLQueryBuilder.vue'
 import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
+import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useOrganization } from '../composables/useOrganization'
 import { useDatasource } from '../composables/useDatasource'
@@ -19,6 +20,7 @@ import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
 import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
+import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
 
 const { timeRange, onRefresh, setCustomRange } = useTimeRange()
 const { currentOrg } = useOrganization()
@@ -32,6 +34,7 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   tempo: tempoLogo,
   victoriatraces: victoriaTracesLogo,
   clickhouse: clickhouseLogo,
+  cloudwatch: cloudwatchLogo,
 }
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'
@@ -109,6 +112,13 @@ function buildTraceLogsQuery(type_: DataSourceType, traceId: string, serviceName
       ? `AND service_name = '${escapedServiceNameSql}'`
       : ''
     return `SELECT timestamp, message, level\nFROM logs\nWHERE message ILIKE '%${escapedTraceIdSql}%' ${serviceCondition}\nORDER BY timestamp DESC\nLIMIT 500`
+  }
+
+  if (type_ === 'cloudwatch') {
+    const serviceFilter = escapedServiceName
+      ? ` | filter service_name = "${escapedServiceName}"`
+      : ''
+    return `fields @timestamp, @message, @logStream\n| filter @message like /${escapedTraceId}/${serviceFilter}\n| sort @timestamp desc\n| limit 500`
   }
 
   if (escapedServiceName) {
@@ -581,7 +591,7 @@ async function runQuery() {
 
     const response = await queryDataSource(selectedDatasourceId.value, {
       query: query.value,
-      signal: isClickHouseDatasource.value ? 'logs' : undefined,
+      signal: isClickHouseDatasource.value || isCloudWatchDatasource.value ? 'logs' : undefined,
       start,
       end,
       step: 15,
@@ -691,6 +701,10 @@ const activeDatasource = computed(
   () => logsDatasources.value.find(ds => ds.id === selectedDatasourceId.value) || null,
 )
 const isClickHouseDatasource = computed(() => activeDatasource.value?.type === 'clickhouse')
+const isCloudWatchDatasource = computed(() => activeDatasource.value?.type === 'cloudwatch')
+const supportsLabelDiscovery = computed(
+  () => activeDatasource.value?.type === 'loki' || activeDatasource.value?.type === 'victorialogs',
+)
 const supportsLiveStreaming = computed(
   () => activeDatasource.value?.type === 'loki' || activeDatasource.value?.type === 'victorialogs',
 )
@@ -758,6 +772,9 @@ function getSmokeQuery(type_: DataSourceType): string {
   if (type_ === 'clickhouse') {
     return 'SELECT now() AS timestamp, \'healthcheck\' AS message LIMIT 1'
   }
+  if (type_ === 'cloudwatch') {
+    return 'fields @timestamp, @message | sort @timestamp desc | limit 1'
+  }
   if (type_ === 'loki') {
     return '{job=~".+"}'
   }
@@ -774,7 +791,7 @@ async function checkDatasourceHealth(datasourceId: string, type_: DataSourceType
   try {
     const healthResult = await queryDataSource(datasourceId, {
       query: getSmokeQuery(type_),
-      signal: type_ === 'clickhouse' ? 'logs' : undefined,
+      signal: type_ === 'clickhouse' || type_ === 'cloudwatch' ? 'logs' : undefined,
       start,
       end,
       step: 15,
@@ -828,7 +845,7 @@ watch(query, (nextQuery, previousQuery) => {
 })
 
 watch(() => selectedDatasourceId.value, (datasourceId) => {
-  if (!datasourceId || isClickHouseDatasource.value) {
+  if (!datasourceId || !supportsLabelDiscovery.value) {
     indexedLabels.value = []
     return
   }
@@ -926,6 +943,13 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
             v-if="isClickHouseDatasource"
             v-model="query"
             signal="logs"
+            :disabled="loading || !hasLogsDatasources"
+          />
+          <CloudWatchQueryEditor
+            v-else-if="isCloudWatchDatasource"
+            v-model="query"
+            signal="logs"
+            :show-signal-selector="false"
             :disabled="loading || !hasLogsDatasources"
           />
           <LogQLQueryBuilder
@@ -1033,7 +1057,7 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
 
         <div v-else-if="!hasLogsDatasources" class="empty-state">
           <p>No logs datasource configured.</p>
-          <p class="hint-text">Add a Loki or Victoria Logs datasource in Data Sources.</p>
+          <p class="hint-text">Add a Loki, Victoria Logs, or CloudWatch datasource in Data Sources.</p>
         </div>
 
         <div v-else class="empty-state">
@@ -1041,11 +1065,16 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
             {{
               isClickHouseDatasource
                 ? 'Write a SQL query and click "Run Query" to inspect logs.'
-                : 'Write a log query and click "Run Query" to inspect logs.'
+                : isCloudWatchDatasource
+                  ? 'Write a CloudWatch Logs Insights query and click "Run Query" to inspect logs.'
+                  : 'Write a log query and click "Run Query" to inspect logs.'
             }}
           </p>
           <p v-if="isClickHouseDatasource" class="hint-text">
             Examples: <code>SELECT timestamp, message, level FROM logs WHERE timestamp &gt;= toDateTime({start})</code>
+          </p>
+          <p v-else-if="isCloudWatchDatasource" class="hint-text">
+            Example: <code>fields @timestamp, @message | filter @message like /error/ | sort @timestamp desc | limit 200</code>
           </p>
           <p v-else class="hint-text">Examples: <code>{job=~".+"}</code>, <code>{app="api"} |= "error"</code>, <code>*</code></p>
         </div>
