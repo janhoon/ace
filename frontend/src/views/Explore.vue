@@ -4,6 +4,7 @@ import { Play, AlertCircle, History, X, Loader2, HeartPulse, CircleAlert, Chevro
 import QueryBuilder from '../components/QueryBuilder.vue'
 import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
 import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
+import ElasticsearchQueryEditor from '../components/ElasticsearchQueryEditor.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import LineChart from '../components/LineChart.vue'
 import { useTimeRange } from '../composables/useTimeRange'
@@ -21,6 +22,7 @@ import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
 import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
+import elasticsearchLogo from '../assets/datasources/elasticsearch-logo.svg'
 import type { ChartSeries } from '../components/LineChart.vue'
 
 const { timeRange, onRefresh, setCustomRange } = useTimeRange()
@@ -36,6 +38,7 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   victoriatraces: victoriaTracesLogo,
   clickhouse: clickhouseLogo,
   cloudwatch: cloudwatchLogo,
+  elasticsearch: elasticsearchLogo,
 }
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'
@@ -97,6 +100,34 @@ function buildServiceMetricsQuery(type_: DataSourceType, serviceName: string): s
         dimensions: serviceName ? { ServiceName: serviceName } : {},
         stat: 'Average',
         period: 60,
+      },
+      null,
+      2,
+    )
+  }
+
+  if (type_ === 'elasticsearch') {
+    const serviceFilter = serviceName
+      ? [{ term: { 'service.name.keyword': serviceName } }]
+      : []
+
+    return JSON.stringify(
+      {
+        index: 'logs-*',
+        query: {
+          bool: {
+            filter: serviceFilter,
+          },
+        },
+        aggs: {
+          timeseries: {
+            date_histogram: {
+              field: '@timestamp',
+              fixed_interval: '30s',
+              min_doc_count: 0,
+            },
+          },
+        },
       },
       null,
       2,
@@ -264,7 +295,7 @@ async function runQuery() {
 
     const response = await queryDataSource(selectedDatasourceId.value, {
       query: query.value,
-      signal: isClickHouseDatasource.value || isCloudWatchDatasource.value ? 'metrics' : undefined,
+      signal: isClickHouseDatasource.value || isCloudWatchDatasource.value || isElasticsearchDatasource.value ? 'metrics' : undefined,
       start,
       end,
       step,
@@ -347,6 +378,7 @@ const activeDatasource = computed(
 )
 const isClickHouseDatasource = computed(() => activeDatasource.value?.type === 'clickhouse')
 const isCloudWatchDatasource = computed(() => activeDatasource.value?.type === 'cloudwatch')
+const isElasticsearchDatasource = computed(() => activeDatasource.value?.type === 'elasticsearch')
 const activeDatasourceHealth = computed<DatasourceHealthStatus>(() => {
   if (!activeDatasource.value) {
     return 'unknown'
@@ -402,6 +434,9 @@ function getSmokeQuery(type_: DataSourceType): string {
   if (type_ === 'cloudwatch') {
     return '{"namespace":"AWS/EC2","metric_name":"CPUUtilization","stat":"Average","period":60}'
   }
+  if (type_ === 'elasticsearch') {
+    return '{"index":"logs-*","aggs":{"timeseries":{"date_histogram":{"field":"@timestamp","fixed_interval":"1m","min_doc_count":0}}}}'
+  }
   if (type_ === 'loki') {
     return '{job=~".+"}'
   }
@@ -418,7 +453,7 @@ async function checkDatasourceHealth(datasourceId: string, type_: DataSourceType
   try {
     const healthResult = await queryDataSource(datasourceId, {
       query: getSmokeQuery(type_),
-      signal: type_ === 'clickhouse' || type_ === 'cloudwatch' ? 'metrics' : undefined,
+      signal: type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch' ? 'metrics' : undefined,
       start,
       end,
       step: 15,
@@ -556,6 +591,13 @@ watch(selectedDatasourceId, () => {
             :show-signal-selector="false"
             :disabled="loading || !hasMetricsDatasources"
           />
+          <ElasticsearchQueryEditor
+            v-else-if="isElasticsearchDatasource"
+            v-model="query"
+            signal="metrics"
+            :show-signal-selector="false"
+            :disabled="loading || !hasMetricsDatasources"
+          />
           <QueryBuilder v-else v-model="query" :disabled="loading || !hasMetricsDatasources" />
 
           <!-- History button -->
@@ -631,7 +673,7 @@ watch(selectedDatasourceId, () => {
 
         <div v-else-if="!hasMetricsDatasources" class="empty-state">
           <p>No metrics datasource configured.</p>
-          <p class="hint-text">Add a Prometheus, VictoriaMetrics, or CloudWatch datasource in Data Sources.</p>
+          <p class="hint-text">Add a Prometheus, VictoriaMetrics, CloudWatch, or Elasticsearch datasource in Data Sources.</p>
         </div>
 
         <div v-else class="empty-state">
@@ -641,7 +683,9 @@ watch(selectedDatasourceId, () => {
                 ? 'Write a SQL query and click "Run Query" to visualize your metrics.'
                 : isCloudWatchDatasource
                   ? 'Write a CloudWatch metrics query and click "Run Query" to visualize your metrics.'
-                  : 'Write a PromQL query and click "Run Query" to visualize your metrics.'
+                  : isElasticsearchDatasource
+                    ? 'Write an Elasticsearch aggregation query and click "Run Query" to visualize your metrics.'
+                    : 'Write a PromQL query and click "Run Query" to visualize your metrics.'
             }}
           </p>
           <p v-if="isClickHouseDatasource" class="hint-text">
@@ -649,6 +693,9 @@ watch(selectedDatasourceId, () => {
           </p>
           <p v-else-if="isCloudWatchDatasource" class="hint-text">
             Example: <code>{"namespace":"AWS/EC2","metric_name":"CPUUtilization","stat":"Average","period":60}</code>
+          </p>
+          <p v-else-if="isElasticsearchDatasource" class="hint-text">
+            Example: <code>{"index":"logs-*","aggs":{"timeseries":{"date_histogram":{"field":"@timestamp","fixed_interval":"1m"}}}}</code>
           </p>
           <p v-else class="hint-text">Examples: <code>up</code>, <code>rate(http_requests_total[5m])</code>, <code>node_cpu_seconds_total</code></p>
         </div>

@@ -9,6 +9,7 @@ import { useOrganization } from '../composables/useOrganization'
 import QueryBuilder from './QueryBuilder.vue'
 import ClickHouseSQLEditor from './ClickHouseSQLEditor.vue'
 import CloudWatchQueryEditor from './CloudWatchQueryEditor.vue'
+import ElasticsearchQueryEditor from './ElasticsearchQueryEditor.vue'
 
 interface Threshold {
   value: number
@@ -142,8 +143,9 @@ const selectedDatasource = computed(() => {
 })
 const isClickHouseDatasource = computed(() => selectedDatasource.value?.type === 'clickhouse')
 const isCloudWatchDatasource = computed(() => selectedDatasource.value?.type === 'cloudwatch')
-const isSignalDatasource = computed(() => isClickHouseDatasource.value || isCloudWatchDatasource.value)
-const cloudWatchSignal = computed<'logs' | 'metrics'>({
+const isElasticsearchDatasource = computed(() => selectedDatasource.value?.type === 'elasticsearch')
+const isSignalDatasource = computed(() => isClickHouseDatasource.value || isCloudWatchDatasource.value || isElasticsearchDatasource.value)
+const nonTraceSignal = computed<'logs' | 'metrics'>({
   get() {
     return querySignal.value === 'logs' ? 'logs' : 'metrics'
   },
@@ -188,7 +190,7 @@ watch(
 
 watch(selectedDatasource, (nextDatasource, prevDatasource) => {
   const switchedToSignalDatasource =
-    (nextDatasource?.type === 'clickhouse' || nextDatasource?.type === 'cloudwatch') &&
+    (nextDatasource?.type === 'clickhouse' || nextDatasource?.type === 'cloudwatch' || nextDatasource?.type === 'elasticsearch') &&
     prevDatasource?.type !== nextDatasource?.type
 
   if (switchedToSignalDatasource) {
@@ -246,7 +248,7 @@ async function handleSubmit() {
   }
 
   if (isSignalDatasource.value) {
-    if (isCloudWatchDatasource.value && querySignal.value === 'traces') {
+    if ((isCloudWatchDatasource.value || isElasticsearchDatasource.value) && querySignal.value === 'traces') {
       query.signal = panelType.value === 'logs' ? 'logs' : 'metrics'
     } else {
       query.signal = querySignal.value
@@ -378,9 +380,11 @@ async function handleSubmit() {
                 ? 'SQL Query'
                 : isCloudWatchDatasource
                   ? 'CloudWatch Query'
-                  : isTracePanelType
-                    ? 'Trace Search Query'
-                    : 'Query'
+                  : isElasticsearchDatasource
+                    ? 'Elasticsearch Query'
+                    : isTracePanelType
+                      ? 'Trace Search Query'
+                      : 'Query'
             }}
           </label>
           <QueryBuilder
@@ -395,9 +399,15 @@ async function handleSubmit() {
             :disabled="loading"
           />
           <CloudWatchQueryEditor
+            v-else-if="isCloudWatchDatasource"
+            v-model="promqlQuery"
+            v-model:signal="nonTraceSignal"
+            :disabled="loading"
+          />
+          <ElasticsearchQueryEditor
             v-else
             v-model="promqlQuery"
-            v-model:signal="cloudWatchSignal"
+            v-model:signal="nonTraceSignal"
             :disabled="loading"
           />
         </div>

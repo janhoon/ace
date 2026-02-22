@@ -280,6 +280,7 @@ func TestDataSourceType_Valid(t *testing.T) {
 		{models.DataSourceVictoriaTraces, true},
 		{models.DataSourceClickHouse, true},
 		{models.DataSourceCloudWatch, true},
+		{models.DataSourceElasticsearch, true},
 		{"invalid", false},
 		{"", false},
 	}
@@ -304,6 +305,7 @@ func TestDataSourceType_IsMetrics(t *testing.T) {
 		{models.DataSourceVictoriaTraces, false},
 		{models.DataSourceClickHouse, true},
 		{models.DataSourceCloudWatch, true},
+		{models.DataSourceElasticsearch, true},
 	}
 
 	for _, tt := range tests {
@@ -326,6 +328,7 @@ func TestDataSourceType_IsLogs(t *testing.T) {
 		{models.DataSourceVictoriaTraces, false},
 		{models.DataSourceClickHouse, true},
 		{models.DataSourceCloudWatch, true},
+		{models.DataSourceElasticsearch, true},
 	}
 
 	for _, tt := range tests {
@@ -348,6 +351,7 @@ func TestDataSourceType_IsTraces(t *testing.T) {
 		{models.DataSourceVictoriaTraces, true},
 		{models.DataSourceClickHouse, true},
 		{models.DataSourceCloudWatch, false},
+		{models.DataSourceElasticsearch, false},
 	}
 
 	for _, tt := range tests {
@@ -367,6 +371,7 @@ func TestCreateDataSourceRequest_AllTypes(t *testing.T) {
 		models.DataSourceVictoriaTraces,
 		models.DataSourceClickHouse,
 		models.DataSourceCloudWatch,
+		models.DataSourceElasticsearch,
 	}
 
 	for _, dsType := range types {

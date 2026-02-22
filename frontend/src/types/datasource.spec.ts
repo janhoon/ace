@@ -31,6 +31,10 @@ describe('datasource types', () => {
     it('returns true for cloudwatch', () => {
       expect(isMetricsType('cloudwatch')).toBe(true)
     })
+
+    it('returns true for elasticsearch', () => {
+      expect(isMetricsType('elasticsearch')).toBe(true)
+    })
   })
 
   describe('isLogsType', () => {
@@ -61,6 +65,10 @@ describe('datasource types', () => {
     it('returns true for cloudwatch', () => {
       expect(isLogsType('cloudwatch')).toBe(true)
     })
+
+    it('returns true for elasticsearch', () => {
+      expect(isLogsType('elasticsearch')).toBe(true)
+    })
   })
 
   describe('isTracingType', () => {
@@ -79,6 +87,10 @@ describe('datasource types', () => {
     it('returns true for clickhouse', () => {
       expect(isTracingType('clickhouse')).toBe(true)
     })
+
+    it('returns false for elasticsearch', () => {
+      expect(isTracingType('elasticsearch')).toBe(false)
+    })
   })
 
   describe('dataSourceTypeLabels', () => {
@@ -92,6 +104,7 @@ describe('datasource types', () => {
         'victoriatraces',
         'clickhouse',
         'cloudwatch',
+        'elasticsearch',
       ]
       for (const type_ of types) {
         expect(dataSourceTypeLabels[type_]).toBeDefined()
@@ -129,6 +142,10 @@ describe('datasource types', () => {
 
     it('returns correct label for cloudwatch', () => {
       expect(dataSourceTypeLabels.cloudwatch).toBe('CloudWatch')
+    })
+
+    it('returns correct label for elasticsearch', () => {
+      expect(dataSourceTypeLabels.elasticsearch).toBe('Elasticsearch')
     })
   })
 })

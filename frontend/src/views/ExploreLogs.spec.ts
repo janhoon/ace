@@ -91,6 +91,23 @@ vi.mock('../components/CloudWatchQueryEditor.vue', () => ({
   },
 }))
 
+vi.mock('../components/ElasticsearchQueryEditor.vue', () => ({
+  default: {
+    name: 'ElasticsearchQueryEditor',
+    props: ['modelValue', 'signal', 'disabled'],
+    emits: ['update:modelValue'],
+    template: `
+      <textarea
+        id="elasticsearch-query"
+        class="query-input elasticsearch-query-input"
+        :value="modelValue"
+        :disabled="disabled"
+        @input="$emit('update:modelValue', $event.target.value)"
+      ></textarea>
+    `,
+  },
+}))
+
 vi.mock('../composables/useTimeRange', () => ({
   useTimeRange: () => ({
     timeRange: { value: { start: Date.now() - 3600000, end: Date.now() } },
@@ -154,6 +171,18 @@ vi.mock('../composables/useDatasource', async () => {
       is_default: false,
       auth_type: 'none',
       auth_config: { region: 'us-east-1', log_group: '/aws/lambda/test' },
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'ds-5',
+      organization_id: 'org-1',
+      name: 'Elasticsearch Logs',
+      type: 'elasticsearch',
+      url: 'http://localhost:9200',
+      is_default: false,
+      auth_type: 'none',
+      auth_config: { index: 'logs-*' },
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
     },
@@ -423,6 +452,30 @@ describe('ExploreLogs', () => {
 
     expect(mockQueryDataSource).toHaveBeenLastCalledWith(
       'ds-4',
+      expect.objectContaining({
+        signal: 'logs',
+      }),
+    )
+  })
+
+  it('uses Elasticsearch editor and passes logs signal for elasticsearch datasource', async () => {
+    const wrapper = mount(ExploreLogs)
+    await flushPromises()
+
+    await wrapper.find('.datasource-trigger').trigger('click')
+    const options = wrapper.findAll('.datasource-option')
+    await options[4].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'ElasticsearchQueryEditor' }).exists()).toBe(true)
+    expect(wrapper.find('.btn-live').attributes('disabled')).toBeDefined()
+
+    await wrapper.find('#elasticsearch-query').setValue('service.name:"api" AND level:error')
+    await wrapper.find('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(mockQueryDataSource).toHaveBeenLastCalledWith(
+      'ds-5',
       expect.objectContaining({
         signal: 'logs',
       }),

@@ -1142,7 +1142,7 @@
         "pnpm --filter ace-frontend typecheck",
         "go test ./..."
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

@@ -7,6 +7,7 @@ export type DataSourceType =
   | 'victoriatraces'
   | 'clickhouse'
   | 'cloudwatch'
+  | 'elasticsearch'
 
 export interface DataSource {
   id: string
@@ -151,11 +152,11 @@ export interface DataSourceQueryResult {
 }
 
 export function isMetricsType(type_: DataSourceType): boolean {
-  return type_ === 'prometheus' || type_ === 'victoriametrics' || type_ === 'clickhouse' || type_ === 'cloudwatch'
+  return type_ === 'prometheus' || type_ === 'victoriametrics' || type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch'
 }
 
 export function isLogsType(type_: DataSourceType): boolean {
-  return type_ === 'loki' || type_ === 'victorialogs' || type_ === 'clickhouse' || type_ === 'cloudwatch'
+  return type_ === 'loki' || type_ === 'victorialogs' || type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch'
 }
 
 export function isTracingType(type_: DataSourceType): boolean {
@@ -171,4 +172,5 @@ export const dataSourceTypeLabels: Record<DataSourceType, string> = {
   victoriatraces: 'VictoriaTraces',
   clickhouse: 'ClickHouse',
   cloudwatch: 'CloudWatch',
+  elasticsearch: 'Elasticsearch',
 }

@@ -71,6 +71,23 @@ vi.mock('../components/CloudWatchQueryEditor.vue', () => ({
   },
 }))
 
+vi.mock('../components/ElasticsearchQueryEditor.vue', () => ({
+  default: {
+    name: 'ElasticsearchQueryEditor',
+    props: ['modelValue', 'signal', 'disabled'],
+    emits: ['update:modelValue'],
+    template: `
+      <textarea
+        id="elasticsearch-query"
+        class="elasticsearch-query-input"
+        :value="modelValue"
+        :disabled="disabled"
+        @input="$emit('update:modelValue', $event.target.value)"
+      ></textarea>
+    `,
+  },
+}))
+
 vi.mock('../composables/useTimeRange', () => ({
   useTimeRange: () => ({
     timeRange: { value: { start: Date.now() - 3600000, end: Date.now() } },
@@ -123,6 +140,18 @@ vi.mock('../composables/useDatasource', async () => {
       is_default: false,
       auth_type: 'none',
       auth_config: { region: 'us-east-1' },
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'ds-4',
+      organization_id: 'org-1',
+      name: 'Elasticsearch Metrics',
+      type: 'elasticsearch',
+      url: 'http://localhost:9200',
+      is_default: false,
+      auth_type: 'none',
+      auth_config: { index: 'logs-*' },
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
     },
@@ -358,6 +387,39 @@ describe('Explore', () => {
 
     expect(mockQueryDataSource).toHaveBeenLastCalledWith(
       'ds-3',
+      expect.objectContaining({
+        signal: 'metrics',
+      }),
+    )
+  })
+
+  it('uses Elasticsearch editor and sends metrics signal for elasticsearch datasource', async () => {
+    mockQueryDataSource.mockResolvedValue({
+      status: 'success',
+      resultType: 'metrics',
+      data: {
+        resultType: 'matrix',
+        result: [],
+      },
+    })
+    vi.mocked(transformToChartData).mockReturnValue({ series: [] })
+
+    const wrapper = mount(Explore)
+    await flushPromises()
+
+    await wrapper.find('.datasource-trigger').trigger('click')
+    const options = wrapper.findAll('.datasource-option')
+    await options[3].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'ElasticsearchQueryEditor' }).exists()).toBe(true)
+
+    await wrapper.find('#elasticsearch-query').setValue('service.name:"api"')
+    await wrapper.find('.btn-run').trigger('click')
+    await flushPromises()
+
+    expect(mockQueryDataSource).toHaveBeenLastCalledWith(
+      'ds-4',
       expect.objectContaining({
         signal: 'metrics',
       }),

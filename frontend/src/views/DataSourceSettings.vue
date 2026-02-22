@@ -14,6 +14,7 @@ import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
 import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
+import elasticsearchLogo from '../assets/datasources/elasticsearch-logo.svg'
 
 const { currentOrg } = useOrganization()
 const {
@@ -47,6 +48,10 @@ const formCloudWatchLogGroup = ref('')
 const formCloudWatchAccessKeyId = ref('')
 const formCloudWatchSecretAccessKey = ref('')
 const formCloudWatchSessionToken = ref('')
+const formElasticsearchIndex = ref('')
+const formElasticsearchTimestampField = ref('')
+const formElasticsearchMessageField = ref('')
+const formElasticsearchLevelField = ref('')
 const formError = ref<string | null>(null)
 const formLoading = ref(false)
 const testAllLoading = ref(false)
@@ -64,11 +69,13 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   victoriatraces: victoriaTracesLogo,
   clickhouse: clickhouseLogo,
   cloudwatch: cloudwatchLogo,
+  elasticsearch: elasticsearchLogo,
 }
 
 const isClickHouseType = computed(() => formType.value === 'clickhouse')
 const isCloudWatchType = computed(() => formType.value === 'cloudwatch')
-const showAuthSettings = computed(() => (isTracingType(formType.value) || isClickHouseType.value) && !isCloudWatchType.value)
+const isElasticsearchType = computed(() => formType.value === 'elasticsearch')
+const showAuthSettings = computed(() => (isTracingType(formType.value) || isClickHouseType.value || isElasticsearchType.value) && !isCloudWatchType.value)
 
 function openCreateModal() {
   editingDs.value = null
@@ -111,6 +118,10 @@ function resetAuthForm() {
   formCloudWatchAccessKeyId.value = ''
   formCloudWatchSecretAccessKey.value = ''
   formCloudWatchSessionToken.value = ''
+  formElasticsearchIndex.value = ''
+  formElasticsearchTimestampField.value = ''
+  formElasticsearchMessageField.value = ''
+  formElasticsearchLevelField.value = ''
 }
 
 function hydrateAuthForm(ds: DataSource) {
@@ -132,6 +143,10 @@ function hydrateAuthForm(ds: DataSource) {
   const accessKeyId = authConfig.access_key_id
   const secretAccessKey = authConfig.secret_access_key
   const sessionToken = authConfig.session_token
+  const index = authConfig.index
+  const timeField = authConfig.time_field
+  const messageField = authConfig.message_field
+  const levelField = authConfig.level_field
 
   if (typeof username === 'string') {
     formBasicUsername.value = username
@@ -168,6 +183,18 @@ function hydrateAuthForm(ds: DataSource) {
   }
   if (typeof sessionToken === 'string') {
     formCloudWatchSessionToken.value = sessionToken
+  }
+  if (typeof index === 'string') {
+    formElasticsearchIndex.value = index
+  }
+  if (typeof timeField === 'string') {
+    formElasticsearchTimestampField.value = timeField
+  }
+  if (typeof messageField === 'string') {
+    formElasticsearchMessageField.value = messageField
+  }
+  if (typeof levelField === 'string') {
+    formElasticsearchLevelField.value = levelField
   }
 }
 
@@ -329,6 +356,28 @@ async function handleSubmit() {
       }
     }
 
+    if (isElasticsearchType.value) {
+      const index = formElasticsearchIndex.value.trim()
+      if (index) {
+        authConfig.index = index
+      }
+
+      const timeField = formElasticsearchTimestampField.value.trim()
+      if (timeField) {
+        authConfig.time_field = timeField
+      }
+
+      const messageField = formElasticsearchMessageField.value.trim()
+      if (messageField) {
+        authConfig.message_field = messageField
+      }
+
+      const levelField = formElasticsearchLevelField.value.trim()
+      if (levelField) {
+        authConfig.level_field = levelField
+      }
+    }
+
     const finalAuthConfig = Object.keys(authConfig).length > 0 ? authConfig : undefined
 
     if (isEditing.value && editingDs.value) {
@@ -385,6 +434,8 @@ function getTypeColor(type_: DataSourceType): string {
       return '#ffd400'
     case 'cloudwatch':
       return '#38bdf8'
+    case 'elasticsearch':
+      return '#00bfb3'
   }
 }
 
@@ -410,6 +461,13 @@ watch(
 watch(formType, (type_) => {
   if (type_ !== 'clickhouse') {
     formDatabase.value = ''
+  }
+
+  if (type_ !== 'elasticsearch') {
+    formElasticsearchIndex.value = ''
+    formElasticsearchTimestampField.value = ''
+    formElasticsearchMessageField.value = ''
+    formElasticsearchLevelField.value = ''
   }
 
   if (type_ === 'cloudwatch') {
@@ -575,6 +633,7 @@ watch(formType, (type_) => {
               <option value="victoriatraces">VictoriaTraces (Tracing)</option>
               <option value="clickhouse">ClickHouse (SQL)</option>
               <option value="cloudwatch">CloudWatch (Metrics + Logs)</option>
+              <option value="elasticsearch">Elasticsearch (ELK)</option>
             </select>
           </div>
 
@@ -673,6 +732,57 @@ watch(formType, (type_) => {
               :disabled="formLoading"
               autocomplete="off"
             />
+          </div>
+
+          <div v-if="isElasticsearchType" class="form-elasticsearch-section">
+            <div class="form-group">
+              <label for="ds-elasticsearch-index">Default Index Pattern (optional)</label>
+              <input
+                id="ds-elasticsearch-index"
+                v-model="formElasticsearchIndex"
+                type="text"
+                placeholder="logs-*"
+                :disabled="formLoading"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="auth-grid">
+              <div class="form-group">
+                <label for="ds-elasticsearch-time-field">Timestamp Field (optional)</label>
+                <input
+                  id="ds-elasticsearch-time-field"
+                  v-model="formElasticsearchTimestampField"
+                  type="text"
+                  placeholder="@timestamp"
+                  :disabled="formLoading"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-group">
+                <label for="ds-elasticsearch-message-field">Message Field (optional)</label>
+                <input
+                  id="ds-elasticsearch-message-field"
+                  v-model="formElasticsearchMessageField"
+                  type="text"
+                  placeholder="message"
+                  :disabled="formLoading"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ds-elasticsearch-level-field">Level Field (optional)</label>
+              <input
+                id="ds-elasticsearch-level-field"
+                v-model="formElasticsearchLevelField"
+                type="text"
+                placeholder="level"
+                :disabled="formLoading"
+                autocomplete="off"
+              />
+            </div>
           </div>
 
           <div v-if="showAuthSettings" class="form-auth-section">
@@ -1168,7 +1278,8 @@ form {
 }
 
 .form-auth-section,
-.form-cloudwatch-section {
+.form-cloudwatch-section,
+.form-elasticsearch-section {
   padding: 0.85rem 0.95rem 0.1rem;
   margin-bottom: 1.1rem;
   border: 1px solid var(--border-primary);

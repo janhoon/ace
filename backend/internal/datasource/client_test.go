@@ -120,6 +120,20 @@ func TestNewClient_CloudWatch(t *testing.T) {
 	}
 }
 
+func TestNewClient_Elasticsearch(t *testing.T) {
+	ds := models.DataSource{
+		Type: models.DataSourceElasticsearch,
+		URL:  "http://localhost:9200",
+	}
+	client, err := NewClient(ds)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := client.(*ElasticsearchClient); !ok {
+		t.Errorf("expected ElasticsearchClient, got %T", client)
+	}
+}
+
 func TestNewClient_InvalidType(t *testing.T) {
 	ds := models.DataSource{
 		Type: "invalid",

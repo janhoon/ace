@@ -6,6 +6,7 @@ import LogViewer from '../components/LogViewer.vue'
 import LogQLQueryBuilder from '../components/LogQLQueryBuilder.vue'
 import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
 import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
+import ElasticsearchQueryEditor from '../components/ElasticsearchQueryEditor.vue'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useOrganization } from '../composables/useOrganization'
 import { useDatasource } from '../composables/useDatasource'
@@ -21,6 +22,7 @@ import tempoLogo from '../assets/datasources/tempo-logo.svg'
 import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
 import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
+import elasticsearchLogo from '../assets/datasources/elasticsearch-logo.svg'
 
 const { timeRange, onRefresh, setCustomRange } = useTimeRange()
 const { currentOrg } = useOrganization()
@@ -35,6 +37,7 @@ const dataSourceTypeLogos: Record<DataSourceType, string> = {
   victoriatraces: victoriaTracesLogo,
   clickhouse: clickhouseLogo,
   cloudwatch: cloudwatchLogo,
+  elasticsearch: elasticsearchLogo,
 }
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'
@@ -119,6 +122,13 @@ function buildTraceLogsQuery(type_: DataSourceType, traceId: string, serviceName
       ? ` | filter service_name = "${escapedServiceName}"`
       : ''
     return `fields @timestamp, @message, @logStream\n| filter @message like /${escapedTraceId}/${serviceFilter}\n| sort @timestamp desc\n| limit 500`
+  }
+
+  if (type_ === 'elasticsearch') {
+    if (escapedServiceName) {
+      return `trace.id:"${escapedTraceId}" AND service.name:"${escapedServiceName}"`
+    }
+    return `trace.id:"${escapedTraceId}"`
   }
 
   if (escapedServiceName) {
@@ -591,7 +601,7 @@ async function runQuery() {
 
     const response = await queryDataSource(selectedDatasourceId.value, {
       query: query.value,
-      signal: isClickHouseDatasource.value || isCloudWatchDatasource.value ? 'logs' : undefined,
+      signal: isClickHouseDatasource.value || isCloudWatchDatasource.value || isElasticsearchDatasource.value ? 'logs' : undefined,
       start,
       end,
       step: 15,
@@ -702,6 +712,7 @@ const activeDatasource = computed(
 )
 const isClickHouseDatasource = computed(() => activeDatasource.value?.type === 'clickhouse')
 const isCloudWatchDatasource = computed(() => activeDatasource.value?.type === 'cloudwatch')
+const isElasticsearchDatasource = computed(() => activeDatasource.value?.type === 'elasticsearch')
 const supportsLabelDiscovery = computed(
   () => activeDatasource.value?.type === 'loki' || activeDatasource.value?.type === 'victorialogs',
 )
@@ -775,6 +786,9 @@ function getSmokeQuery(type_: DataSourceType): string {
   if (type_ === 'cloudwatch') {
     return 'fields @timestamp, @message | sort @timestamp desc | limit 1'
   }
+  if (type_ === 'elasticsearch') {
+    return '*'
+  }
   if (type_ === 'loki') {
     return '{job=~".+"}'
   }
@@ -791,7 +805,7 @@ async function checkDatasourceHealth(datasourceId: string, type_: DataSourceType
   try {
     const healthResult = await queryDataSource(datasourceId, {
       query: getSmokeQuery(type_),
-      signal: type_ === 'clickhouse' || type_ === 'cloudwatch' ? 'logs' : undefined,
+      signal: type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch' ? 'logs' : undefined,
       start,
       end,
       step: 15,
@@ -952,6 +966,13 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
             :show-signal-selector="false"
             :disabled="loading || !hasLogsDatasources"
           />
+          <ElasticsearchQueryEditor
+            v-else-if="isElasticsearchDatasource"
+            v-model="query"
+            signal="logs"
+            :show-signal-selector="false"
+            :disabled="loading || !hasLogsDatasources"
+          />
           <LogQLQueryBuilder
             v-else
             v-model="query"
@@ -1057,7 +1078,7 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
 
         <div v-else-if="!hasLogsDatasources" class="empty-state">
           <p>No logs datasource configured.</p>
-          <p class="hint-text">Add a Loki, Victoria Logs, or CloudWatch datasource in Data Sources.</p>
+          <p class="hint-text">Add a Loki, Victoria Logs, CloudWatch, or Elasticsearch datasource in Data Sources.</p>
         </div>
 
         <div v-else class="empty-state">
@@ -1067,7 +1088,9 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
                 ? 'Write a SQL query and click "Run Query" to inspect logs.'
                 : isCloudWatchDatasource
                   ? 'Write a CloudWatch Logs Insights query and click "Run Query" to inspect logs.'
-                  : 'Write a log query and click "Run Query" to inspect logs.'
+                  : isElasticsearchDatasource
+                    ? 'Write an Elasticsearch/Lucene query and click "Run Query" to inspect logs.'
+                    : 'Write a log query and click "Run Query" to inspect logs.'
             }}
           </p>
           <p v-if="isClickHouseDatasource" class="hint-text">
@@ -1075,6 +1098,9 @@ watch(() => selectedDatasourceId.value, (datasourceId) => {
           </p>
           <p v-else-if="isCloudWatchDatasource" class="hint-text">
             Example: <code>fields @timestamp, @message | filter @message like /error/ | sort @timestamp desc | limit 200</code>
+          </p>
+          <p v-else-if="isElasticsearchDatasource" class="hint-text">
+            Examples: <code>service.name:"api" AND level:error</code>, <code>{"index":"logs-*","query":{"query_string":{"query":"error"}}}</code>
           </p>
           <p v-else class="hint-text">Examples: <code>{job=~".+"}</code>, <code>{app="api"} |= "error"</code>, <code>*</code></p>
         </div>

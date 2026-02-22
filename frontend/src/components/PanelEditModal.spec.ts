@@ -56,6 +56,17 @@ vi.mock('../composables/useDatasource', async () => {
           created_at: '2026-01-01T00:00:00Z',
           updated_at: '2026-01-01T00:00:00Z',
         },
+        {
+          id: 'ds-elasticsearch-1',
+          organization_id: 'org-1',
+          name: 'Elasticsearch Main',
+          type: 'elasticsearch',
+          url: 'http://localhost:9200',
+          is_default: false,
+          auth_type: 'none',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
       ]),
       fetchDatasources: mockFetchDatasources,
     }),
@@ -101,6 +112,23 @@ vi.mock('./CloudWatchQueryEditor.vue', () => ({
           <option value="logs">logs</option>
         </select>
         <textarea id="cloudwatch-query" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)"></textarea>
+      </div>
+    `,
+  },
+}))
+
+vi.mock('./ElasticsearchQueryEditor.vue', () => ({
+  default: {
+    name: 'ElasticsearchQueryEditor',
+    props: ['modelValue', 'signal', 'disabled'],
+    emits: ['update:modelValue', 'update:signal'],
+    template: `
+      <div class="mock-elasticsearch-editor">
+        <select id="elasticsearch-signal" :value="signal" @change="$emit('update:signal', $event.target.value)">
+          <option value="metrics">metrics</option>
+          <option value="logs">logs</option>
+        </select>
+        <textarea id="elasticsearch-query" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)"></textarea>
       </div>
     `,
   },
@@ -422,6 +450,50 @@ describe('PanelEditModal', () => {
       query: {
         datasource_id: 'ds-cloudwatch-1',
         expr: 'fields @timestamp, @message | limit 10',
+        signal: 'logs',
+      },
+    })
+  })
+
+  it('renders Elasticsearch editor and saves logs signal config', async () => {
+    vi.mocked(api.createPanel).mockResolvedValue({
+      id: 'panel-elasticsearch-1',
+      dashboard_id: dashboardId,
+      title: 'Elasticsearch Logs',
+      type: 'logs',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: {
+        datasource_id: 'ds-elasticsearch-1',
+        expr: 'service.name:"api" AND level:error',
+        signal: 'logs',
+      },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    })
+
+    const wrapper = mount(PanelEditModal, {
+      props: { dashboardId },
+    })
+    await flushPromises()
+
+    await wrapper.find('#title').setValue('Elasticsearch Logs')
+    await wrapper.find('#type').setValue('logs')
+    await wrapper.find('#datasource').setValue('ds-elasticsearch-1')
+
+    expect(wrapper.findComponent({ name: 'ElasticsearchQueryEditor' }).exists()).toBe(true)
+
+    await wrapper.find('#elasticsearch-signal').setValue('logs')
+    await wrapper.find('#elasticsearch-query').setValue('service.name:"api" AND level:error')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(api.createPanel).toHaveBeenCalledWith(dashboardId, {
+      title: 'Elasticsearch Logs',
+      type: 'logs',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: {
+        datasource_id: 'ds-elasticsearch-1',
+        expr: 'service.name:"api" AND level:error',
         signal: 'logs',
       },
     })

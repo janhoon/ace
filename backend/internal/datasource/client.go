@@ -85,6 +85,8 @@ func NewClient(ds models.DataSource) (Client, error) {
 		return NewClickHouseClient(ds)
 	case models.DataSourceCloudWatch:
 		return NewCloudWatchClient(ds)
+	case models.DataSourceElasticsearch:
+		return NewElasticsearchClient(ds)
 	default:
 		return nil, fmt.Errorf("unsupported datasource type: %s", ds.Type)
 	}
@@ -120,6 +122,8 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 			return err
 		}
 		return client.TestConnection(ctx)
+	case models.DataSourceElasticsearch:
+		return runHTTPConnectionCheck(ctx, ds, []string{"/_cluster/health", "/_cat/indices?format=json&h=index&bytes=b", "/"})
 	default:
 		return fmt.Errorf("unsupported datasource type: %s", ds.Type)
 	}

@@ -104,6 +104,47 @@ services:
       timeout: 5s
       retries: 5
 
+  elasticsearch:
+    <<: *json_file_logging
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    container_name: dash-elasticsearch
+    profiles:
+      - elk
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://127.0.0.1:9200/_cluster/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  logstash:
+    <<: *json_file_logging
+    image: docker.elastic.co/logstash/logstash:8.17.0
+    container_name: dash-logstash
+    profiles:
+      - elk
+    user: "0:0"
+    environment:
+      LS_JAVA_OPTS: -Xms256m -Xmx256m
+      XPACK_MONITORING_ENABLED: "false"
+    ports:
+      - "9600:9600"
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - logstash_data:/usr/share/logstash/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
   tempo:
     <<: *json_file_logging
     image: grafana/tempo:2.7.2
@@ -173,5 +214,7 @@ volumes:
   loki_data:
   victoriametrics_data:
   victorialogs_data:
+  elasticsearch_data:
+  logstash_data:
   otel_collector_data:
   tempo_data:

@@ -73,6 +73,12 @@ Tag strategy:
    ```
    This starts the OpenTelemetry Collector, which tails Docker container logs and ships them to both Loki and Victoria Logs.
 
+   Optional: start the ELK path (Elasticsearch + Logstash, no Kibana):
+   ```bash
+   docker compose --profile elk up -d elasticsearch logstash
+   ```
+   Logstash tails Docker container JSON logs and writes them to Elasticsearch indices named `dash-logs-*`.
+
    Optional: start continuous synthetic trace traffic for Tempo testing:
    ```bash
    # enable load generator
@@ -111,6 +117,12 @@ Tag strategy:
 
    You can also still run backend/frontend commands directly from their folders.
 
+### ELK / Elasticsearch setup (without Kibana)
+
+For the Logstash → Elasticsearch → Ace flow, see:
+
+- `docs/elk-elasticsearch.md`
+
 ### Seed First Admin
 
 Create the first admin user and organization:
@@ -136,6 +148,47 @@ make seed-datasources
 
 # or for another organization slug
 make seed-datasources ORG=my-company
+```
+
+### Elasticsearch + Logstash (ELK) in Ace (without Kibana)
+
+Ace can query Elasticsearch directly for both **logs** and **metrics-style** aggregations, so Kibana is optional for exploration dashboards.
+
+1. Start the ELK profile:
+   ```bash
+   docker compose --profile elk up -d elasticsearch logstash
+   ```
+2. In **Data Sources → Add Data Source**, create an `Elasticsearch (ELK)` datasource:
+   - URL: `http://localhost:9200`
+   - Auth: `none` (for local profile)
+   - Default Index Pattern: `dash-logs-*`
+   - Timestamp Field: `@timestamp` (optional)
+   - Message Field: `message` (optional)
+   - Level Field: `level` (optional)
+3. Use Explore/Dashboards:
+   - **Logs mode:** Lucene query string (example: `service.name:"backend" AND level:error`) or Elasticsearch JSON body.
+   - **Metrics mode:** JSON body with `aggs`, or plain query string and Ace will auto-build a date histogram timeseries.
+
+Detailed setup and examples: `docs/elk-elasticsearch.md`.
+
+Example metrics aggregation query:
+```json
+{
+  "index": "dash-logs-*",
+  "query": {
+    "query_string": {
+      "query": "service.name:backend"
+    }
+  },
+  "aggs": {
+    "timeseries": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "fixed_interval": "1m"
+      }
+    }
+  }
+}
 ```
 
 ### Running Tests
@@ -233,5 +286,6 @@ dash/
 ├── agent/              # Ralph agent for automated development
 ├── docker-compose.yml  # Local infra services (DB, metrics, logs)
 ├── otel-collector.yml  # Docker log shipping to Loki + Victoria Logs
+├── logstash/           # Optional ELK pipeline config for local Elasticsearch ingest
 └── README.md
 ```
