@@ -12,29 +12,16 @@ docker compose --profile elk up -d elasticsearch logstash
 
 - Elasticsearch listens on `http://localhost:9200`
 - Logstash pipeline file: `logstash/pipeline/logstash.conf`
+- Note: the default Logstash pipeline tails Docker log files under `/var/lib/docker/containers` (best on Linux hosts).
 
 ## 1) Send logs from Logstash to Elasticsearch
 
-Example Logstash pipeline:
+The provided local pipeline (`logstash/pipeline/logstash.conf`) tails Docker JSON logs from
+`/var/lib/docker/containers/*/*-json.log`, enriches them with compose metadata, and writes to:
 
-```conf
-input {
-  beats {
-    port => 5044
-  }
-}
+- `dash-logs-%{+YYYY.MM.dd}`
 
-filter {
-  # optional parsing/transforms
-}
-
-output {
-  elasticsearch {
-    hosts => ["http://elasticsearch:9200"]
-    index => "dash-logs-%{+YYYY.MM.dd}"
-  }
-}
-```
+You can customize that pipeline if you prefer Beats/HTTP inputs, but no extra shipper is required for local Docker development.
 
 ## 2) Verify Elasticsearch has documents
 
