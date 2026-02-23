@@ -438,7 +438,11 @@ describe('ExploreTraces', () => {
       .find((button) => button.text() === 'View Logs')
     expect(logsButton).toBeTruthy()
 
-    await logsButton!.trigger('click')
+    if (!logsButton) {
+      throw new Error('Expected View Logs action button to be present')
+    }
+
+    await logsButton.trigger('click')
 
     expect(mockRouterPush).toHaveBeenCalledWith('/app/explore/logs')
     expect(JSON.parse(localStorage.getItem('trace_logs_navigation') || '{}')).toMatchObject({
@@ -491,7 +495,11 @@ describe('ExploreTraces', () => {
       .find((button) => button.text() === 'View Service Metrics')
     expect(metricsButton).toBeTruthy()
 
-    await metricsButton!.trigger('click')
+    if (!metricsButton) {
+      throw new Error('Expected View Service Metrics action button to be present')
+    }
+
+    await metricsButton.trigger('click')
 
     expect(mockRouterPush).toHaveBeenCalledWith('/app/explore/metrics')
     expect(JSON.parse(localStorage.getItem('trace_metrics_navigation') || '{}')).toMatchObject({

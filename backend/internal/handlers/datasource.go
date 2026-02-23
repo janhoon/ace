@@ -428,9 +428,12 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var result *datasource.QueryResult
-	if ds.Type == models.DataSourceClickHouse {
-		clickHouseClient, err := datasource.NewClickHouseClient(ds)
-		if err != nil {
+	var queryErr error
+
+	switch ds.Type {
+	case models.DataSourceClickHouse:
+		clickHouseClient, clientErr := datasource.NewClickHouseClient(ds)
+		if clientErr != nil {
 			analytics.Track(r.Context(), analytics.Event{
 				DistinctID: userID.String(),
 				Name:       "datasource_query_failed",
@@ -440,19 +443,19 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 					"organization_id": ds.OrganizationID.String(),
 					"datasource_id":   ds.ID.String(),
 					"datasource_type": ds.Type,
-					"error":           err.Error(),
+					"error":           clientErr.Error(),
 				},
 			})
 
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + clientErr.Error()})
 			return
 		}
 
-		result, err = clickHouseClient.QueryWithSignal(ctx, queryReq.Query, signal, start, end, step, queryReq.Limit)
-	} else if ds.Type == models.DataSourceCloudWatch {
-		cloudWatchClient, err := datasource.NewCloudWatchClient(ds)
-		if err != nil {
+		result, queryErr = clickHouseClient.QueryWithSignal(ctx, queryReq.Query, signal, start, end, step, queryReq.Limit)
+	case models.DataSourceCloudWatch:
+		cloudWatchClient, clientErr := datasource.NewCloudWatchClient(ds)
+		if clientErr != nil {
 			analytics.Track(r.Context(), analytics.Event{
 				DistinctID: userID.String(),
 				Name:       "datasource_query_failed",
@@ -462,19 +465,19 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 					"organization_id": ds.OrganizationID.String(),
 					"datasource_id":   ds.ID.String(),
 					"datasource_type": ds.Type,
-					"error":           err.Error(),
+					"error":           clientErr.Error(),
 				},
 			})
 
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + clientErr.Error()})
 			return
 		}
 
-		result, err = cloudWatchClient.QueryWithSignal(ctx, queryReq.Query, signal, start, end, step, queryReq.Limit)
-	} else if ds.Type == models.DataSourceElasticsearch {
-		elasticsearchClient, err := datasource.NewElasticsearchClient(ds)
-		if err != nil {
+		result, queryErr = cloudWatchClient.QueryWithSignal(ctx, queryReq.Query, signal, start, end, step, queryReq.Limit)
+	case models.DataSourceElasticsearch:
+		elasticsearchClient, clientErr := datasource.NewElasticsearchClient(ds)
+		if clientErr != nil {
 			analytics.Track(r.Context(), analytics.Event{
 				DistinctID: userID.String(),
 				Name:       "datasource_query_failed",
@@ -484,19 +487,19 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 					"organization_id": ds.OrganizationID.String(),
 					"datasource_id":   ds.ID.String(),
 					"datasource_type": ds.Type,
-					"error":           err.Error(),
+					"error":           clientErr.Error(),
 				},
 			})
 
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + clientErr.Error()})
 			return
 		}
 
-		result, err = elasticsearchClient.QueryWithSignal(ctx, queryReq.Query, signal, start, end, step, queryReq.Limit)
-	} else {
-		client, err := datasource.NewClient(ds)
-		if err != nil {
+		result, queryErr = elasticsearchClient.QueryWithSignal(ctx, queryReq.Query, signal, start, end, step, queryReq.Limit)
+	default:
+		client, clientErr := datasource.NewClient(ds)
+		if clientErr != nil {
 			analytics.Track(r.Context(), analytics.Event{
 				DistinctID: userID.String(),
 				Name:       "datasource_query_failed",
@@ -506,19 +509,19 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 					"organization_id": ds.OrganizationID.String(),
 					"datasource_id":   ds.ID.String(),
 					"datasource_type": ds.Type,
-					"error":           err.Error(),
+					"error":           clientErr.Error(),
 				},
 			})
 
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + clientErr.Error()})
 			return
 		}
 
-		result, err = client.Query(ctx, queryReq.Query, start, end, step, queryReq.Limit)
+		result, queryErr = client.Query(ctx, queryReq.Query, start, end, step, queryReq.Limit)
 	}
 
-	if err != nil {
+	if queryErr != nil {
 		analytics.Track(r.Context(), analytics.Event{
 			DistinctID: userID.String(),
 			Name:       "datasource_query_failed",
@@ -529,12 +532,12 @@ func (h *DataSourceHandler) Query(w http.ResponseWriter, r *http.Request) {
 				"datasource_id":   ds.ID.String(),
 				"datasource_type": ds.Type,
 				"query_length":    len(queryReq.Query),
-				"error":           err.Error(),
+				"error":           queryErr.Error(),
 			},
 		})
 
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "query failed: " + err.Error()})
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "query failed: " + queryErr.Error()})
 		return
 	}
 
@@ -1321,47 +1324,50 @@ func (h *DataSourceHandler) QueryByParams(w http.ResponseWriter, r *http.Request
 	signal := strings.TrimSpace(r.URL.Query().Get("signal"))
 
 	var result *datasource.QueryResult
-	if ds.Type == models.DataSourceClickHouse {
-		clickHouseClient, err := datasource.NewClickHouseClient(ds)
-		if err != nil {
+	var queryErr error
+
+	switch ds.Type {
+	case models.DataSourceClickHouse:
+		clickHouseClient, clientErr := datasource.NewClickHouseClient(ds)
+		if clientErr != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + clientErr.Error()})
 			return
 		}
 
-		result, err = clickHouseClient.QueryWithSignal(ctx, query, signal, start, end, step, limit)
-	} else if ds.Type == models.DataSourceCloudWatch {
-		cloudWatchClient, err := datasource.NewCloudWatchClient(ds)
-		if err != nil {
+		result, queryErr = clickHouseClient.QueryWithSignal(ctx, query, signal, start, end, step, limit)
+	case models.DataSourceCloudWatch:
+		cloudWatchClient, clientErr := datasource.NewCloudWatchClient(ds)
+		if clientErr != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + clientErr.Error()})
 			return
 		}
 
-		result, err = cloudWatchClient.QueryWithSignal(ctx, query, signal, start, end, step, limit)
-	} else if ds.Type == models.DataSourceElasticsearch {
-		elasticsearchClient, err := datasource.NewElasticsearchClient(ds)
-		if err != nil {
+		result, queryErr = cloudWatchClient.QueryWithSignal(ctx, query, signal, start, end, step, limit)
+	case models.DataSourceElasticsearch:
+		elasticsearchClient, clientErr := datasource.NewElasticsearchClient(ds)
+		if clientErr != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + clientErr.Error()})
 			return
 		}
 
-		result, err = elasticsearchClient.QueryWithSignal(ctx, query, signal, start, end, step, limit)
-	} else {
-		client, err := datasource.NewClient(ds)
-		if err != nil {
+		result, queryErr = elasticsearchClient.QueryWithSignal(ctx, query, signal, start, end, step, limit)
+	default:
+		client, clientErr := datasource.NewClient(ds)
+		if clientErr != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + err.Error()})
+			json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "failed to create datasource client: " + clientErr.Error()})
 			return
 		}
 
-		result, err = client.Query(ctx, query, start, end, step, limit)
+		result, queryErr = client.Query(ctx, query, start, end, step, limit)
 	}
 
-	if err != nil {
+	if queryErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "query failed: " + err.Error()})
+		json.NewEncoder(w).Encode(ErrorResponse{Status: "error", Error: "query failed: " + queryErr.Error()})
 		return
 	}
 

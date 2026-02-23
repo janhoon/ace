@@ -17,7 +17,7 @@ interface PostHogLike {
   identify: (distinctId: string, properties?: EventProperties) => void
   reset: () => void
   isFeatureEnabled?: (flag: string) => boolean | undefined
-  onFeatureFlags?: (callback: () => void) => (() => void) | void
+  onFeatureFlags?: (callback: () => void) => (() => void) | undefined
   opt_in_capturing?: () => void
   opt_out_capturing?: () => void
   set_config?: (config: Record<string, unknown>) => void
@@ -209,30 +209,8 @@ export function setSessionRecordingEnabled(enabled: boolean) {
   applySessionRecording()
 }
 
-export function isFeatureFlagEnabled(flag: string): boolean {
-  if (!posthogClient || !shouldCaptureEvents()) {
-    return false
-  }
-
-  return Boolean(posthogClient.isFeatureEnabled?.(flag))
-}
-
-export function onFeatureFlagsChanged(callback: () => void): () => void {
-  if (!posthogClient || !posthogClient.onFeatureFlags) {
-    return () => {}
-  }
-
-  const unsubscribe = posthogClient.onFeatureFlags(callback)
-  if (typeof unsubscribe === 'function') {
-    return unsubscribe
-  }
-
-  return () => {}
-}
-
 export {
   analyticsReady,
-  analyticsInitialized,
   analyticsDntEnabled,
   analyticsConsent,
   analyticsSessionRecordingEnabled,

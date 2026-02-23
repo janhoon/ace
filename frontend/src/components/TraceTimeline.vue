@@ -12,9 +12,7 @@ const props = defineProps<{
   selectedSpanId?: string | null
 }>()
 
-const emit = defineEmits<{
-  (e: 'select-span', span: TraceSpan): void
-}>()
+const emit = defineEmits<(e: 'select-span', span: TraceSpan) => void>()
 
 const zoomPercent = ref(100)
 const panPercent = ref(0)
