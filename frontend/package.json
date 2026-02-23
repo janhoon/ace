@@ -35,7 +35,7 @@
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.8.1",
     "happy-dom": "^20.7.0",
-    "knip": "^5.64.1",
+    "knip": "^5.85.0",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-monaco-editor": "^1.1.0",
