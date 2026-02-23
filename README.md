@@ -63,65 +63,42 @@ Tag strategy:
 
 - Node.js 18+
 - Go 1.25+
-- Docker and Docker Compose
+- Docker (for image builds and local security tooling)
+- A local Kubernetes cluster (for example: kind, minikube, or Docker Desktop Kubernetes)
+- `kubectl`, `helm`, and `tilt`
 
 ### Setup
 
-1. Start the infrastructure services:
+1. Start your local Kubernetes cluster.
+
+2. Start Tilt from the repo root:
    ```bash
-   docker-compose up -d
-   ```
-   This starts the OpenTelemetry Collector, which tails Docker container logs and ships them to both Loki and Victoria Logs.
-
-   Optional: start the ELK path (Elasticsearch + Logstash, no Kibana):
-   ```bash
-   docker compose --profile elk up -d elasticsearch logstash
-   ```
-   Logstash tails Docker container JSON logs and writes them to Elasticsearch indices named `dash-logs-*`.
-
-   Optional: start continuous synthetic trace traffic for Tempo testing:
-   ```bash
-   # enable load generator
-   docker compose --profile otel-load up -d otel-loadgen
-
-   # watch load generator logs
-   docker compose logs -f otel-loadgen
-
-   # disable load generator
-   docker compose stop otel-loadgen
-   ```
-   The load generator emits both single-service traces and inter-service
-   traces (`edge -> checkout -> payments/inventory -> worker`) so service
-   graph and cross-service debugging flows have realistic traffic.
-
-2. Start the backend API:
-   ```bash
-   make backend
-   ```
-   The API will be available at http://localhost:8080 and auto-reloads on Go file changes.
-
-   If you want to run without hot reload:
-   ```bash
-   cd backend
-   go run ./cmd/api
+   make tilt-up
    ```
 
-3. Start the frontend dev server:
+   Tilt will run:
+   - Core services enabled by default: `postgres`, `valkey`, `backend`, `frontend`
+   - External test services disabled by default: `prometheus`, `loki`, `victoria-metrics`, `victoria-logs`, `tempo`
+
+   Open the Tilt UI (shown in the `tilt up` output), then enable optional services from the UI when needed.
+   You can also pre-enable them at startup, for example: `tilt up -- --enable=prometheus --enable=loki`.
+
+3. Access local endpoints:
+   - Postgres: localhost:5432
+   - Valkey: localhost:6379
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:8080
+   - Optional datasource ports (once enabled in Tilt):
+     - Prometheus: http://localhost:9090
+     - Loki: http://localhost:3100
+     - VictoriaMetrics: http://localhost:8428
+     - Victoria Logs: http://localhost:9428
+     - Tempo: http://localhost:3200
+
+4. Stop everything:
    ```bash
-   cd frontend
-   npm install
-   cd ..
-   make frontend
+   make tilt-down
    ```
-   The frontend will be available at http://localhost:5173
-
-   You can also still run backend/frontend commands directly from their folders.
-
-### ELK / Elasticsearch setup (without Kibana)
-
-For the Logstash → Elasticsearch → Ace flow, see:
-
-- `docs/elk-elasticsearch.md`
 
 ### Seed First Admin
 
@@ -154,22 +131,19 @@ make seed-datasources ORG=my-company
 
 Ace can query Elasticsearch directly for both **logs** and **metrics-style** aggregations, so Kibana is optional for exploration dashboards.
 
-1. Start the ELK profile:
-   ```bash
-   docker compose --profile elk up -d elasticsearch logstash
-   ```
-2. In **Data Sources → Add Data Source**, create an `Elasticsearch (ELK)` datasource:
-   - URL: `http://localhost:9200`
-   - Auth: `none` (for local profile)
-   - Default Index Pattern: `dash-logs-*`
-   - Timestamp Field: `@timestamp` (optional)
-   - Message Field: `message` (optional)
-   - Level Field: `level` (optional)
-3. Use Explore/Dashboards:
-   - **Logs mode:** Lucene query string (example: `service.name:"backend" AND level:error`) or Elasticsearch JSON body.
-   - **Metrics mode:** JSON body with `aggs`, or plain query string and Ace will auto-build a date histogram timeseries.
+If you run Elasticsearch locally, add an `Elasticsearch (ELK)` datasource in **Data Sources → Add Data Source**:
 
-Detailed setup and examples: `docs/elk-elasticsearch.md`.
+- URL: `http://localhost:9200`
+- Auth: `none` (for local profile)
+- Default Index Pattern: `dash-logs-*`
+- Timestamp Field: `@timestamp` (optional)
+- Message Field: `message` (optional)
+- Level Field: `level` (optional)
+
+Then use Explore/Dashboards:
+
+- **Logs mode:** Lucene query string (example: `service.name:"backend" AND level:error`) or Elasticsearch JSON body.
+- **Metrics mode:** JSON body with `aggs`, or plain query string and Ace will auto-build a date histogram timeseries.
 
 Example metrics aggregation query:
 ```json
@@ -284,8 +258,7 @@ dash/
 │   │   └── db/         # Database connection and migrations
 │   └── pkg/            # Public packages
 ├── agent/              # Ralph agent for automated development
-├── docker-compose.yml  # Local infra services (DB, metrics, logs)
-├── otel-collector.yml  # Docker log shipping to Loki + Victoria Logs
-├── logstash/           # Optional ELK pipeline config for local Elasticsearch ingest
+├── Tiltfile            # Local dev orchestration (Tilt + Helm)
+├── deploy/charts/      # Helm charts for local infra services
 └── README.md
 ```
