@@ -1,29 +1,14 @@
-import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
-import monacoEditorPluginModule from 'vite-plugin-monaco-editor'
-
-// Handle both ESM and CommonJS default export
-type MonacoEditorPluginModule = typeof monacoEditorPluginModule & {
-  default?: typeof monacoEditorPluginModule
-}
-
-const monacoEditorPlugin =
-  (monacoEditorPluginModule as MonacoEditorPluginModule).default || monacoEditorPluginModule
+import { defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    monacoEditorPlugin({
-      languageWorkers: ['editorWorkerService'],
-      customWorkers: []
-    })
-  ],
+  plugins: [vue()],
   server: {
-    port: 5173
+    port: 5173,
   },
   test: {
     environment: 'happy-dom',
-    globals: true
-  }
+    globals: true,
+  },
 })

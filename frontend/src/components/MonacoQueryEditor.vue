@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, shallowRef, computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import '../monaco/setupWorkers'
 import * as monaco from 'monaco-editor'
-import { registerPromQLLanguage, definePromQLTheme, PROMQL_LANGUAGE_ID } from '../promql/language'
-import { registerCompletionProvider } from '../promql/completionProvider'
-import { registerHoverProvider } from '../promql/hoverProvider'
 import {
-  registerLogQueryLanguages,
   LOGQL_LANGUAGE_ID,
   LOGSQL_LANGUAGE_ID,
+  registerLogQueryLanguages,
   setLogQLIndexedLabels,
 } from '../logquery/language'
+import { registerCompletionProvider } from '../promql/completionProvider'
+import { registerHoverProvider } from '../promql/hoverProvider'
+import { definePromQLTheme, PROMQL_LANGUAGE_ID, registerPromQLLanguage } from '../promql/language'
 
 type QueryLanguage = 'promql' | 'logql' | 'logsql'
 
@@ -32,23 +33,26 @@ function initializeMonaco() {
   registerLogQueryLanguages(monaco)
 }
 
-const props = withDefaults(defineProps<{
-  modelValue: string
-  disabled?: boolean
-  height?: number
-  placeholder?: string
-  language?: QueryLanguage
-  indexedLabels?: string[]
-}>(), {
-  height: 100,
-  placeholder: 'Enter PromQL query...',
-  language: 'promql',
-  indexedLabels: () => [],
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    disabled?: boolean
+    height?: number
+    placeholder?: string
+    language?: QueryLanguage
+    indexedLabels?: string[]
+  }>(),
+  {
+    height: 100,
+    placeholder: 'Enter PromQL query...',
+    language: 'promql',
+    indexedLabels: () => [],
+  },
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
-  'submit': []
+  submit: []
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -90,22 +94,22 @@ onMounted(() => {
       vertical: 'auto',
       horizontal: 'auto',
       verticalScrollbarSize: 8,
-      horizontalScrollbarSize: 8
+      horizontalScrollbarSize: 8,
     },
     suggest: {
       showIcons: true,
       showStatusBar: true,
       preview: true,
-      previewMode: 'prefix'
+      previewMode: 'prefix',
     },
     quickSuggestions: {
       other: true,
       comments: false,
-      strings: true
+      strings: true,
     },
     acceptSuggestionOnEnter: 'on',
     tabCompletion: 'on',
-    readOnly: props.disabled
+    readOnly: props.disabled,
   })
 
   editorInstance.value = editor
@@ -141,36 +145,52 @@ onUnmounted(() => {
 })
 
 // Sync external value changes to editor
-watch(() => props.modelValue, (newValue) => {
-  if (editorInstance.value && editorInstance.value.getValue() !== newValue) {
-    editorInstance.value.setValue(newValue)
-  }
-})
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    if (editorInstance.value && editorInstance.value.getValue() !== newValue) {
+      editorInstance.value.setValue(newValue)
+    }
+  },
+)
 
 // Handle disabled state
-watch(() => props.disabled, (disabled) => {
-  if (editorInstance.value) {
-    editorInstance.value.updateOptions({ readOnly: disabled })
-  }
-})
+watch(
+  () => props.disabled,
+  (disabled) => {
+    if (editorInstance.value) {
+      editorInstance.value.updateOptions({ readOnly: disabled })
+    }
+  },
+)
 
 // Handle height changes
-watch(() => props.height, () => {
-  if (editorInstance.value) {
-    editorInstance.value.layout()
-  }
-})
+watch(
+  () => props.height,
+  () => {
+    if (editorInstance.value) {
+      editorInstance.value.layout()
+    }
+  },
+)
 
-watch(() => props.language, (language) => {
-  const model = editorInstance.value?.getModel()
-  if (model) {
-    monaco.editor.setModelLanguage(model, getMonacoLanguageId(language))
-  }
-})
+watch(
+  () => props.language,
+  (language) => {
+    const model = editorInstance.value?.getModel()
+    if (model) {
+      monaco.editor.setModelLanguage(model, getMonacoLanguageId(language))
+    }
+  },
+)
 
-watch(() => props.indexedLabels, (labels) => {
-  setLogQLIndexedLabels(labels)
-}, { immediate: true })
+watch(
+  () => props.indexedLabels,
+  (labels) => {
+    setLogQLIndexedLabels(labels)
+  },
+  { immediate: true },
+)
 
 // Focus the editor
 function focus() {
