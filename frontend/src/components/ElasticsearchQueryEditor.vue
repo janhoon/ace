@@ -23,8 +23,8 @@ const emit = defineEmits<{
 }>()
 
 const examples: Record<ElasticsearchSignal, string> = {
-  metrics: '{\n  "index": "dash-logs-*",\n  "query": {\n    "query_string": {\n      "query": "service.name:api"\n    }\n  },\n  "aggs": {\n    "timeseries": {\n      "date_histogram": {\n        "field": "@timestamp",\n        "fixed_interval": "1m"\n      }\n    }\n  }\n}',
-  logs: '{\n  "index": "dash-logs-*",\n  "query": {\n    "query_string": {\n      "query": "level:error AND service.name:api"\n    }\n  },\n  "size": 200\n}',
+  metrics: '{\n  "index": "ace-logs-*",\n  "query": {\n    "query_string": {\n      "query": "service.name:api"\n    }\n  },\n  "aggs": {\n    "timeseries": {\n      "date_histogram": {\n        "field": "@timestamp",\n        "fixed_interval": "1m"\n      }\n    }\n  }\n}',
+  logs: '{\n  "index": "ace-logs-*",\n  "query": {\n    "query_string": {\n      "query": "level:error AND service.name:api"\n    }\n  },\n  "size": 200\n}',
 }
 
 const helperText = computed(() => {

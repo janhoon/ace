@@ -206,7 +206,7 @@ func main() {
 	mux.HandleFunc("POST /api/convert/grafana", auth.RequireAuth(jwtManager, grafanaConverterHandler.Convert))
 
 	// Apply middleware
-	handler := corsMiddleware(otelhttp.NewHandler(mux, "dash-api"))
+	handler := corsMiddleware(otelhttp.NewHandler(mux, "ace-api"))
 
 	// Create server
 	server := &http.Server{

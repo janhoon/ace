@@ -24,8 +24,8 @@ interface PostHogLike {
 }
 
 const POSTHOG_HOST_DEFAULT = 'https://eu.posthog.com'
-const CONSENT_STORAGE_KEY = 'dash.analytics.consent'
-const SESSION_RECORDING_STORAGE_KEY = 'dash.analytics.session_recording'
+const CONSENT_STORAGE_KEY = 'ace.analytics.consent'
+const SESSION_RECORDING_STORAGE_KEY = 'ace.analytics.session_recording'
 
 const analyticsReady = ref(false)
 const analyticsInitialized = ref(false)

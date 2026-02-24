@@ -49,7 +49,7 @@ function switchMode() {
               <path d="M18 9l-5 5-4-4-3 3" />
             </svg>
           </div>
-          <span class="logo-text">Dash</span>
+          <span class="logo-text">Ace</span>
         </div>
         <h1>{{ mode === 'login' ? 'Welcome back' : 'Create account' }}</h1>
         <p class="subtitle">

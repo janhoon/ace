@@ -147,7 +147,7 @@ defineExpose({ isExpanded })
       <div class="sidebar-logo">
         <Activity class="logo-icon" :size="24" />
         <div v-if="isVisuallyExpanded" class="logo-copy">
-          <span class="logo-text">Dash</span>
+          <span class="logo-text">Ace</span>
           <span class="logo-subtext">developer cockpit</span>
         </div>
       </div>

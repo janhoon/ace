@@ -23,8 +23,8 @@ const (
 	defaultPostHogHost        = "https://us.i.posthog.com"
 	defaultFeatureFlagTTL     = time.Minute
 	defaultFeatureFlagTimeout = 3 * time.Second
-	optOutHeader              = "X-Dash-Analytics-Opt-Out"
-	optOutCookie              = "dash_analytics_opt_out"
+	optOutHeader              = "X-Ace-Analytics-Opt-Out"
+	optOutCookie              = "ace_analytics_opt_out"
 )
 
 type Config struct {

@@ -30,7 +30,7 @@ function openPrivacySettings() {
     <div class="consent-copy">
       <strong>Analytics preferences</strong>
       <p>
-        Dash can use privacy-focused analytics and optional session recording to improve product quality.
+        Ace can use privacy-focused analytics and optional session recording to improve product quality.
       </p>
     </div>
     <div class="consent-actions">

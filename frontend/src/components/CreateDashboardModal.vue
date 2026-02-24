@@ -371,7 +371,7 @@ async function handleSubmit() {
             data-testid="grafana-convert"
             @click="convertGrafana"
           >
-            {{ convertingGrafana ? 'Converting...' : 'Convert to Dash YAML' }}
+            {{ convertingGrafana ? 'Converting...' : 'Convert to Ace YAML' }}
           </button>
 
           <ul v-if="grafanaWarnings.length" class="warning-list" data-testid="grafana-warnings">
