@@ -444,7 +444,7 @@ describe('ExploreTraces', () => {
 
     await logsButton.trigger('click')
 
-    expect(mockRouterPush).toHaveBeenCalledWith('/app/explore/logs')
+    expect(mockRouterPush).toHaveBeenCalledWith('/explore/logs')
     expect(JSON.parse(localStorage.getItem('trace_logs_navigation') || '{}')).toMatchObject({
       traceId: 'trace-abc',
       serviceName: 'api',
@@ -501,7 +501,7 @@ describe('ExploreTraces', () => {
 
     await metricsButton.trigger('click')
 
-    expect(mockRouterPush).toHaveBeenCalledWith('/app/explore/metrics')
+    expect(mockRouterPush).toHaveBeenCalledWith('/explore/metrics')
     expect(JSON.parse(localStorage.getItem('trace_metrics_navigation') || '{}')).toMatchObject({
       serviceName: 'api',
     })

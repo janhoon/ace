@@ -440,7 +440,7 @@ async function handleSave() {
       }
       await addDatasource(orgId, payload)
     }
-    router.push('/app/datasources')
+    router.push('/datasources')
   } catch (e) {
     formError.value = e instanceof Error ? e.message : 'Failed to save datasource'
   } finally {
@@ -518,7 +518,7 @@ watch(
 <template>
   <div class="datasource-create">
     <header class="page-header">
-      <button class="btn btn-secondary" @click="router.push('/app/datasources')">
+      <button class="btn btn-secondary" @click="router.push('/datasources')">
         <ArrowLeft :size="16" />
         Back to Data Sources
       </button>
@@ -831,7 +831,7 @@ watch(
       <div v-if="formError" class="error-message">{{ formError }}</div>
 
       <footer class="form-actions">
-        <button type="button" class="btn btn-secondary" :disabled="saveLoading" @click="router.push('/app/datasources')">
+        <button type="button" class="btn btn-secondary" :disabled="saveLoading" @click="router.push('/datasources')">
           Cancel
         </button>
         <button type="submit" class="btn btn-primary" :disabled="saveLoading">

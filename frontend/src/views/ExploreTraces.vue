@@ -506,7 +506,7 @@ function openTraceLogs(payload: {
     // Ignore localStorage write issues; navigation still works.
   }
 
-  router.push('/app/explore/logs')
+  router.push('/explore/logs')
 }
 
 function openServiceMetrics(payload: {
@@ -528,7 +528,7 @@ function openServiceMetrics(payload: {
     // Ignore localStorage write issues; navigation still works.
   }
 
-  router.push('/app/explore/metrics')
+  router.push('/explore/metrics')
 }
 
 function consumeTraceNavigationContext() {

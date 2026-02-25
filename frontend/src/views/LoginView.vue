@@ -24,7 +24,7 @@ async function handleSubmit() {
     } else {
       await register(email.value, password.value, name.value || undefined)
     }
-    router.push('/app/dashboards')
+    router.push('/dashboards')
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'An error occurred'
   } finally {

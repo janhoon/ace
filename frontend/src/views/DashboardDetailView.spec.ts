@@ -211,7 +211,7 @@ describe('DashboardDetailView', () => {
     expect(backBtn.exists()).toBe(true)
 
     await backBtn.trigger('click')
-    expect(mockPush).toHaveBeenCalledWith('/app/dashboards')
+    expect(mockPush).toHaveBeenCalledWith('/dashboards')
   })
 
   it('should show Add Panel button', async () => {
@@ -241,7 +241,7 @@ describe('DashboardDetailView', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="dashboard-settings-button"]').trigger('click')
-    expect(mockPush).toHaveBeenCalledWith('/app/dashboards/test-dashboard-id/settings/general')
+    expect(mockPush).toHaveBeenCalledWith('/dashboards/test-dashboard-id/settings/general')
   })
 
   it('shows dashboard settings button for viewers and admins', async () => {
@@ -302,7 +302,7 @@ describe('DashboardDetailView', () => {
     panel.vm.$emit('open-trace', { datasourceId: 'ds-trace-1', traceId: 'trace-abc' })
     await flushPromises()
 
-    expect(mockPush).toHaveBeenCalledWith('/app/explore/traces')
+    expect(mockPush).toHaveBeenCalledWith('/explore/traces')
     expect(JSON.parse(localStorage.getItem('dashboard_trace_navigation') || '{}')).toEqual({
       datasourceId: 'ds-trace-1',
       traceId: 'trace-abc',

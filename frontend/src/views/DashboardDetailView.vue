@@ -233,14 +233,14 @@ async function handleDeletePanel() {
 }
 
 function goBack() {
-  router.push('/app/dashboards')
+  router.push('/dashboards')
 }
 
 function openDashboardSettings() {
   trackEvent('dashboard_settings_opened', {
     dashboard_id: dashboardId,
   })
-  router.push(`/app/dashboards/${dashboardId}/settings/general`)
+  router.push(`/dashboards/${dashboardId}/settings/general`)
 }
 
 function openTraceTimeline(payload: { datasourceId: string, traceId: string }) {
@@ -257,7 +257,7 @@ function openTraceTimeline(payload: { datasourceId: string, traceId: string }) {
     // Ignore localStorage write issues; navigation still works.
   }
 
-  router.push('/app/explore/traces')
+  router.push('/explore/traces')
 }
 
 // Handle layout changes (drag/resize)

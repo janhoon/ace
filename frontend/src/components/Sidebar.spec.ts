@@ -9,7 +9,7 @@ const mockUser = ref({ email: 'user@example.com' })
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({
-    path: '/app/dashboards',
+    path: '/dashboards',
   }),
   useRouter: () => ({
     push: mockPush,

@@ -50,11 +50,11 @@ const dataSourceTypeLogos: Partial<Record<DataSourceType, string>> = {
 const canCreate = computed(() => !!currentOrg.value && currentOrg.value.role !== 'viewer')
 
 function openCreatePage() {
-  router.push('/app/datasources/new')
+  router.push('/datasources/new')
 }
 
 function openEditPage(dsId: string) {
-  router.push(`/app/datasources/${dsId}/edit`)
+  router.push(`/datasources/${dsId}/edit`)
 }
 
 function getTypeLogo(type_: DataSourceType): string | undefined {

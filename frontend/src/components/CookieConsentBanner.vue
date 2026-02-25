@@ -21,7 +21,7 @@ function declineAnalytics() {
 }
 
 function openPrivacySettings() {
-  router.push('/app/settings/privacy')
+  router.push('/settings/privacy')
 }
 </script>
 

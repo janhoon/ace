@@ -34,53 +34,44 @@ interface NavChild {
 }
 
 const navItems: NavItem[] = [
-  { id: 'dashboards', icon: LayoutDashboard, label: 'Dashboards', path: '/app/dashboards' },
-  { id: 'alerts', icon: BellRing, label: 'Alerts', path: '/app/alerts' },
+  { id: 'dashboards', icon: LayoutDashboard, label: 'Dashboards', path: '/dashboards' },
+  { id: 'alerts', icon: BellRing, label: 'Alerts', path: '/alerts' },
   {
     id: 'explore',
     icon: Compass,
     label: 'Explore',
-    path: '/app/explore/metrics',
+    path: '/explore/metrics',
     children: [
-      { label: 'Metrics', path: '/app/explore/metrics' },
-      { label: 'Logs', path: '/app/explore/logs' },
-      { label: 'Traces', path: '/app/explore/traces' },
+      { label: 'Metrics', path: '/explore/metrics' },
+      { label: 'Logs', path: '/explore/logs' },
+      { label: 'Traces', path: '/explore/traces' },
     ],
   },
-  { id: 'datasources', icon: Database, label: 'Data Sources', path: '/app/datasources' },
+  { id: 'datasources', icon: Database, label: 'Data Sources', path: '/datasources' },
 ]
 
-function normalizeAppPath(path: string): string {
-  if (path.startsWith('/app/')) {
-    return path.slice(4)
-  }
-  return path
-}
-
 const openNavGroups = ref<Record<string, boolean>>({
-  explore: normalizeAppPath(route.path).startsWith('/explore'),
+  explore: route.path.startsWith('/explore'),
 })
 
 // Settings path is dynamic based on current organization
 const settingsPath = computed(() => {
   if (currentOrg.value) {
-    return `/app/settings/org/${currentOrg.value.id}/general`
+    return `/settings/org/${currentOrg.value.id}/general`
   }
   return null
 })
 
-const privacySettingsPath = '/app/settings/privacy'
+const privacySettingsPath = '/settings/privacy'
 
 watch(() => route.path, (path) => {
-  if (normalizeAppPath(path).startsWith('/explore')) {
+  if (path.startsWith('/explore')) {
     openNavGroups.value.explore = true
   }
 })
 
 function isRouteMatch(path: string): boolean {
-  const currentPath = normalizeAppPath(route.path)
-  const targetPath = normalizeAppPath(path)
-  return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`)
+  return route.path === path || route.path.startsWith(`${path}/`)
 }
 
 function isActive(item: NavItem): boolean {

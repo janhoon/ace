@@ -152,7 +152,7 @@ const activeSection = computed<SettingsSection>(() => {
 })
 
 function sectionPath(section: SettingsSection): string {
-  return `/app/settings/org/${orgId.value}/${section}`
+  return `/settings/org/${orgId.value}/${section}`
 }
 
 function navigateToSection(section: SettingsSection) {
@@ -417,7 +417,7 @@ async function handleDelete() {
   try {
     await deleteOrganization(orgId.value)
     await fetchOrganizations()
-    router.push('/app/dashboards')
+    router.push('/dashboards')
   } catch (e) {
     alert(e instanceof Error ? e.message : 'Failed to delete organization')
   } finally {
