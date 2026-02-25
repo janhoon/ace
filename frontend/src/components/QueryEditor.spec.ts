@@ -1,16 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import QueryEditor from './QueryEditor.vue'
-import * as useProm from '../composables/useProm'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PrometheusQueryResult } from '../composables/useProm'
+import * as useProm from '../composables/useProm'
+import QueryEditor from './QueryEditor.vue'
 
 // Mock the useProm module
 vi.mock('../composables/useProm', () => ({
-  queryPrometheus: vi.fn()
+  queryPrometheus: vi.fn(),
 }))
 
 function findRunButton(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('button').find(b => b.text().includes('Run Query') || b.text().includes('Running...'))!
+  return wrapper
+    .findAll('button')
+    .find((b) => b.text().includes('Run Query') || b.text().includes('Running...'))!
 }
 
 describe('QueryEditor', () => {
@@ -21,8 +23,8 @@ describe('QueryEditor', () => {
   it('renders the query textarea', () => {
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: ''
-      }
+        modelValue: '',
+      },
     })
 
     expect(wrapper.find('textarea#promql-query').exists()).toBe(true)
@@ -32,8 +34,8 @@ describe('QueryEditor', () => {
   it('displays the current query value', () => {
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'up'
-      }
+        modelValue: 'up',
+      },
     })
 
     const textarea = wrapper.find('textarea#promql-query')
@@ -43,8 +45,8 @@ describe('QueryEditor', () => {
   it('emits update:modelValue when query changes', async () => {
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: ''
-      }
+        modelValue: '',
+      },
     })
 
     await wrapper.find('textarea#promql-query').setValue('process_cpu')
@@ -56,8 +58,8 @@ describe('QueryEditor', () => {
     const wrapper = mount(QueryEditor, {
       props: {
         modelValue: 'up',
-        disabled: true
-      }
+        disabled: true,
+      },
     })
 
     const textarea = wrapper.find('textarea#promql-query')
@@ -70,8 +72,8 @@ describe('QueryEditor', () => {
   it('disables Run Query button when query is empty', () => {
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: ''
-      }
+        modelValue: '',
+      },
     })
 
     const button = findRunButton(wrapper)
@@ -81,8 +83,8 @@ describe('QueryEditor', () => {
   it('enables Run Query button when query has value', () => {
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'up'
-      }
+        modelValue: 'up',
+      },
     })
 
     const button = findRunButton(wrapper)
@@ -92,8 +94,8 @@ describe('QueryEditor', () => {
   it('disables Run Query button for whitespace-only query', () => {
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: '   '
-      }
+        modelValue: '   ',
+      },
     })
 
     const button = findRunButton(wrapper)
@@ -111,8 +113,8 @@ describe('QueryEditor', () => {
 
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'up'
-      }
+        modelValue: 'up',
+      },
     })
 
     await findRunButton(wrapper).trigger('click')
@@ -129,13 +131,13 @@ describe('QueryEditor', () => {
   it('displays error when query fails', async () => {
     vi.mocked(useProm.queryPrometheus).mockResolvedValueOnce({
       status: 'error',
-      error: 'parse error at line 1'
+      error: 'parse error at line 1',
     })
 
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'invalid{query'
-      }
+        modelValue: 'invalid{query',
+      },
     })
 
     await findRunButton(wrapper).trigger('click')
@@ -153,16 +155,19 @@ describe('QueryEditor', () => {
         result: [
           {
             metric: { __name__: 'up', instance: 'localhost:9090', job: 'prometheus' },
-            values: [[1704067200, '1'], [1704067215, '1']]
-          }
-        ]
-      }
+            values: [
+              [1704067200, '1'],
+              [1704067215, '1'],
+            ],
+          },
+        ],
+      },
     })
 
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'up'
-      }
+        modelValue: 'up',
+      },
     })
 
     await findRunButton(wrapper).trigger('click')
@@ -180,16 +185,16 @@ describe('QueryEditor', () => {
         result: [
           {
             metric: { __name__: 'up', instance: 'localhost:9090', job: 'prometheus' },
-            values: [[1704067200, '1']]
-          }
-        ]
-      }
+            values: [[1704067200, '1']],
+          },
+        ],
+      },
     })
 
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'up'
-      }
+        modelValue: 'up',
+      },
     })
 
     await findRunButton(wrapper).trigger('click')
@@ -198,7 +203,7 @@ describe('QueryEditor', () => {
     const labels = wrapper.findAll('.font-mono.rounded-full')
     expect(labels.length).toBeGreaterThan(0)
 
-    const labelTexts = labels.map(l => l.text())
+    const labelTexts = labels.map((l) => l.text())
     expect(labelTexts).toContain('__name__')
     expect(labelTexts).toContain('instance')
     expect(labelTexts).toContain('job')
@@ -212,20 +217,23 @@ describe('QueryEditor', () => {
         result: [
           {
             metric: { __name__: 'up', job: 'prometheus' },
-            values: [[1704067200, '1'], [1704067215, '1']]
+            values: [
+              [1704067200, '1'],
+              [1704067215, '1'],
+            ],
           },
           {
             metric: { __name__: 'up', job: 'node' },
-            values: [[1704067200, '0']]
-          }
-        ]
-      }
+            values: [[1704067200, '0']],
+          },
+        ],
+      },
     })
 
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'up'
-      }
+        modelValue: 'up',
+      },
     })
 
     await findRunButton(wrapper).trigger('click')
@@ -241,14 +249,14 @@ describe('QueryEditor', () => {
       status: 'success',
       data: {
         resultType: 'matrix',
-        result: []
-      }
+        result: [],
+      },
     })
 
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'nonexistent_metric'
-      }
+        modelValue: 'nonexistent_metric',
+      },
     })
 
     await findRunButton(wrapper).trigger('click')
@@ -265,16 +273,16 @@ describe('QueryEditor', () => {
         result: [
           {
             metric: { __name__: 'up' },
-            values: [[1704067200, '1']]
-          }
-        ]
-      }
+            values: [[1704067200, '1']],
+          },
+        ],
+      },
     })
 
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'up'
-      }
+        modelValue: 'up',
+      },
     })
 
     // Run initial query
@@ -296,8 +304,8 @@ describe('QueryEditor', () => {
 
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'up'
-      }
+        modelValue: 'up',
+      },
     })
 
     await findRunButton(wrapper).trigger('click')
@@ -310,13 +318,13 @@ describe('QueryEditor', () => {
   it('calls queryPrometheus with correct parameters', async () => {
     vi.mocked(useProm.queryPrometheus).mockResolvedValueOnce({
       status: 'success',
-      data: { resultType: 'matrix', result: [] }
+      data: { resultType: 'matrix', result: [] },
     })
 
     const wrapper = mount(QueryEditor, {
       props: {
-        modelValue: 'up'
-      }
+        modelValue: 'up',
+      },
     })
 
     await findRunButton(wrapper).trigger('click')

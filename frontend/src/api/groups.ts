@@ -1,3 +1,4 @@
+import { trackEvent } from '../analytics'
 import type {
   AddUserGroupMemberRequest,
   CreateUserGroupRequest,
@@ -5,7 +6,6 @@ import type {
   UserGroup,
   UserGroupMembership,
 } from '../types/rbac'
-import { trackEvent } from '../analytics'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -18,7 +18,7 @@ function getAuthHeaders(): HeadersInit {
 }
 
 async function getErrorMessage(response: Response, fallback: string): Promise<string> {
-  const error = await response.json().catch(() => ({})) as { error?: string }
+  const error = (await response.json().catch(() => ({}))) as { error?: string }
   return error.error || fallback
 }
 
@@ -125,7 +125,10 @@ export async function deleteGroup(orgId: string, groupId: string): Promise<void>
   })
 }
 
-export async function listGroupMembers(orgId: string, groupId: string): Promise<UserGroupMembership[]> {
+export async function listGroupMembers(
+  orgId: string,
+  groupId: string,
+): Promise<UserGroupMembership[]> {
   const response = await fetch(`${API_BASE}/api/orgs/${orgId}/groups/${groupId}/members`, {
     headers: getAuthHeaders(),
   })
@@ -178,11 +181,18 @@ export async function addGroupMember(
   return membership
 }
 
-export async function removeGroupMember(orgId: string, groupId: string, userId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/orgs/${orgId}/groups/${groupId}/members/${userId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  })
+export async function removeGroupMember(
+  orgId: string,
+  groupId: string,
+  userId: string,
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/api/orgs/${orgId}/groups/${groupId}/members/${userId}`,
+    {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    },
+  )
 
   if (!response.ok) {
     trackEvent('settings_group_member_remove_failed', {

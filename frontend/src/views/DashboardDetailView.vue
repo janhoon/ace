@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { AlertCircle, ArrowLeft, LayoutGrid, Plus, Settings, Trash2 } from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { GridLayout, GridItem } from 'vue3-grid-layout-next'
-import { ArrowLeft, Plus, Trash2, LayoutGrid, AlertCircle, Settings } from 'lucide-vue-next'
-import type { Dashboard } from '../types/dashboard'
-import type { Panel as PanelType } from '../types/panel'
+import { GridItem, GridLayout } from 'vue3-grid-layout-next'
+import { trackEvent } from '../analytics'
 import { getDashboard } from '../api/dashboards'
-import { listPanels, deletePanel, updatePanel } from '../api/panels'
+import { deletePanel, listPanels, updatePanel } from '../api/panels'
 import Panel from '../components/Panel.vue'
 import PanelEditModal from '../components/PanelEditModal.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
-import { useTimeRange } from '../composables/useTimeRange'
 import { useOrganization } from '../composables/useOrganization'
-import { trackEvent } from '../analytics'
+import { useTimeRange } from '../composables/useTimeRange'
+import type { Dashboard } from '../types/dashboard'
+import type { Panel as PanelType } from '../types/panel'
 
 const route = useRoute()
 const router = useRouter()
@@ -83,7 +83,7 @@ interface LayoutItem {
 }
 
 const layout = computed<LayoutItem[]>(() => {
-  return panels.value.map(panel => ({
+  return panels.value.map((panel) => ({
     i: panel.id,
     x: panel.grid_pos.x,
     y: panel.grid_pos.y,
@@ -243,7 +243,7 @@ function openDashboardSettings() {
   router.push(`/dashboards/${dashboardId}/settings/general`)
 }
 
-function openTraceTimeline(payload: { datasourceId: string, traceId: string }) {
+function openTraceTimeline(payload: { datasourceId: string; traceId: string }) {
   try {
     localStorage.setItem(
       TRACE_NAVIGATION_CONTEXT_KEY,
@@ -267,7 +267,7 @@ function onLayoutUpdated(newLayout: LayoutItem[]) {
 
   // Update local panels state with new positions
   for (const item of newLayout) {
-    const panel = panels.value.find(p => p.id === item.i)
+    const panel = panels.value.find((p) => p.id === item.i)
     if (panel) {
       const moved = panel.grid_pos.x !== item.x || panel.grid_pos.y !== item.y
       const resized = panel.grid_pos.w !== item.w || panel.grid_pos.h !== item.h
@@ -316,7 +316,7 @@ function onLayoutUpdated(newLayout: LayoutItem[]) {
 
 async function saveLayoutToDatabase(newLayout: LayoutItem[]) {
   for (const item of newLayout) {
-    const panel = panels.value.find(p => p.id === item.i)
+    const panel = panels.value.find((p) => p.id === item.i)
     if (panel) {
       try {
         await updatePanel(panel.id, {
@@ -335,7 +335,7 @@ async function saveLayoutToDatabase(newLayout: LayoutItem[]) {
 }
 
 function getPanelById(id: string): PanelType | undefined {
-  return panels.value.find(p => p.id === id)
+  return panels.value.find((p) => p.id === id)
 }
 
 onMounted(async () => {

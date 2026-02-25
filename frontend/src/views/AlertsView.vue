@@ -1,38 +1,38 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
+  AlertCircle,
+  BellOff,
   BellRing,
   ChevronDown,
   ChevronRight,
   Clock,
   Loader2,
-  RefreshCw,
-  AlertCircle,
-  BellOff,
   Plus,
-  X,
-  Trash2,
   Radio,
+  RefreshCw,
+  Trash2,
+  X,
 } from 'lucide-vue-next'
-import { useOrganization } from '../composables/useOrganization'
-import { useAuth } from '../composables/useAuth'
-import { useDatasource } from '../composables/useDatasource'
-import { fetchAlerts, fetchGroups } from '../composables/useVMAlert'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
-  fetchAlertManagerAlerts,
-  fetchSilences,
   createSilence,
   expireSilence,
+  fetchAlertManagerAlerts,
   fetchReceivers,
+  fetchSilences,
 } from '../composables/useAlertManager'
+import { useAuth } from '../composables/useAuth'
+import { useDatasource } from '../composables/useDatasource'
+import { useOrganization } from '../composables/useOrganization'
+import { fetchAlerts, fetchGroups } from '../composables/useVMAlert'
 import type {
-  VMAlertAlert,
-  VMAlertRuleGroup,
   AMAlert,
-  AMSilence,
   AMMatcher,
   AMReceiver,
+  AMSilence,
   DataSource,
+  VMAlertAlert,
+  VMAlertRuleGroup,
 } from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
 
@@ -92,13 +92,9 @@ const formattedLastRefreshed = computed(() => {
 })
 
 // VMAlert computed
-const firingAlerts = computed(() =>
-  alerts.value.filter((a) => a.state === 'firing'),
-)
+const firingAlerts = computed(() => alerts.value.filter((a) => a.state === 'firing'))
 
-const pendingAlerts = computed(() =>
-  alerts.value.filter((a) => a.state === 'pending'),
-)
+const pendingAlerts = computed(() => alerts.value.filter((a) => a.state === 'pending'))
 
 const inactiveAlerts = computed(() =>
   alerts.value.filter((a) => a.state !== 'firing' && a.state !== 'pending'),
@@ -194,13 +190,13 @@ function silenceStatusClass(state: string): string {
 }
 
 function truncateId(id: string): string {
-  return id.length > 8 ? id.substring(0, 8) + '…' : id
+  return id.length > 8 ? `${id.substring(0, 8)}…` : id
 }
 
 function formatMatchersText(matchers: AMMatcher[]): string {
   return matchers
     .map((m) => {
-      const op = m.isEqual ? (m.isRegex ? '=~' : '=') : (m.isRegex ? '!~' : '!=')
+      const op = m.isEqual ? (m.isRegex ? '=~' : '=') : m.isRegex ? '!~' : '!='
       return `${m.name}${op}"${m.value}"`
     })
     .join(', ')

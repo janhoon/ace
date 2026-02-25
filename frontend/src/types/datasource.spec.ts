@@ -1,6 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import { isMetricsType, isLogsType, isTracingType, isAlertingType, dataSourceTypeLabels } from './datasource'
+import { describe, expect, it } from 'vitest'
 import type { DataSourceType } from './datasource'
+import {
+  dataSourceTypeLabels,
+  isAlertingType,
+  isLogsType,
+  isMetricsType,
+  isTracingType,
+} from './datasource'
 
 describe('datasource types', () => {
   describe('isMetricsType', () => {

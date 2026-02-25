@@ -1,8 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
-import DataSourceSettings from './DataSourceSettings.vue'
 import type { DataSource } from '../types/datasource'
+import DataSourceSettings from './DataSourceSettings.vue'
 
 const mockPush = vi.fn()
 const mockFetchDatasources = vi.hoisted(() => vi.fn())

@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import {
+  type AnalyticsConsent,
   analyticsConsent,
   analyticsDntEnabled,
   analyticsReady,
@@ -9,12 +10,13 @@ import {
   setAnalyticsConsent,
   setSessionRecordingEnabled,
   trackEvent,
-  type AnalyticsConsent,
 } from '../analytics'
 
 export function useAnalytics() {
   const canTrack = computed(() => {
-    return analyticsReady.value && analyticsConsent.value === 'granted' && !analyticsDntEnabled.value
+    return (
+      analyticsReady.value && analyticsConsent.value === 'granted' && !analyticsDntEnabled.value
+    )
   })
 
   return {

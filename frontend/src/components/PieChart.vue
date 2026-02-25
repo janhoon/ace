@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import VChart from 'vue-echarts'
+import type { EChartsOption } from 'echarts'
+import { PieChart as EChartsPieChart } from 'echarts/charts'
+import { LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { PieChart as EChartsPieChart } from 'echarts/charts'
-import { TitleComponent, TooltipComponent, LegendComponent } from 'echarts/components'
-import type { EChartsOption } from 'echarts'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import VChart from 'vue-echarts'
 
 // Register ECharts components
 use([CanvasRenderer, EChartsPieChart, TitleComponent, TooltipComponent, LegendComponent])
@@ -30,7 +30,7 @@ const props = withDefaults(
     showLabels: true,
     title: '',
     height: '100%',
-  }
+  },
 )
 
 const chartRef = ref<typeof VChart | null>(null)

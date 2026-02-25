@@ -82,7 +82,9 @@ describe('DashboardSettingsView', () => {
 
     mockGetDashboard.mockResolvedValue({ ...mockDashboard })
     mockUpdateDashboard.mockResolvedValue({ ...mockDashboard })
-    mockExportDashboardYaml.mockResolvedValue(new Blob([initialYaml], { type: 'application/x-yaml' }))
+    mockExportDashboardYaml.mockResolvedValue(
+      new Blob([initialYaml], { type: 'application/x-yaml' }),
+    )
     mockFetchOrganizations.mockResolvedValue(undefined)
     mockConvertGrafanaDashboard.mockResolvedValue({
       format: 'yaml',
@@ -100,7 +102,9 @@ describe('DashboardSettingsView', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="dashboard-settings-sidebar"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="settings-section-general"]').classes()).toContain('text-emerald-600')
+    expect(wrapper.get('[data-testid="settings-section-general"]').classes()).toContain(
+      'text-emerald-600',
+    )
     expect(wrapper.text()).toContain('Dashboard Settings')
   })
 

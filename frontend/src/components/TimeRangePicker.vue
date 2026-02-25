@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
-import { Clock, ChevronDown, ChevronUp, RefreshCw } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, Clock, RefreshCw } from 'lucide-vue-next'
+import { computed, onUnmounted, ref } from 'vue'
 import { useTimeRange } from '../composables/useTimeRange'
 
-const props = withDefaults(defineProps<{
-  stacked?: boolean
-}>(), {
-  stacked: false,
-})
+const props = withDefaults(
+  defineProps<{
+    stacked?: boolean
+  }>(),
+  {
+    stacked: false,
+  },
+)
 
 const {
   displayText,

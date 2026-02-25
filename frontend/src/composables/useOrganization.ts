@@ -1,6 +1,6 @@
-import { ref, computed, watch } from 'vue'
-import type { Organization } from '../types/organization'
+import { computed, ref, watch } from 'vue'
 import { listOrganizations } from '../api/organizations'
+import type { Organization } from '../types/organization'
 
 const organizations = ref<Organization[]>([])
 const currentOrgId = ref<string | null>(localStorage.getItem('current_org_id'))
@@ -9,7 +9,11 @@ const error = ref<string | null>(null)
 
 const currentOrg = computed(() => {
   if (!currentOrgId.value) return organizations.value[0] || null
-  return organizations.value.find((org) => org.id === currentOrgId.value) || organizations.value[0] || null
+  return (
+    organizations.value.find((org) => org.id === currentOrgId.value) ||
+    organizations.value[0] ||
+    null
+  )
 })
 
 watch(currentOrgId, (newId) => {

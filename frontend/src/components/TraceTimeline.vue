@@ -69,7 +69,10 @@ const orderedRows = computed<SpanRow[]>(() => {
   const byId = spanMap.value
 
   const roots = props.trace.spans
-    .filter((span) => !span.parentSpanId || !byId.has(span.parentSpanId) || span.parentSpanId === span.spanId)
+    .filter(
+      (span) =>
+        !span.parentSpanId || !byId.has(span.parentSpanId) || span.parentSpanId === span.spanId,
+    )
     .sort(spanSort)
 
   const walk = (span: TraceSpan, depth: number) => {
@@ -90,9 +93,7 @@ const orderedRows = computed<SpanRow[]>(() => {
     walk(root, 0)
   }
 
-  const leftovers = props.trace.spans
-    .filter((span) => !visited.has(span.spanId))
-    .sort(spanSort)
+  const leftovers = props.trace.spans.filter((span) => !visited.has(span.spanId)).sort(spanSort)
   for (const span of leftovers) {
     walk(span, 0)
   }
@@ -110,11 +111,14 @@ const traceBounds = computed(() => {
   }
 
   const spanStarts = props.trace.spans.map((span) => span.startTimeUnixNano)
-  const spanEnds = props.trace.spans.map((span) => span.startTimeUnixNano + Math.max(span.durationNano, 1))
+  const spanEnds = props.trace.spans.map(
+    (span) => span.startTimeUnixNano + Math.max(span.durationNano, 1),
+  )
 
   const minStart = Math.min(...spanStarts)
   const maxEnd = Math.max(...spanEnds)
-  const traceStart = props.trace.startTimeUnixNano > 0 ? Math.min(props.trace.startTimeUnixNano, minStart) : minStart
+  const traceStart =
+    props.trace.startTimeUnixNano > 0 ? Math.min(props.trace.startTimeUnixNano, minStart) : minStart
   const traceEndFromDuration = traceStart + Math.max(props.trace.durationNano, 1)
   const traceEnd = Math.max(maxEnd, traceEndFromDuration)
 
@@ -127,8 +131,12 @@ const traceBounds = computed(() => {
 
 const zoomScale = computed(() => Math.max(1, zoomPercent.value / 100))
 const windowDuration = computed(() => traceBounds.value.totalDuration / zoomScale.value)
-const maxPanDuration = computed(() => Math.max(traceBounds.value.totalDuration - windowDuration.value, 0))
-const windowStart = computed(() => traceBounds.value.start + maxPanDuration.value * (panPercent.value / 100))
+const maxPanDuration = computed(() =>
+  Math.max(traceBounds.value.totalDuration - windowDuration.value, 0),
+)
+const windowStart = computed(
+  () => traceBounds.value.start + maxPanDuration.value * (panPercent.value / 100),
+)
 const windowEnd = computed(() => windowStart.value + windowDuration.value)
 
 const visibleRows = computed(() => {
@@ -139,7 +147,9 @@ const visibleRows = computed(() => {
   })
 })
 
-const svgHeight = computed(() => axisHeight + Math.max(visibleRows.value.length, 1) * rowHeight + 10)
+const svgHeight = computed(
+  () => axisHeight + Math.max(visibleRows.value.length, 1) * rowHeight + 10,
+)
 const svgWidth = labelWidth + barsWidth + 12
 
 const serviceColorPalette = [
@@ -156,7 +166,9 @@ const serviceColorPalette = [
 ]
 
 const serviceColorMap = computed(() => {
-  const services = [...new Set(props.trace.spans.map((span) => span.serviceName || 'unknown'))].sort()
+  const services = [
+    ...new Set(props.trace.spans.map((span) => span.serviceName || 'unknown')),
+  ].sort()
   const map = new Map<string, string>()
   services.forEach((service, index) => {
     map.set(service, serviceColorPalette[index % serviceColorPalette.length])
@@ -205,7 +217,7 @@ function formatTraceOffset(unixNanoTimestamp: number): string {
 }
 
 const timeMarkers = computed(() => {
-  const markers: Array<{ x: number, label: string }> = []
+  const markers: Array<{ x: number; label: string }> = []
   for (let i = 0; i <= markerCount; i += 1) {
     const ratio = i / markerCount
     const timestamp = windowStart.value + windowDuration.value * ratio
@@ -266,9 +278,7 @@ const criticalPathSpanIds = computed(() => {
     return result
   }
 
-  const roots = orderedRows.value
-    .filter((row) => row.depth === 0)
-    .map((row) => row.span)
+  const roots = orderedRows.value.filter((row) => row.depth === 0).map((row) => row.span)
 
   let best: LongestPathResult = { score: 0, path: [] }
   for (const root of roots) {

@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import TraceSpanDetailsPanel from './TraceSpanDetailsPanel.vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Trace, TraceSpan } from '../types/datasource'
+import TraceSpanDetailsPanel from './TraceSpanDetailsPanel.vue'
 
 function makeTrace(): Trace {
   return {
@@ -107,9 +107,11 @@ describe('TraceSpanDetailsPanel', () => {
     })
 
     // The parent relation link is the button with emerald styling in the Relationships section
-    const parentButton = childWrapper.findAll('button').find((b) => b.text().includes('GET /api/orders'))
+    const parentButton = childWrapper
+      .findAll('button')
+      .find((b) => b.text().includes('GET /api/orders'))
     expect(parentButton).toBeTruthy()
-    await parentButton!.trigger('click')
+    await parentButton?.trigger('click')
     const parentEmit = childWrapper.emitted('select-span')
     expect(parentEmit).toBeTruthy()
     expect(parentEmit?.[0]?.[0]).toMatchObject({ spanId: 'span-root' })
@@ -123,9 +125,11 @@ describe('TraceSpanDetailsPanel', () => {
     })
 
     // The child relation link is the button with the child span's operation name
-    const childButton = rootWrapper.findAll('button').find((b) => b.text().includes('SELECT orders'))
+    const childButton = rootWrapper
+      .findAll('button')
+      .find((b) => b.text().includes('SELECT orders'))
     expect(childButton).toBeTruthy()
-    await childButton!.trigger('click')
+    await childButton?.trigger('click')
     const childEmit = rootWrapper.emitted('select-span')
     expect(childEmit).toBeTruthy()
     expect(childEmit?.[0]?.[0]).toMatchObject({ spanId: 'span-child' })

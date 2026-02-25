@@ -1,20 +1,20 @@
 <script setup lang="ts">
+import { AlertCircle, BarChart3, Pencil, Trash2 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
-import { Pencil, Trash2, AlertCircle, BarChart3 } from 'lucide-vue-next'
-import type { Panel } from '../types/panel'
-import type { LogEntry, TraceSpan, TraceSummary } from '../types/datasource'
-import { useTimeRange } from '../composables/useTimeRange'
-import { useProm } from '../composables/useProm'
 import { queryDataSource, searchDataSourceTraces } from '../api/datasources'
-import LineChart from './LineChart.vue'
+import { useProm } from '../composables/useProm'
+import { useTimeRange } from '../composables/useTimeRange'
+import type { LogEntry, TraceSpan, TraceSummary } from '../types/datasource'
+import type { Panel } from '../types/panel'
 import BarChart from './BarChart.vue'
 import GaugeChart, { type Threshold } from './GaugeChart.vue'
+import LineChart from './LineChart.vue'
+import LogViewer from './LogViewer.vue'
 import PieChart, { type PieDataItem } from './PieChart.vue'
 import StatPanel, { type DataPoint } from './StatPanel.vue'
 import TablePanel from './TablePanel.vue'
-import LogViewer from './LogViewer.vue'
-import TraceListPanel from './TraceListPanel.vue'
 import TraceHeatmapPanel from './TraceHeatmapPanel.vue'
+import TraceListPanel from './TraceListPanel.vue'
 
 const props = defineProps<{
   panel: Panel
@@ -23,7 +23,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   edit: [panel: Panel]
   delete: [panel: Panel]
-  'open-trace': [payload: { datasourceId: string, traceId: string }]
+  'open-trace': [payload: { datasourceId: string; traceId: string }]
 }>()
 
 const { timeRange, onRefresh } = useTimeRange()
@@ -71,7 +71,13 @@ function isTraceErrorSpan(span: TraceSpan): boolean {
 }
 
 function getTraceIdForSpan(span: TraceSpan): string {
-  const traceIdFromTags = getTagValue(span.tags, ['traceId', 'trace_id', 'traceid', 'otelTraceId', 'trace'])
+  const traceIdFromTags = getTagValue(span.tags, [
+    'traceId',
+    'trace_id',
+    'traceid',
+    'otelTraceId',
+    'trace',
+  ])
   if (traceIdFromTags) {
     return traceIdFromTags
   }
@@ -123,9 +129,10 @@ function convertClickHouseSpansToTraceSummaries(spans: TraceSpan[]): TraceSummar
   const summaries: TraceSummary[] = []
   for (const group of grouped.values()) {
     const spanIds = new Set(group.spans.map((span) => span.spanId))
-    const rootSpan = [...group.spans]
-      .sort((left, right) => left.startTimeUnixNano - right.startTimeUnixNano)
-      .find((span) => !span.parentSpanId || !spanIds.has(span.parentSpanId)) || group.spans[0]
+    const rootSpan =
+      [...group.spans]
+        .sort((left, right) => left.startTimeUnixNano - right.startTimeUnixNano)
+        .find((span) => !span.parentSpanId || !spanIds.has(span.parentSpanId)) || group.spans[0]
 
     const startTimeUnixNano =
       group.startTimeUnixNano === Number.MAX_SAFE_INTEGER ? 0 : group.startTimeUnixNano
@@ -148,7 +155,9 @@ function convertClickHouseSpansToTraceSummaries(spans: TraceSpan[]): TraceSummar
 
 // Check if panel uses a datasource-based query
 const datasourceId = computed(() => props.panel.query?.datasource_id as string | undefined)
-const queryExpr = computed(() => (props.panel.query?.promql || props.panel.query?.expr || '') as string)
+const queryExpr = computed(
+  () => (props.panel.query?.promql || props.panel.query?.expr || '') as string,
+)
 const explicitQuerySignal = computed<QuerySignal | null>(() => {
   const value = props.panel.query?.signal
   return isQuerySignal(value) ? value : null
@@ -171,7 +180,7 @@ const inferredQuerySignal = computed<QuerySignal | undefined>(() => {
 })
 
 // Setup Prometheus query (legacy, when no datasource_id)
-const promqlQuery = computed(() => !datasourceId.value ? queryExpr.value : '')
+const promqlQuery = computed(() => (!datasourceId.value ? queryExpr.value : ''))
 
 // Create refs for useProm
 const queryRef = ref(promqlQuery.value)
@@ -179,11 +188,20 @@ const startRef = computed(() => Math.floor(timeRange.value.start / 1000))
 const endRef = computed(() => Math.floor(timeRange.value.end / 1000))
 
 // Watch for query changes
-watch(promqlQuery, (newQuery) => {
-  queryRef.value = newQuery
-}, { immediate: true })
+watch(
+  promqlQuery,
+  (newQuery) => {
+    queryRef.value = newQuery
+  },
+  { immediate: true },
+)
 
-const { chartData: promChartData, loading: promLoading, error: promError, fetch: promRefetch } = useProm({
+const {
+  chartData: promChartData,
+  loading: promLoading,
+  error: promError,
+  fetch: promRefetch,
+} = useProm({
   query: queryRef,
   start: startRef,
   end: endRef,
@@ -195,7 +213,9 @@ const dsLoading = ref(false)
 const dsError = ref<string | null>(null)
 const dsLogs = ref<LogEntry[]>([])
 const dsTraceSummaries = ref<TraceSummary[]>([])
-const dsChartData = ref<{ series: { name: string; data: { timestamp: number; value: number }[] }[] }>({ series: [] })
+const dsChartData = ref<{
+  series: { name: string; data: { timestamp: number; value: number }[] }[]
+}>({ series: [] })
 
 const traceServiceFilter = computed(() => {
   return typeof props.panel.query?.service === 'string' ? props.panel.query.service : ''
@@ -250,7 +270,9 @@ async function fetchDatasourceData() {
           return
         }
 
-        dsTraceSummaries.value = convertClickHouseSpansToTraceSummaries(traceResult.data?.traces || [])
+        dsTraceSummaries.value = convertClickHouseSpansToTraceSummaries(
+          traceResult.data?.traces || [],
+        )
       } else {
         dsTraceSummaries.value = await searchDataSourceTraces(datasourceId.value, {
           query: queryExpr.value.trim() || undefined,
@@ -326,17 +348,30 @@ async function fetchDatasourceData() {
 }
 
 // Fetch datasource data when params change
-watch([datasourceId, queryExpr, explicitQuerySignal, inferredQuerySignal, traceServiceFilter, traceSearchLimit, startRef, endRef], () => {
-  const isTracePanel = props.panel.type === 'trace_list' || props.panel.type === 'trace_heatmap'
-  if (datasourceId.value && (isTracePanel || queryExpr.value)) {
-    fetchDatasourceData()
-  }
-}, { immediate: true })
+watch(
+  [
+    datasourceId,
+    queryExpr,
+    explicitQuerySignal,
+    inferredQuerySignal,
+    traceServiceFilter,
+    traceSearchLimit,
+    startRef,
+    endRef,
+  ],
+  () => {
+    const isTracePanel = props.panel.type === 'trace_list' || props.panel.type === 'trace_heatmap'
+    if (datasourceId.value && (isTracePanel || queryExpr.value)) {
+      fetchDatasourceData()
+    }
+  },
+  { immediate: true },
+)
 
 // Unified computed values
-const loading = computed(() => datasourceId.value ? dsLoading.value : promLoading.value)
-const error = computed(() => datasourceId.value ? dsError.value : promError.value)
-const chartData = computed(() => datasourceId.value ? dsChartData.value : promChartData.value)
+const loading = computed(() => (datasourceId.value ? dsLoading.value : promLoading.value))
+const error = computed(() => (datasourceId.value ? dsError.value : promError.value))
+const chartData = computed(() => (datasourceId.value ? dsChartData.value : promChartData.value))
 const logEntries = computed(() => dsLogs.value)
 const traceSummaries = computed(() => dsTraceSummaries.value)
 
@@ -372,9 +407,7 @@ const gaugeConfig = computed(() => {
     max: typeof query.max === 'number' ? query.max : 100,
     unit: typeof query.unit === 'string' ? query.unit : '',
     decimals: typeof query.decimals === 'number' ? query.decimals : 2,
-    thresholds: Array.isArray(query.thresholds)
-      ? (query.thresholds as Threshold[])
-      : [],
+    thresholds: Array.isArray(query.thresholds) ? (query.thresholds as Threshold[]) : [],
   }
 })
 

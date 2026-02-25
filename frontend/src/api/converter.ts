@@ -27,7 +27,7 @@ export async function convertGrafanaDashboard(
 
     let message = 'Failed to convert Grafana dashboard'
     try {
-      const errorData = await response.json() as { error?: string }
+      const errorData = (await response.json()) as { error?: string }
       if (errorData.error) {
         message = errorData.error
       }

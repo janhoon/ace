@@ -1,4 +1,4 @@
-import { ref, computed, readonly } from 'vue'
+import { computed, readonly, ref } from 'vue'
 
 interface TimeRange {
   start: number // Unix timestamp in milliseconds
@@ -55,7 +55,7 @@ function calculateTimeRange(): TimeRange {
     return customRange.value
   }
 
-  const preset = TIME_RANGE_PRESETS.find(p => p.value === selectedPreset.value)
+  const preset = TIME_RANGE_PRESETS.find((p) => p.value === selectedPreset.value)
   if (!preset) {
     // Default to 1 hour if preset not found
     const now = Date.now()
@@ -82,7 +82,7 @@ async function triggerRefresh() {
   lastRefreshTime.value = Date.now()
 
   // Execute all refresh callbacks
-  const promises = Array.from(refreshCallbacks).map(callback => {
+  const promises = Array.from(refreshCallbacks).map((callback) => {
     try {
       const result = callback()
       return result instanceof Promise ? result : Promise.resolve()
@@ -112,16 +112,18 @@ export function useTimeRange() {
       return `${formatDateTime(start)} - ${formatDateTime(end)}`
     }
 
-    const preset = TIME_RANGE_PRESETS.find(p => p.value === selectedPreset.value)
+    const preset = TIME_RANGE_PRESETS.find((p) => p.value === selectedPreset.value)
     return preset?.label || 'Last 1 hour'
   })
 
   const refreshInterval = computed(() => {
-    return REFRESH_INTERVALS.find(r => r.value === refreshIntervalValue.value) || REFRESH_INTERVALS[0]
+    return (
+      REFRESH_INTERVALS.find((r) => r.value === refreshIntervalValue.value) || REFRESH_INTERVALS[0]
+    )
   })
 
   function setPreset(presetValue: string) {
-    const preset = TIME_RANGE_PRESETS.find(p => p.value === presetValue)
+    const preset = TIME_RANGE_PRESETS.find((p) => p.value === presetValue)
     if (preset) {
       selectedPreset.value = presetValue
       isCustomRange.value = false
@@ -143,7 +145,7 @@ export function useTimeRange() {
   }
 
   function setRefreshInterval(intervalValue: string) {
-    const interval = REFRESH_INTERVALS.find(r => r.value === intervalValue)
+    const interval = REFRESH_INTERVALS.find((r) => r.value === intervalValue)
     if (interval) {
       refreshIntervalValue.value = intervalValue
       startAutoRefresh(interval.interval)
@@ -161,7 +163,7 @@ export function useTimeRange() {
 
   function resumeAutoRefresh() {
     isPaused.value = false
-    const interval = REFRESH_INTERVALS.find(r => r.value === refreshIntervalValue.value)
+    const interval = REFRESH_INTERVALS.find((r) => r.value === refreshIntervalValue.value)
     if (interval && interval.interval > 0) {
       startAutoRefresh(interval.interval)
     }

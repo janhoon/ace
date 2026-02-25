@@ -1,11 +1,15 @@
-import { ref, computed } from 'vue'
-import type { DataSource, CreateDataSourceRequest, UpdateDataSourceRequest } from '../types/datasource'
+import { computed, ref } from 'vue'
 import {
-  listDataSources,
   createDataSource,
-  updateDataSource,
   deleteDataSource,
+  listDataSources,
+  updateDataSource,
 } from '../api/datasources'
+import type {
+  CreateDataSourceRequest,
+  DataSource,
+  UpdateDataSourceRequest,
+} from '../types/datasource'
 
 const datasources = ref<DataSource[]>([])
 const loading = ref(false)
@@ -73,13 +77,23 @@ export function useDatasource() {
 
   const metricsDatasources = computed(() =>
     datasources.value.filter(
-      (d) => d.type === 'prometheus' || d.type === 'victoriametrics' || d.type === 'clickhouse' || d.type === 'cloudwatch' || d.type === 'elasticsearch',
+      (d) =>
+        d.type === 'prometheus' ||
+        d.type === 'victoriametrics' ||
+        d.type === 'clickhouse' ||
+        d.type === 'cloudwatch' ||
+        d.type === 'elasticsearch',
     ),
   )
 
   const logsDatasources = computed(() =>
     datasources.value.filter(
-      (d) => d.type === 'loki' || d.type === 'victorialogs' || d.type === 'clickhouse' || d.type === 'cloudwatch' || d.type === 'elasticsearch',
+      (d) =>
+        d.type === 'loki' ||
+        d.type === 'victorialogs' ||
+        d.type === 'clickhouse' ||
+        d.type === 'cloudwatch' ||
+        d.type === 'elasticsearch',
     ),
   )
 
@@ -89,9 +103,7 @@ export function useDatasource() {
     ),
   )
 
-  const vmalertDatasources = computed(() =>
-    datasources.value.filter((d) => d.type === 'vmalert'),
-  )
+  const vmalertDatasources = computed(() => datasources.value.filter((d) => d.type === 'vmalert'))
 
   const alertingDatasources = computed(() =>
     datasources.value.filter((d) => d.type === 'vmalert' || d.type === 'alertmanager'),

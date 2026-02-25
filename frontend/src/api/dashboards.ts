@@ -1,5 +1,5 @@
-import type { Dashboard, CreateDashboardRequest, UpdateDashboardRequest } from '../types/dashboard'
 import { trackEvent } from '../analytics'
+import type { CreateDashboardRequest, Dashboard, UpdateDashboardRequest } from '../types/dashboard'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -37,7 +37,10 @@ export async function getDashboard(id: string): Promise<Dashboard> {
   return response.json()
 }
 
-export async function createDashboard(orgId: string, data: CreateDashboardRequest): Promise<Dashboard> {
+export async function createDashboard(
+  orgId: string,
+  data: CreateDashboardRequest,
+): Promise<Dashboard> {
   const response = await fetch(`${API_BASE}/api/orgs/${orgId}/dashboards`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -62,7 +65,10 @@ export async function createDashboard(orgId: string, data: CreateDashboardReques
   return dashboard
 }
 
-export async function updateDashboard(id: string, data: UpdateDashboardRequest): Promise<Dashboard> {
+export async function updateDashboard(
+  id: string,
+  data: UpdateDashboardRequest,
+): Promise<Dashboard> {
   const response = await fetch(`${API_BASE}/api/dashboards/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),

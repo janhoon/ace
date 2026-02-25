@@ -1,5 +1,5 @@
-import type { Panel, CreatePanelRequest, UpdatePanelRequest } from '../types/panel'
 import { trackEvent } from '../analytics'
+import type { CreatePanelRequest, Panel, UpdatePanelRequest } from '../types/panel'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 

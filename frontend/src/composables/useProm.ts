@@ -1,4 +1,4 @@
-import { ref, type Ref, watch } from 'vue'
+import { type Ref, ref, watch } from 'vue'
 import { trackEvent } from '../analytics'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
@@ -48,19 +48,17 @@ export function transformToChartData(result: PrometheusQueryResult): ChartData {
       }
     }
     const metricName = metricResult.metric.__name__ || 'value'
-    const name = labelParts.length > 0
-      ? `${metricName}{${labelParts.join(',')}}`
-      : metricName
+    const name = labelParts.length > 0 ? `${metricName}{${labelParts.join(',')}}` : metricName
 
     const data = metricResult.values.map(([timestamp, value]) => ({
       timestamp,
-      value: parseFloat(value)
+      value: parseFloat(value),
     }))
 
     series.push({
       name,
       data,
-      labels: metricResult.metric
+      labels: metricResult.metric,
     })
   }
 
@@ -100,7 +98,9 @@ export async function fetchLabels(): Promise<string[]> {
 
 // Fetch label values for a specific label
 export async function fetchLabelValues(labelName: string): Promise<string[]> {
-  const response = await fetch(`${API_BASE_URL}/api/datasources/prometheus/label/${encodeURIComponent(labelName)}/values`)
+  const response = await fetch(
+    `${API_BASE_URL}/api/datasources/prometheus/label/${encodeURIComponent(labelName)}/values`,
+  )
   const data: MetadataResponse = await response.json()
 
   if (data.status !== 'success' || !data.data) {
@@ -115,13 +115,13 @@ export async function queryPrometheus(
   query: string,
   start: number,
   end: number,
-  step: number
+  step: number,
 ): Promise<PrometheusQueryResult> {
   const params = new URLSearchParams({
     query,
     start: Math.floor(start).toString(),
     end: Math.floor(end).toString(),
-    step: step.toString()
+    step: step.toString(),
   })
 
   const response = await fetch(`${API_BASE_URL}/api/datasources/prometheus/query?${params}`)
@@ -169,7 +169,7 @@ export function useProm(options: UsePromOptions): UsePromReturn {
         options.query.value,
         options.start.value,
         options.end.value,
-        options.step?.value ?? defaultStep.value
+        options.step?.value ?? defaultStep.value,
       )
 
       data.value = result
@@ -210,7 +210,7 @@ export function useProm(options: UsePromOptions): UsePromReturn {
           fetch()
         }
       },
-      { immediate: true }
+      { immediate: true },
     )
   }
 
@@ -219,6 +219,6 @@ export function useProm(options: UsePromOptions): UsePromReturn {
     chartData,
     loading,
     error,
-    fetch
+    fetch,
   }
 }

@@ -1,7 +1,4 @@
-import type {
-  ReplaceResourcePermissionsRequest,
-  ResourcePermissionEntry,
-} from '../types/rbac'
+import type { ReplaceResourcePermissionsRequest, ResourcePermissionEntry } from '../types/rbac'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -14,7 +11,7 @@ function getAuthHeaders(): HeadersInit {
 }
 
 async function getErrorMessage(response: Response, fallback: string): Promise<string> {
-  const error = await response.json().catch(() => ({})) as { error?: string }
+  const error = (await response.json().catch(() => ({}))) as { error?: string }
   return error.error || fallback
 }
 
@@ -59,7 +56,9 @@ export async function replaceFolderPermissions(
   return response.json()
 }
 
-export async function listDashboardPermissions(dashboardId: string): Promise<ResourcePermissionEntry[]> {
+export async function listDashboardPermissions(
+  dashboardId: string,
+): Promise<ResourcePermissionEntry[]> {
   const response = await fetch(`${API_BASE}/api/dashboards/${dashboardId}/permissions`, {
     headers: getAuthHeaders(),
   })

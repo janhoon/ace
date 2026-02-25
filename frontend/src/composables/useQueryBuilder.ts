@@ -1,6 +1,6 @@
-import { ref, computed, watch } from 'vue'
-import { fetchMetrics, fetchLabels, fetchLabelValues } from './useProm'
+import { computed, ref, watch } from 'vue'
 import { trackEvent } from '../analytics'
+import { fetchLabels, fetchLabelValues, fetchMetrics } from './useProm'
 
 // Supported aggregation functions
 export const AGGREGATION_FUNCTIONS = [
@@ -17,7 +17,7 @@ export const AGGREGATION_FUNCTIONS = [
   { value: 'stddev', label: 'Std Dev' },
   { value: 'stdvar', label: 'Std Variance' },
   { value: 'topk', label: 'Top K', requiresK: true },
-  { value: 'bottomk', label: 'Bottom K', requiresK: true }
+  { value: 'bottomk', label: 'Bottom K', requiresK: true },
 ] as const
 
 // Label filter operators
@@ -25,11 +25,11 @@ export const LABEL_OPERATORS = [
   { value: '=', label: '=' },
   { value: '!=', label: '!=' },
   { value: '=~', label: '=~' },
-  { value: '!~', label: '!~' }
+  { value: '!~', label: '!~' },
 ] as const
 
-type AggregationFunction = typeof AGGREGATION_FUNCTIONS[number]['value']
-export type LabelOperator = typeof LABEL_OPERATORS[number]['value']
+type AggregationFunction = (typeof AGGREGATION_FUNCTIONS)[number]['value']
+export type LabelOperator = (typeof LABEL_OPERATORS)[number]['value']
 
 export interface LabelFilter {
   id: string
@@ -83,8 +83,8 @@ export function useQueryBuilder(initialQuery = '') {
     // Add label filters
     if (labelFilters.value.length > 0) {
       const filters = labelFilters.value
-        .filter(f => f.label && f.value)
-        .map(f => `${f.label}${f.operator}"${f.value}"`)
+        .filter((f) => f.label && f.value)
+        .map((f) => `${f.label}${f.operator}"${f.value}"`)
         .join(',')
 
       if (filters) {
@@ -93,7 +93,7 @@ export function useQueryBuilder(initialQuery = '') {
     }
 
     // Wrap with rate/increase/irate/idelta functions (needs range)
-    const aggFunc = AGGREGATION_FUNCTIONS.find(a => a.value === aggregation.value)
+    const aggFunc = AGGREGATION_FUNCTIONS.find((a) => a.value === aggregation.value)
     if (aggFunc && 'requiresRange' in aggFunc && aggFunc.requiresRange) {
       query = `${aggregation.value}(${query}[${rangeInterval.value}])`
     }
@@ -102,18 +102,21 @@ export function useQueryBuilder(initialQuery = '') {
     if (aggregation.value && !('requiresRange' in (aggFunc || {}))) {
       if ('requiresK' in (aggFunc || {}) && (aggFunc as { requiresK?: boolean })?.requiresK) {
         // topk/bottomk
-        const byClause = groupByLabels.value.length > 0
-          ? ` by (${groupByLabels.value.join(', ')})`
-          : ''
+        const byClause =
+          groupByLabels.value.length > 0 ? ` by (${groupByLabels.value.join(', ')})` : ''
         query = `${aggregation.value}(${kValue.value}, ${query})${byClause}`
       } else if (aggFunc) {
         // Normal aggregation
-        const byClause = groupByLabels.value.length > 0
-          ? ` by (${groupByLabels.value.join(', ')})`
-          : ''
+        const byClause =
+          groupByLabels.value.length > 0 ? ` by (${groupByLabels.value.join(', ')})` : ''
         query = `${aggregation.value}(${query})${byClause}`
       }
-    } else if (aggFunc && 'requiresRange' in aggFunc && aggFunc.requiresRange && groupByLabels.value.length > 0) {
+    } else if (
+      aggFunc &&
+      'requiresRange' in aggFunc &&
+      aggFunc.requiresRange &&
+      groupByLabels.value.length > 0
+    ) {
       // For rate/increase functions with group by, wrap with sum
       query = `sum(${query}) by (${groupByLabels.value.join(', ')})`
     }
@@ -193,7 +196,7 @@ export function useQueryBuilder(initialQuery = '') {
       id: generateFilterId(),
       label: '',
       operator: '=',
-      value: ''
+      value: '',
     })
     trackEvent('query_builder_filter_added', {
       filter_count: labelFilters.value.length,
@@ -202,7 +205,7 @@ export function useQueryBuilder(initialQuery = '') {
 
   // Remove a label filter
   function removeLabelFilter(id: string) {
-    labelFilters.value = labelFilters.value.filter(f => f.id !== id)
+    labelFilters.value = labelFilters.value.filter((f) => f.id !== id)
     trackEvent('query_builder_filter_removed', {
       filter_count: labelFilters.value.length,
     })
@@ -210,7 +213,7 @@ export function useQueryBuilder(initialQuery = '') {
 
   // Update a label filter
   function updateLabelFilter(id: string, updates: Partial<LabelFilter>) {
-    const filter = labelFilters.value.find(f => f.id === id)
+    const filter = labelFilters.value.find((f) => f.id === id)
     if (filter) {
       Object.assign(filter, updates)
     }
@@ -301,6 +304,6 @@ export function useQueryBuilder(initialQuery = '') {
     updateLabelFilter,
     toggleGroupByLabel,
     setQuery,
-    reset
+    reset,
   }
 }

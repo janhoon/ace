@@ -9,17 +9,23 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select-span', span: TraceSpan): void
-  (e: 'open-trace-logs', payload: {
-    traceId: string
-    serviceName: string
-    startTimeUnixNano: number
-    endTimeUnixNano: number
-  }): void
-  (e: 'open-service-metrics', payload: {
-    serviceName: string
-    startTimeUnixNano: number
-    endTimeUnixNano: number
-  }): void
+  (
+    e: 'open-trace-logs',
+    payload: {
+      traceId: string
+      serviceName: string
+      startTimeUnixNano: number
+      endTimeUnixNano: number
+    },
+  ): void
+  (
+    e: 'open-service-metrics',
+    payload: {
+      serviceName: string
+      startTimeUnixNano: number
+      endTimeUnixNano: number
+    },
+  ): void
 }>()
 
 const feedbackMessage = ref('')
@@ -100,7 +106,9 @@ function formatTraceOffset(unixNanoTimestamp: number): string {
 }
 
 function formatLogFields(log: TraceLog): Array<[string, string]> {
-  return Object.entries(log.fields || {}).sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+  return Object.entries(log.fields || {}).sort(([leftKey], [rightKey]) =>
+    leftKey.localeCompare(rightKey),
+  )
 }
 
 function copyWithTextArea(value: string): boolean {

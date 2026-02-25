@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import { ArrowLeft, Download, Settings } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Download, Settings } from 'lucide-vue-next'
-import { exportDashboardYaml, getDashboard, updateDashboard } from '../api/dashboards'
 import { convertGrafanaDashboard } from '../api/converter'
-import type { Dashboard } from '../types/dashboard'
-import { useOrganization } from '../composables/useOrganization'
+import { exportDashboardYaml, getDashboard, updateDashboard } from '../api/dashboards'
 import DashboardPermissionsEditor from '../components/DashboardPermissionsEditor.vue'
+import { useOrganization } from '../composables/useOrganization'
+import type { Dashboard } from '../types/dashboard'
 
 interface DashboardViewSettings {
   timeRangePreset: string
@@ -83,9 +83,17 @@ const grafanaWarnings = ref<string[]>([])
 const showGrafanaReplace = ref(false)
 
 const dashboardId = computed(() => route.params.id as string)
-const canManagePermissions = computed(() => Boolean(currentOrg.value && currentOrg.value.role !== 'viewer'))
-const canEdit = computed(() => Boolean(currentOrg.value && (currentOrg.value.role === 'admin' || currentOrg.value.role === 'editor')))
-const permissionsOrgId = computed(() => currentOrgId.value || dashboard.value?.organization_id || null)
+const canManagePermissions = computed(() =>
+  Boolean(currentOrg.value && currentOrg.value.role !== 'viewer'),
+)
+const canEdit = computed(() =>
+  Boolean(
+    currentOrg.value && (currentOrg.value.role === 'admin' || currentOrg.value.role === 'editor'),
+  ),
+)
+const permissionsOrgId = computed(
+  () => currentOrgId.value || dashboard.value?.organization_id || null,
+)
 
 const settingsSections = computed(() => {
   if (canManagePermissions.value) {
@@ -98,8 +106,8 @@ const settingsSections = computed(() => {
 const parsedVariables = computed(() => {
   return variablesInput.value
     .split(',')
-    .map(variable => variable.trim())
-    .filter(variable => variable.length > 0)
+    .map((variable) => variable.trim())
+    .filter((variable) => variable.length > 0)
 })
 
 const yamlDirty = computed(() => yamlContent.value !== originalYamlContent.value)
@@ -316,8 +324,8 @@ function extractVariables(rawYaml: string): string[] {
 
   const section = variablesSectionMatch?.[1] ?? ''
   return [...section.matchAll(/(?:^|\n)\s{4}-\s*name:\s*(.+)/g)]
-    .map(match => normalizeYamlValue(match[1] ?? ''))
-    .filter(name => name.length > 0)
+    .map((match) => normalizeYamlValue(match[1] ?? ''))
+    .filter((name) => name.length > 0)
 }
 
 function extractTimeRangePreset(rawYaml: string, fallback: string): string {
@@ -346,7 +354,7 @@ function extractRefreshInterval(rawYaml: string, fallback: string): string {
 
   const refreshMatch = dashboardSection.match(/(?:^|\n)\s{2}refresh_interval:\s*(.+)/)
   const value = normalizeYamlValue(refreshMatch?.[1] ?? '')
-  return REFRESH_OPTIONS.some(option => option.value === value) ? value : fallback
+  return REFRESH_OPTIONS.some((option) => option.value === value) ? value : fallback
 }
 
 function extractTitleAndDescription(rawYaml: string): { title: string; description: string } {
@@ -409,7 +417,9 @@ async function saveYamlSettings() {
     return
   }
 
-  const { title: nextTitle, description: nextDescription } = extractTitleAndDescription(yamlContent.value)
+  const { title: nextTitle, description: nextDescription } = extractTitleAndDescription(
+    yamlContent.value,
+  )
   if (!nextTitle.trim()) {
     yamlValidationError.value = 'Dashboard title is required'
     return

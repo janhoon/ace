@@ -1,29 +1,40 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { Play, AlertCircle, History, X, Loader2, HeartPulse, CircleAlert, ChevronDown, ChevronUp, Check } from 'lucide-vue-next'
-import QueryBuilder from '../components/QueryBuilder.vue'
-import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
-import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
-import ElasticsearchQueryEditor from '../components/ElasticsearchQueryEditor.vue'
-import TimeRangePicker from '../components/TimeRangePicker.vue'
-import LineChart from '../components/LineChart.vue'
-import { useTimeRange } from '../composables/useTimeRange'
-import { transformToChartData, type PrometheusQueryResult } from '../composables/useProm'
-import { useOrganization } from '../composables/useOrganization'
-import { useDatasource } from '../composables/useDatasource'
+import {
+  AlertCircle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  CircleAlert,
+  HeartPulse,
+  History,
+  Loader2,
+  Play,
+  X,
+} from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { queryDataSource } from '../api/datasources'
-import type { DataSourceType } from '../types/datasource'
-import { dataSourceTypeLabels } from '../types/datasource'
-import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
-import lokiLogo from '../assets/datasources/loki-logo.svg'
-import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
-import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
-import tempoLogo from '../assets/datasources/tempo-logo.svg'
-import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
 import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
 import elasticsearchLogo from '../assets/datasources/elasticsearch-logo.svg'
+import lokiLogo from '../assets/datasources/loki-logo.svg'
+import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
+import tempoLogo from '../assets/datasources/tempo-logo.svg'
+import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
+import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
+import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
+import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
+import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
+import ElasticsearchQueryEditor from '../components/ElasticsearchQueryEditor.vue'
 import type { ChartSeries } from '../components/LineChart.vue'
+import LineChart from '../components/LineChart.vue'
+import QueryBuilder from '../components/QueryBuilder.vue'
+import TimeRangePicker from '../components/TimeRangePicker.vue'
+import { useDatasource } from '../composables/useDatasource'
+import { useOrganization } from '../composables/useOrganization'
+import { type PrometheusQueryResult, transformToChartData } from '../composables/useProm'
+import { useTimeRange } from '../composables/useTimeRange'
+import type { DataSourceType } from '../types/datasource'
+import { dataSourceTypeLabels } from '../types/datasource'
 
 const { timeRange, onRefresh, setCustomRange } = useTimeRange()
 const { currentOrg } = useOrganization()
@@ -107,9 +118,7 @@ function buildServiceMetricsQuery(type_: DataSourceType, serviceName: string): s
   }
 
   if (type_ === 'elasticsearch') {
-    const serviceFilter = serviceName
-      ? [{ term: { 'service.name.keyword': serviceName } }]
-      : []
+    const serviceFilter = serviceName ? [{ term: { 'service.name.keyword': serviceName } }] : []
 
     return JSON.stringify(
       {
@@ -165,9 +174,14 @@ function consumeTraceMetricsNavigationContext() {
       }
     }
 
-    pendingServiceName.value = typeof parsed.serviceName === 'string' ? parsed.serviceName.trim() : ''
+    pendingServiceName.value =
+      typeof parsed.serviceName === 'string' ? parsed.serviceName.trim() : ''
 
-    if (typeof parsed.startMs === 'number' && typeof parsed.endMs === 'number' && parsed.endMs > parsed.startMs) {
+    if (
+      typeof parsed.startMs === 'number' &&
+      typeof parsed.endMs === 'number' &&
+      parsed.endMs > parsed.startMs
+    ) {
       pendingStartMs.value = parsed.startMs
       pendingEndMs.value = parsed.endMs
     }
@@ -181,7 +195,10 @@ function applyTraceMetricsNavigationContext() {
     return
   }
 
-  query.value = buildServiceMetricsQuery(activeDatasource.value?.type || 'prometheus', pendingServiceName.value)
+  query.value = buildServiceMetricsQuery(
+    activeDatasource.value?.type || 'prometheus',
+    pendingServiceName.value,
+  )
 
   if (pendingStartMs.value !== null && pendingEndMs.value !== null) {
     setCustomRange(pendingStartMs.value, pendingEndMs.value)
@@ -231,34 +248,31 @@ watch(
       return
     }
 
-    const hasSelected = sources.some(ds => ds.id === selectedDatasourceId.value)
+    const hasSelected = sources.some((ds) => ds.id === selectedDatasourceId.value)
     if (!hasSelected) {
-      const defaultDatasource = sources.find(ds => ds.is_default)
+      const defaultDatasource = sources.find((ds) => ds.is_default)
       selectedDatasourceId.value = defaultDatasource?.id || sources[0].id
     }
   },
   { immediate: true },
 )
 
-watch(
-  metricsDatasources,
-  (sources) => {
-    const sourceIds = new Set(sources.map(ds => ds.id))
-    datasourceHealth.value = Object.fromEntries(
-      Object.entries(datasourceHealth.value).filter(([id]) => sourceIds.has(id)),
-    )
-    datasourceHealthErrors.value = Object.fromEntries(
-      Object.entries(datasourceHealthErrors.value).filter(([id]) => sourceIds.has(id)),
-    )
-  },
-)
+watch(metricsDatasources, (sources) => {
+  const sourceIds = new Set(sources.map((ds) => ds.id))
+  datasourceHealth.value = Object.fromEntries(
+    Object.entries(datasourceHealth.value).filter(([id]) => sourceIds.has(id)),
+  )
+  datasourceHealthErrors.value = Object.fromEntries(
+    Object.entries(datasourceHealthErrors.value).filter(([id]) => sourceIds.has(id)),
+  )
+})
 
 // Save query to history
 function addToHistory(q: string) {
   if (!q.trim()) return
 
   // Remove duplicate if exists
-  const filtered = queryHistory.value.filter(h => h !== q)
+  const filtered = queryHistory.value.filter((h) => h !== q)
 
   // Add to beginning
   queryHistory.value = [q, ...filtered].slice(0, MAX_HISTORY)
@@ -295,7 +309,12 @@ async function runQuery() {
 
     const response = await queryDataSource(selectedDatasourceId.value, {
       query: query.value,
-      signal: isClickHouseDatasource.value || isCloudWatchDatasource.value || isElasticsearchDatasource.value ? 'metrics' : undefined,
+      signal:
+        isClickHouseDatasource.value ||
+        isCloudWatchDatasource.value ||
+        isElasticsearchDatasource.value
+          ? 'metrics'
+          : undefined,
       start,
       end,
       step,
@@ -315,9 +334,9 @@ async function runQuery() {
       result.value = metricsResponse
 
       const chartData = transformToChartData(metricsResponse)
-      chartSeries.value = chartData.series.map(s => ({
+      chartSeries.value = chartData.series.map((s) => ({
         name: s.name,
-        data: s.data
+        data: s.data,
       }))
 
       // Add to history on successful query
@@ -370,11 +389,13 @@ onUnmounted(() => {
 })
 
 // Computed properties
-const hasResults = computed(() => result.value?.status === 'success' && chartSeries.value.length > 0)
+const hasResults = computed(
+  () => result.value?.status === 'success' && chartSeries.value.length > 0,
+)
 const seriesCount = computed(() => chartSeries.value.length)
 const hasMetricsDatasources = computed(() => metricsDatasources.value.length > 0)
 const activeDatasource = computed(
-  () => metricsDatasources.value.find(ds => ds.id === selectedDatasourceId.value) || null,
+  () => metricsDatasources.value.find((ds) => ds.id === selectedDatasourceId.value) || null,
 )
 const isClickHouseDatasource = computed(() => activeDatasource.value?.type === 'clickhouse')
 const isCloudWatchDatasource = computed(() => activeDatasource.value?.type === 'cloudwatch')
@@ -429,7 +450,7 @@ function getSmokeQuery(type_: DataSourceType): string {
     return 'up'
   }
   if (type_ === 'clickhouse') {
-    return 'SELECT now() AS timestamp, toFloat64(1) AS value, \'up\' AS metric LIMIT 1'
+    return "SELECT now() AS timestamp, toFloat64(1) AS value, 'up' AS metric LIMIT 1"
   }
   if (type_ === 'cloudwatch') {
     return '{"namespace":"AWS/EC2","metric_name":"CPUUtilization","stat":"Average","period":60}'
@@ -453,7 +474,10 @@ async function checkDatasourceHealth(datasourceId: string, type_: DataSourceType
   try {
     const healthResult = await queryDataSource(datasourceId, {
       query: getSmokeQuery(type_),
-      signal: type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch' ? 'metrics' : undefined,
+      signal:
+        type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch'
+          ? 'metrics'
+          : undefined,
       start,
       end,
       step: 15,

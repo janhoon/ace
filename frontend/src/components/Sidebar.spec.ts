@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import Sidebar from './Sidebar.vue'
 
@@ -68,9 +68,9 @@ describe('Sidebar', () => {
     expect(aside.classes()).not.toContain('w-58')
 
     // Click toggle button (Expand/Collapse title button)
-    const toggleBtn = wrapper.findAll('button').find(b =>
-      b.attributes('title') === 'Expand' || b.attributes('title') === 'Collapse'
-    )!
+    const toggleBtn = wrapper
+      .findAll('button')
+      .find((b) => b.attributes('title') === 'Expand' || b.attributes('title') === 'Collapse')!
     await toggleBtn.trigger('click')
 
     // Expanded: w-58 (wide)

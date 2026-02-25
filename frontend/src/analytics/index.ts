@@ -209,9 +209,4 @@ export function setSessionRecordingEnabled(enabled: boolean) {
   applySessionRecording()
 }
 
-export {
-  analyticsReady,
-  analyticsDntEnabled,
-  analyticsConsent,
-  analyticsSessionRecordingEnabled,
-}
+export { analyticsReady, analyticsDntEnabled, analyticsConsent, analyticsSessionRecordingEnabled }

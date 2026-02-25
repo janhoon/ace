@@ -154,11 +154,23 @@ export interface DataSourceQueryResult {
 }
 
 export function isMetricsType(type_: DataSourceType): boolean {
-  return type_ === 'prometheus' || type_ === 'victoriametrics' || type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch'
+  return (
+    type_ === 'prometheus' ||
+    type_ === 'victoriametrics' ||
+    type_ === 'clickhouse' ||
+    type_ === 'cloudwatch' ||
+    type_ === 'elasticsearch'
+  )
 }
 
 export function isLogsType(type_: DataSourceType): boolean {
-  return type_ === 'loki' || type_ === 'victorialogs' || type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch'
+  return (
+    type_ === 'loki' ||
+    type_ === 'victorialogs' ||
+    type_ === 'clickhouse' ||
+    type_ === 'cloudwatch' ||
+    type_ === 'elasticsearch'
+  )
 }
 
 export function isTracingType(type_: DataSourceType): boolean {

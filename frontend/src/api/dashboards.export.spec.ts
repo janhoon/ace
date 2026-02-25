@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { exportDashboardYaml } from './dashboards'
 
 describe('exportDashboardYaml', () => {
@@ -37,6 +37,8 @@ describe('exportDashboardYaml', () => {
   it('throws permission error for forbidden response', async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 403 })
 
-    await expect(exportDashboardYaml('dashboard-1')).rejects.toThrow('Not authorized to export this dashboard')
+    await expect(exportDashboardYaml('dashboard-1')).rejects.toThrow(
+      'Not authorized to export this dashboard',
+    )
   })
 })

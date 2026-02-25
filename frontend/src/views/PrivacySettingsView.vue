@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { ArrowLeft } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAnalytics, type AnalyticsConsent } from '../composables/useAnalytics'
+import { type AnalyticsConsent, useAnalytics } from '../composables/useAnalytics'
 
 const router = useRouter()
 const {

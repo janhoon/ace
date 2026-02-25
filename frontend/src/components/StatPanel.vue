@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-vue-next'
-import VChart from 'vue-echarts'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
+import type { EChartsOption } from 'echarts'
 import { LineChart } from 'echarts/charts'
 import { GridComponent } from 'echarts/components'
-import type { EChartsOption } from 'echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { Minus, TrendingDown, TrendingUp } from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import VChart from 'vue-echarts'
 
 // Register ECharts components for sparkline
 use([CanvasRenderer, LineChart, GridComponent])
@@ -45,7 +45,7 @@ const props = withDefaults(
     showTrend: true,
     showSparkline: true,
     height: '100%',
-  }
+  },
 )
 
 const chartRef = ref<typeof VChart | null>(null)
@@ -114,7 +114,11 @@ const trend = computed(() => {
 
 // Calculate trend percentage
 const trendPercentage = computed(() => {
-  if (props.previousValue === undefined || props.previousValue === null || props.previousValue === 0) {
+  if (
+    props.previousValue === undefined ||
+    props.previousValue === null ||
+    props.previousValue === 0
+  ) {
     return null
   }
   const change = ((props.value - props.previousValue) / Math.abs(props.previousValue)) * 100

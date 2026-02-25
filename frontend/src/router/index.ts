@@ -1,4 +1,9 @@
-import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded, type RouteRecordRaw } from 'vue-router'
+import {
+  createRouter,
+  createWebHistory,
+  type RouteLocationNormalizedLoaded,
+  type RouteRecordRaw,
+} from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
 const defaultDescription =
@@ -51,14 +56,14 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/dashboards/:id/settings',
-    redirect: to => ({
+    redirect: (to) => ({
       path: `/dashboards/${to.params.id}/settings/general`,
       query: to.query,
     }),
   },
   {
     path: '/app/dashboards/:id/settings',
-    redirect: to => ({
+    redirect: (to) => ({
       path: `/dashboards/${to.params.id}/settings/general`,
       query: to.query,
     }),
@@ -132,14 +137,14 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/settings/org/:id',
-    redirect: to => ({
+    redirect: (to) => ({
       path: `/settings/org/${to.params.id}/general`,
       query: to.query,
     }),
   },
   {
     path: '/app/settings/org/:id',
-    redirect: to => ({
+    redirect: (to) => ({
       path: `/settings/org/${to.params.id}/general`,
       query: to.query,
     }),
@@ -238,7 +243,8 @@ function upsertCanonical(url: string) {
 
 function applySeoMetadata(to: RouteLocationNormalizedLoaded) {
   const title = typeof to.meta.title === 'string' ? to.meta.title : 'Ace'
-  const description = typeof to.meta.description === 'string' ? to.meta.description : defaultDescription
+  const description =
+    typeof to.meta.description === 'string' ? to.meta.description : defaultDescription
   const url = `${window.location.origin}${to.fullPath}`
 
   document.title = title

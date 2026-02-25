@@ -1,4 +1,4 @@
-import type { AMAlert, AMSilence, AMSilenceCreate, AMReceiver } from '../types/datasource'
+import type { AMAlert, AMReceiver, AMSilence, AMSilenceCreate } from '../types/datasource'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 

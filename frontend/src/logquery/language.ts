@@ -55,7 +55,7 @@ const LOGQL_OPERATORS = ['|=', '!=', '|~', '!~', '|']
 let logQLIndexedLabels: string[] = []
 
 export function setLogQLIndexedLabels(labels: string[]) {
-  logQLIndexedLabels = [...new Set(labels.map(label => label.trim()).filter(Boolean))]
+  logQLIndexedLabels = [...new Set(labels.map((label) => label.trim()).filter(Boolean))]
 }
 
 const LOGSQL_KEYWORDS = [
@@ -157,13 +157,16 @@ function registerLogQLLanguage(monaco: typeof Monaco) {
         [/\|=|\|~|!=|!~|=~|[=><!]=?|[|+\-*/%^]/, 'operator'],
         [/[{}()[\]]/, '@brackets'],
         [/[a-zA-Z_][a-zA-Z0-9_]*(?=\s*(=|!=|=~|!~))/, 'label'],
-        [/[a-zA-Z_][a-zA-Z0-9_]*/, {
-          cases: {
-            '@keywords': 'keyword',
-            '@functions': 'function',
-            '@default': 'identifier',
+        [
+          /[a-zA-Z_][a-zA-Z0-9_]*/,
+          {
+            cases: {
+              '@keywords': 'keyword',
+              '@functions': 'function',
+              '@default': 'identifier',
+            },
           },
-        }],
+        ],
       ],
       string_double: [
         [/[^\\"]+/, 'string'],
@@ -180,10 +183,13 @@ function registerLogQLLanguage(monaco: typeof Monaco) {
 }
 
 function registerLogSQLLanguage(monaco: typeof Monaco) {
-  const sqlKeywords = [...LOGSQL_KEYWORDS, ...LOGSQL_KEYWORDS.map(keyword => keyword.toUpperCase())]
+  const sqlKeywords = [
+    ...LOGSQL_KEYWORDS,
+    ...LOGSQL_KEYWORDS.map((keyword) => keyword.toUpperCase()),
+  ]
   const sqlFunctions = [
     ...Object.keys(LOGSQL_FUNCTIONS),
-    ...Object.keys(LOGSQL_FUNCTIONS).map(fn => fn.toUpperCase()),
+    ...Object.keys(LOGSQL_FUNCTIONS).map((fn) => fn.toUpperCase()),
   ]
 
   monaco.languages.register({ id: LOGSQL_LANGUAGE_ID })
@@ -193,9 +199,7 @@ function registerLogSQLLanguage(monaco: typeof Monaco) {
       lineComment: '--',
       blockComment: ['/*', '*/'],
     },
-    brackets: [
-      ['(', ')'],
-    ],
+    brackets: [['(', ')']],
     autoClosingPairs: [
       { open: '(', close: ')' },
       { open: '"', close: '"' },
@@ -222,13 +226,16 @@ function registerLogSQLLanguage(monaco: typeof Monaco) {
         [/\d+(\.\d+)?/, 'number'],
         [/[(),.*]/, 'operator'],
         [/[=><!]+/, 'operator'],
-        [/[a-zA-Z_][a-zA-Z0-9_]*/, {
-          cases: {
-            '@keywords': 'keyword',
-            '@functions': 'function',
-            '@default': 'identifier',
+        [
+          /[a-zA-Z_][a-zA-Z0-9_]*/,
+          {
+            cases: {
+              '@keywords': 'keyword',
+              '@functions': 'function',
+              '@default': 'identifier',
+            },
           },
-        }],
+        ],
       ],
       string_double: [
         [/[^\\"]+/, 'string'],
@@ -274,7 +281,7 @@ function registerLogQLCompletionProvider(monaco: typeof Monaco) {
         range,
       }))
 
-      const keywordSuggestions = LOGQL_KEYWORDS.map(keyword => ({
+      const keywordSuggestions = LOGQL_KEYWORDS.map((keyword) => ({
         label: keyword,
         kind: monaco.languages.CompletionItemKind.Keyword,
         insertText: keyword,
@@ -282,7 +289,7 @@ function registerLogQLCompletionProvider(monaco: typeof Monaco) {
         range,
       }))
 
-      const labelSuggestions = logQLIndexedLabels.map(label => ({
+      const labelSuggestions = logQLIndexedLabels.map((label) => ({
         label,
         kind: monaco.languages.CompletionItemKind.Property,
         insertText: label,
@@ -291,7 +298,7 @@ function registerLogQLCompletionProvider(monaco: typeof Monaco) {
         range,
       }))
 
-      const operatorSuggestions = LOGQL_OPERATORS.map(operator => ({
+      const operatorSuggestions = LOGQL_OPERATORS.map((operator) => ({
         label: operator,
         kind: monaco.languages.CompletionItemKind.Operator,
         insertText: ` ${operator} `,
@@ -329,7 +336,7 @@ function registerLogSQLCompletionProvider(monaco: typeof Monaco) {
     provideCompletionItems(model, position) {
       const range = createRange(model, position)
 
-      const keywordSuggestions = LOGSQL_KEYWORDS.map(keyword => ({
+      const keywordSuggestions = LOGSQL_KEYWORDS.map((keyword) => ({
         label: keyword.toUpperCase(),
         kind: monaco.languages.CompletionItemKind.Keyword,
         insertText: keyword.toUpperCase(),
@@ -402,10 +409,7 @@ function registerLogQLHoverProvider(monaco: typeof Monaco) {
           startColumn: word.startColumn,
           endColumn: word.endColumn,
         },
-        contents: [
-          { value: `**${text}** (keyword)` },
-          { value: keywordDescription },
-        ],
+        contents: [{ value: `**${text}** (keyword)` }, { value: keywordDescription }],
       }
     },
   })

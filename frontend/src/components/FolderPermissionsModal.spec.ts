@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FolderPermissionsModal from './FolderPermissionsModal.vue'
 
 const mockListFolderPermissions = vi.hoisted(() => vi.fn())

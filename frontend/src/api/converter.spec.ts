@@ -13,12 +13,13 @@ describe('converter API', () => {
   it('converts grafana dashboard payload', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
-        format: 'json',
-        content: '{"schema_version":1}',
-        document: { schema_version: 1, dashboard: { title: 'Converted', panels: [] } },
-        warnings: [],
-      }),
+      json: () =>
+        Promise.resolve({
+          format: 'json',
+          content: '{"schema_version":1}',
+          document: { schema_version: 1, dashboard: { title: 'Converted', panels: [] } },
+          warnings: [],
+        }),
     })
 
     const result = await convertGrafanaDashboard('{"dashboard":{"title":"x"}}', 'json')
@@ -34,12 +35,13 @@ describe('converter API', () => {
     localStorage.setItem('access_token', 'token-123')
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
-        format: 'yaml',
-        content: 'schema_version: 1',
-        document: { schema_version: 1, dashboard: { title: 'Converted', panels: [] } },
-        warnings: [],
-      }),
+      json: () =>
+        Promise.resolve({
+          format: 'yaml',
+          content: 'schema_version: 1',
+          document: { schema_version: 1, dashboard: { title: 'Converted', panels: [] } },
+          warnings: [],
+        }),
     })
 
     await convertGrafanaDashboard('{"dashboard":{"title":"x"}}', 'yaml')

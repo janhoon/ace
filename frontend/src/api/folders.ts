@@ -1,4 +1,4 @@
-import type { Folder, CreateFolderRequest, UpdateFolderRequest } from '../types/folder'
+import type { CreateFolderRequest, Folder, UpdateFolderRequest } from '../types/folder'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -11,7 +11,7 @@ function getAuthHeaders(): HeadersInit {
 }
 
 async function getErrorMessage(response: Response, fallback: string): Promise<string> {
-  const error = await response.json().catch(() => ({})) as { error?: string }
+  const error = (await response.json().catch(() => ({}))) as { error?: string }
   if (error.error) {
     return error.error
   }

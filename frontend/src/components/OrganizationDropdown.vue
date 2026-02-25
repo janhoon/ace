@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { ChevronDown, Plus, Check } from 'lucide-vue-next'
+import { Check, ChevronDown, Plus } from 'lucide-vue-next'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useOrganization } from '../composables/useOrganization'
 
 defineProps<{

@@ -1,5 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { listDashboards, getDashboard, createDashboard, updateDashboard, deleteDashboard } from './dashboards'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  createDashboard,
+  deleteDashboard,
+  getDashboard,
+  listDashboards,
+  updateDashboard,
+} from './dashboards'
 
 describe('Dashboard API', () => {
   const orgId = 'org-1'
@@ -20,7 +26,7 @@ describe('Dashboard API', () => {
       const mockData = [{ id: '1', title: 'Test' }]
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockData)
+        json: () => Promise.resolve(mockData),
       })
 
       const result = await listDashboards(orgId)
@@ -28,7 +34,7 @@ describe('Dashboard API', () => {
         `http://localhost:8080/api/orgs/${orgId}/dashboards`,
         expect.objectContaining({
           headers: { 'Content-Type': 'application/json' },
-        })
+        }),
       )
       expect(result).toEqual(mockData)
     })
@@ -44,7 +50,7 @@ describe('Dashboard API', () => {
       const mockData = { id: '1', title: 'Test' }
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockData)
+        json: () => Promise.resolve(mockData),
       })
 
       const result = await getDashboard('1')
@@ -52,7 +58,7 @@ describe('Dashboard API', () => {
         'http://localhost:8080/api/dashboards/1',
         expect.objectContaining({
           headers: { 'Content-Type': 'application/json' },
-        })
+        }),
       )
       expect(result).toEqual(mockData)
     })
@@ -68,7 +74,7 @@ describe('Dashboard API', () => {
       const mockData = { id: '1', title: 'New Dashboard' }
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockData)
+        json: () => Promise.resolve(mockData),
       })
 
       const result = await createDashboard(orgId, { title: 'New Dashboard' })
@@ -77,15 +83,17 @@ describe('Dashboard API', () => {
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: 'New Dashboard' })
-        })
+          body: JSON.stringify({ title: 'New Dashboard' }),
+        }),
       )
       expect(result).toEqual(mockData)
     })
 
     it('throws error on failure', async () => {
       mockFetch.mockResolvedValue({ ok: false })
-      await expect(createDashboard(orgId, { title: 'Test' })).rejects.toThrow('Failed to create dashboard')
+      await expect(createDashboard(orgId, { title: 'Test' })).rejects.toThrow(
+        'Failed to create dashboard',
+      )
     })
   })
 
@@ -94,7 +102,7 @@ describe('Dashboard API', () => {
       const mockData = { id: '1', title: 'Updated' }
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockData)
+        json: () => Promise.resolve(mockData),
       })
 
       const result = await updateDashboard('1', { title: 'Updated' })
@@ -103,15 +111,17 @@ describe('Dashboard API', () => {
         expect.objectContaining({
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: 'Updated' })
-        })
+          body: JSON.stringify({ title: 'Updated' }),
+        }),
       )
       expect(result).toEqual(mockData)
     })
 
     it('throws error on failure', async () => {
       mockFetch.mockResolvedValue({ ok: false })
-      await expect(updateDashboard('1', { title: 'Test' })).rejects.toThrow('Failed to update dashboard')
+      await expect(updateDashboard('1', { title: 'Test' })).rejects.toThrow(
+        'Failed to update dashboard',
+      )
     })
   })
 
@@ -122,7 +132,7 @@ describe('Dashboard API', () => {
       await deleteDashboard('1')
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:8080/api/dashboards/1',
-        expect.objectContaining({ method: 'DELETE' })
+        expect.objectContaining({ method: 'DELETE' }),
       )
     })
 

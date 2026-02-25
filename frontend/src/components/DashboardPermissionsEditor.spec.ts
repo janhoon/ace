@@ -1,4 +1,4 @@
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import DashboardPermissionsEditor from './DashboardPermissionsEditor.vue'
 
 const mockListDashboardPermissions = vi.hoisted(() => vi.fn())

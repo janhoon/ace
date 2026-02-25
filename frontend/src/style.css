@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 @theme {
-  --font-sans: 'Space Grotesk', 'Segoe UI', sans-serif;
-  --font-mono: 'IBM Plex Mono', 'Cascadia Mono', monospace;
+  --font-sans: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", monospace;
 }
 
 /* Base styles */
@@ -14,11 +14,12 @@
   }
 
   *::selection {
-    background: oklch(92.4% .12 165);
+    background: oklch(92.4% 0.12 165);
     color: #0f172a;
   }
 
-  html, body {
+  html,
+  body {
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
@@ -42,7 +43,12 @@
     display: flex;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     color: #0f172a;
     font-weight: 600;
     margin: 0;
@@ -50,13 +56,27 @@
     line-height: 1.25;
   }
 
-  h1 { font-size: 1.875rem; font-weight: 700; }
-  h2 { font-size: 1.5rem; font-weight: 700; }
-  h3 { font-size: 1.25rem; font-weight: 600; }
+  h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+  }
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
 
-  p { color: #475569; margin: 0; }
+  p {
+    color: #475569;
+    margin: 0;
+  }
 
-  code, pre, kbd {
+  code,
+  pre,
+  kbd {
     font-family: var(--font-mono);
   }
 
@@ -64,9 +84,11 @@
     font-weight: 500;
     color: #059669;
     text-decoration: none;
-    transition: color 150ms cubic-bezier(.4, 0, .2, 1);
+    transition: color 150ms cubic-bezier(0.4, 0, 0.2, 1);
   }
-  a:hover { color: #047857; }
+  a:hover {
+    color: #047857;
+  }
 
   button {
     font-family: inherit;
@@ -74,10 +96,20 @@
   }
 
   /* Scrollbar — light theme */
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: #f1f5f9; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
 }
 
 /* Utility animations */
@@ -94,21 +126,39 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes row-highlight-fade {
-  0% { background: rgba(245, 158, 11, 0.28); }
-  100% { background: transparent; }
+  0% {
+    background: rgba(245, 158, 11, 0.28);
+  }
+  100% {
+    background: transparent;
+  }
 }

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import PanelEditModal from './PanelEditModal.vue'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api/panels'
+import PanelEditModal from './PanelEditModal.vue'
 
 const mockFetchDatasources = vi.hoisted(() => vi.fn())
 
@@ -87,17 +87,18 @@ vi.mock('../composables/useProm', () => ({
   queryPrometheus: vi.fn(),
   fetchMetrics: vi.fn().mockResolvedValue([]),
   fetchLabels: vi.fn().mockResolvedValue([]),
-  fetchLabelValues: vi.fn().mockResolvedValue([])
+  fetchLabelValues: vi.fn().mockResolvedValue([]),
 }))
 
 // Mock MonacoQueryEditor component (Monaco doesn't work in test environment)
 vi.mock('./MonacoQueryEditor.vue', () => ({
   default: {
     name: 'MonacoQueryEditor',
-    template: '<div class="mock-monaco-editor"><textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)"></textarea></div>',
+    template:
+      '<div class="mock-monaco-editor"><textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)"></textarea></div>',
     props: ['modelValue', 'disabled', 'height', 'placeholder'],
-    emits: ['update:modelValue', 'submit']
-  }
+    emits: ['update:modelValue', 'submit'],
+  },
 }))
 
 vi.mock('./CloudWatchQueryEditor.vue', () => ({
@@ -144,7 +145,7 @@ describe('PanelEditModal', () => {
 
   it('renders form fields', async () => {
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
     await flushPromises()
     expect(wrapper.find('input#title').exists()).toBe(true)
@@ -155,7 +156,7 @@ describe('PanelEditModal', () => {
 
   it('shows "Add Panel" title when creating new panel', () => {
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
     expect(wrapper.find('header h2').text()).toBe('Add Panel')
   })
@@ -171,24 +172,27 @@ describe('PanelEditModal', () => {
           type: 'line_chart',
           grid_pos: { x: 0, y: 0, w: 6, h: 4 },
           created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z'
-        }
-      }
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+      },
     })
     expect(wrapper.find('header h2').text()).toBe('Edit Panel')
   })
 
   it('emits close event when cancel is clicked', async () => {
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
-    await wrapper.findAll('button').find(b => b.text() === 'Cancel')?.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Cancel')
+      ?.trigger('click')
     expect(wrapper.emitted('close')).toBeTruthy()
   })
 
   it('shows error when title is empty', async () => {
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
     await wrapper.find('form').trigger('submit')
     expect(wrapper.text()).toContain('Title is required')
@@ -203,11 +207,11 @@ describe('PanelEditModal', () => {
       grid_pos: { x: 0, y: 0, w: 6, h: 4 },
       query: { promql: 'up' },
       created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      updated_at: '2024-01-01T00:00:00Z',
     })
 
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
     await flushPromises()
     await wrapper.find('input#title').setValue('Panel with Query')
@@ -223,7 +227,7 @@ describe('PanelEditModal', () => {
       title: 'Panel with Query',
       type: 'line_chart',
       grid_pos: { x: 0, y: 0, w: 6, h: 4 },
-      query: { promql: 'up' }
+      query: { promql: 'up' },
     })
   })
 
@@ -235,11 +239,11 @@ describe('PanelEditModal', () => {
       type: 'line_chart',
       grid_pos: { x: 0, y: 0, w: 6, h: 4 },
       created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      updated_at: '2024-01-01T00:00:00Z',
     })
 
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
     await wrapper.find('input#title').setValue('New Panel')
     await wrapper.find('form').trigger('submit')
@@ -249,7 +253,7 @@ describe('PanelEditModal', () => {
       title: 'New Panel',
       type: 'line_chart',
       grid_pos: { x: 0, y: 0, w: 6, h: 4 },
-      query: undefined
+      query: undefined,
     })
     expect(wrapper.emitted('saved')).toBeTruthy()
   })
@@ -262,16 +266,16 @@ describe('PanelEditModal', () => {
       type: 'line_chart',
       grid_pos: { x: 0, y: 0, w: 6, h: 4 },
       created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      updated_at: '2024-01-01T00:00:00Z',
     }
 
     vi.mocked(api.updatePanel).mockResolvedValue({
       ...existingPanel,
-      title: 'Updated Panel'
+      title: 'Updated Panel',
     })
 
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId, panel: existingPanel }
+      props: { dashboardId, panel: existingPanel },
     })
     await wrapper.find('input#title').setValue('Updated Panel')
     await wrapper.find('form').trigger('submit')
@@ -280,7 +284,7 @@ describe('PanelEditModal', () => {
     expect(api.updatePanel).toHaveBeenCalledWith('1', {
       title: 'Updated Panel',
       type: 'line_chart',
-      query: undefined
+      query: undefined,
     })
     expect(wrapper.emitted('saved')).toBeTruthy()
   })
@@ -289,7 +293,7 @@ describe('PanelEditModal', () => {
     vi.mocked(api.createPanel).mockRejectedValue(new Error('Network error'))
 
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
     await wrapper.find('input#title').setValue('New Panel')
     await wrapper.find('form').trigger('submit')
@@ -300,7 +304,7 @@ describe('PanelEditModal', () => {
 
   it('renders trace panel type options', async () => {
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
     await flushPromises()
 
@@ -311,7 +315,7 @@ describe('PanelEditModal', () => {
 
   it('requires datasource for trace panels', async () => {
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
     await flushPromises()
 
@@ -332,11 +336,11 @@ describe('PanelEditModal', () => {
       grid_pos: { x: 0, y: 0, w: 6, h: 4 },
       query: { datasource_id: 'ds-trace-1', expr: 'service=api', service: 'api', limit: 25 },
       created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      updated_at: '2024-01-01T00:00:00Z',
     })
 
     const wrapper = mount(PanelEditModal, {
-      props: { dashboardId }
+      props: { dashboardId },
     })
     await flushPromises()
 
@@ -362,7 +366,7 @@ describe('PanelEditModal', () => {
         expr: 'service=api',
         service: 'api',
         limit: 25,
-      }
+      },
     })
   })
 

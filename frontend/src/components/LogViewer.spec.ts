@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import LogViewer from './LogViewer.vue'
 
 describe('LogViewer', () => {
@@ -99,6 +99,6 @@ describe('LogViewer', () => {
 
     // Highlighted logs use a row-highlight-fade animation class
     const row = wrapper.find('.cursor-pointer')
-    expect(row.classes().some(c => c.includes('animate-'))).toBe(true)
+    expect(row.classes().some((c) => c.includes('animate-'))).toBe(true)
   })
 })

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import OrganizationSettings from './OrganizationSettings.vue'
 
 const mockRouteParams = { id: 'org-1', section: 'general' }
@@ -165,8 +165,14 @@ describe('OrganizationSettings', () => {
       updated_at: '2026-02-08T00:00:00Z',
     })
 
-    vi.stubGlobal('confirm', vi.fn(() => true))
-    vi.stubGlobal('alert', vi.fn(() => undefined))
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    )
+    vi.stubGlobal(
+      'alert',
+      vi.fn(() => undefined),
+    )
   })
 
   afterEach(() => {
@@ -304,15 +310,17 @@ describe('OrganizationSettings', () => {
     await wrapper.get('[data-testid="edit-sso-google"]').trigger('click')
     await flushPromises()
 
-    expect((wrapper.get('[data-testid="google-client-id"]').element as HTMLInputElement).value).toBe(
-      'google-client-id',
-    )
+    expect(
+      (wrapper.get('[data-testid="google-client-id"]').element as HTMLInputElement).value,
+    ).toBe('google-client-id')
 
     await wrapper.get('[data-testid="back-sso-provider-picker"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="sso-provider-option-microsoft"]').trigger('click')
     await flushPromises()
-    expect((wrapper.get('[data-testid="microsoft-tenant-id"]').element as HTMLInputElement).value).toBe('tenant-1')
+    expect(
+      (wrapper.get('[data-testid="microsoft-tenant-id"]').element as HTMLInputElement).value,
+    ).toBe('tenant-1')
 
     await wrapper.get('[data-testid="back-sso-provider-picker"]').trigger('click')
     await flushPromises()

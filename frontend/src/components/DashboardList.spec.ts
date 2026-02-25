@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
-import DashboardList from './DashboardList.vue'
 import * as dashboardApi from '../api/dashboards'
 import * as folderApi from '../api/folders'
+import DashboardList from './DashboardList.vue'
 
 const mockCurrentOrgId = ref<string | null>('org-1')
 const mockCurrentOrg = ref({
@@ -150,7 +150,9 @@ describe('DashboardList', () => {
     const wrapper = mount(DashboardList)
     await flushPromises()
 
-    const dashboardRow = wrapper.get('[data-testid="tree-dashboard-row-123e4567-e89b-12d3-a456-426614174000"]')
+    const dashboardRow = wrapper.get(
+      '[data-testid="tree-dashboard-row-123e4567-e89b-12d3-a456-426614174000"]',
+    )
     const dashboardRowContainer = dashboardRow.element.parentElement as HTMLElement
     expect(dashboardRowContainer.style.display).toBe('')
 
@@ -168,7 +170,9 @@ describe('DashboardList', () => {
     const wrapper = mount(DashboardList)
     await flushPromises()
 
-    await wrapper.get('[data-testid="tree-dashboard-123e4567-e89b-12d3-a456-426614174000"]').trigger('click')
+    await wrapper
+      .get('[data-testid="tree-dashboard-123e4567-e89b-12d3-a456-426614174000"]')
+      .trigger('click')
 
     expect(mockPush).toHaveBeenCalledWith('/dashboards/123e4567-e89b-12d3-a456-426614174000')
   })
@@ -202,9 +206,11 @@ describe('DashboardList', () => {
 
     const newDashBtn = wrapper.findAll('button').find((b) => b.text().includes('New Dashboard'))
     expect(newDashBtn).toBeDefined()
-    await newDashBtn!.trigger('click')
+    await newDashBtn?.trigger('click')
     expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).exists()).toBe(true)
-    expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).props('initialMode')).toBe('create')
+    expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).props('initialMode')).toBe(
+      'create',
+    )
   })
 
   it('opens create modal in grafana mode from dashboard query param', async () => {
@@ -220,7 +226,9 @@ describe('DashboardList', () => {
     await flushPromises()
 
     expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).exists()).toBe(true)
-    expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).props('initialMode')).toBe('grafana')
+    expect(wrapper.findComponent({ name: 'CreateDashboardModal' }).props('initialMode')).toBe(
+      'grafana',
+    )
     expect(mockReplace).toHaveBeenCalledWith({ query: {} })
   })
 
@@ -261,9 +269,7 @@ describe('DashboardList', () => {
         },
       ])
       .mockResolvedValueOnce([])
-    vi.mocked(folderApi.listFolders)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
+    vi.mocked(folderApi.listFolders).mockResolvedValueOnce([]).mockResolvedValueOnce([])
     vi.mocked(folderApi.createFolder).mockResolvedValue({
       id: 'new-folder',
       organization_id: 'org-1',
@@ -338,15 +344,22 @@ describe('DashboardList', () => {
     const wrapper = mount(DashboardList)
     await flushPromises()
 
-    await wrapper.get('[data-testid="dashboard-card-123e4567-e89b-12d3-a456-426614174000"]').trigger('dragstart')
+    await wrapper
+      .get('[data-testid="dashboard-card-123e4567-e89b-12d3-a456-426614174000"]')
+      .trigger('dragstart')
     await wrapper.get('[data-testid="folder-section-folder-b"]').trigger('dragover')
     await wrapper.get('[data-testid="folder-section-folder-b"]').trigger('drop')
     await flushPromises()
 
-    expect(vi.mocked(dashboardApi.updateDashboard)).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174000', {
-      folder_id: 'folder-b',
-    })
-    expect(wrapper.get('[data-testid="folder-section-folder-b"]').text()).toContain('Test Dashboard')
+    expect(vi.mocked(dashboardApi.updateDashboard)).toHaveBeenCalledWith(
+      '123e4567-e89b-12d3-a456-426614174000',
+      {
+        folder_id: 'folder-b',
+      },
+    )
+    expect(wrapper.get('[data-testid="folder-section-folder-b"]').text()).toContain(
+      'Test Dashboard',
+    )
   })
 
   it('moves dashboard from explorer tree via drag and drop', async () => {
@@ -367,30 +380,41 @@ describe('DashboardList', () => {
     const wrapper = mount(DashboardList)
     await flushPromises()
 
-    await wrapper.get('[data-testid="tree-dashboard-123e4567-e89b-12d3-a456-426614174000"]').trigger('dragstart')
+    await wrapper
+      .get('[data-testid="tree-dashboard-123e4567-e89b-12d3-a456-426614174000"]')
+      .trigger('dragstart')
     await wrapper.get('[data-testid="tree-row-folder-b"]').trigger('dragover')
     await wrapper.get('[data-testid="tree-row-folder-b"]').trigger('drop')
     await flushPromises()
 
-    expect(vi.mocked(dashboardApi.updateDashboard)).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174000', {
-      folder_id: 'folder-b',
-    })
+    expect(vi.mocked(dashboardApi.updateDashboard)).toHaveBeenCalledWith(
+      '123e4567-e89b-12d3-a456-426614174000',
+      {
+        folder_id: 'folder-b',
+      },
+    )
   })
 
   it('rolls back dashboard move on drag-and-drop API failure', async () => {
     vi.mocked(dashboardApi.listDashboards).mockResolvedValue(mockDashboards)
     vi.mocked(folderApi.listFolders).mockResolvedValue(mockFolders)
-    vi.mocked(dashboardApi.updateDashboard).mockRejectedValue(new Error('Not authorized to update this dashboard'))
+    vi.mocked(dashboardApi.updateDashboard).mockRejectedValue(
+      new Error('Not authorized to update this dashboard'),
+    )
 
     const wrapper = mount(DashboardList)
     await flushPromises()
 
-    await wrapper.get('[data-testid="dashboard-card-123e4567-e89b-12d3-a456-426614174000"]').trigger('dragstart')
+    await wrapper
+      .get('[data-testid="dashboard-card-123e4567-e89b-12d3-a456-426614174000"]')
+      .trigger('dragstart')
     await wrapper.get('[data-testid="folder-section-folder-b"]').trigger('dragover')
     await wrapper.get('[data-testid="folder-section-folder-b"]').trigger('drop')
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="folder-section-folder-a"]').text()).toContain('Test Dashboard')
+    expect(wrapper.get('[data-testid="folder-section-folder-a"]').text()).toContain(
+      'Test Dashboard',
+    )
     expect(wrapper.text()).toContain('Not authorized to update this dashboard')
   })
 
@@ -405,7 +429,11 @@ describe('DashboardList', () => {
     const wrapper = mount(DashboardList)
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="dashboard-card-123e4567-e89b-12d3-a456-426614174000"]').attributes('draggable')).toBe('false')
+    expect(
+      wrapper
+        .get('[data-testid="dashboard-card-123e4567-e89b-12d3-a456-426614174000"]')
+        .attributes('draggable'),
+    ).toBe('false')
   })
 
   it('does not fetch dashboards when no organization is selected', async () => {
@@ -437,9 +465,7 @@ describe('DashboardList', () => {
     vi.mocked(dashboardApi.listDashboards)
       .mockResolvedValueOnce(mockDashboards)
       .mockResolvedValueOnce([])
-    vi.mocked(folderApi.listFolders)
-      .mockResolvedValueOnce(mockFolders)
-      .mockResolvedValueOnce([])
+    vi.mocked(folderApi.listFolders).mockResolvedValueOnce(mockFolders).mockResolvedValueOnce([])
 
     const wrapper = mount(DashboardList, {
       global: {

@@ -1,17 +1,17 @@
+import { trackEvent } from '../analytics'
 import type {
-  DataSource,
   CreateDataSourceRequest,
-  UpdateDataSourceRequest,
+  DataSource,
+  DataSourceLogStreamRequest,
   DataSourceQueryRequest,
   DataSourceQueryResult,
-  DataSourceLogStreamRequest,
   LogEntry,
   Trace,
+  TraceSearchRequest,
   TraceServiceGraph,
   TraceSummary,
-  TraceSearchRequest,
+  UpdateDataSourceRequest,
 } from '../types/datasource'
-import { trackEvent } from '../analytics'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -175,16 +175,19 @@ interface TraceServiceGraphResponse {
 }
 
 export async function fetchDataSourceTrace(id: string, traceId: string): Promise<Trace> {
-  const response = await fetch(`${API_BASE}/api/datasources/${id}/traces/${encodeURIComponent(traceId)}`, {
-    headers: getAuthHeaders(),
-  })
+  const response = await fetch(
+    `${API_BASE}/api/datasources/${id}/traces/${encodeURIComponent(traceId)}`,
+    {
+      headers: getAuthHeaders(),
+    },
+  )
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     throw new Error(err.error || 'Failed to fetch trace')
   }
 
-  const body = await response.json() as TraceResponse
+  const body = (await response.json()) as TraceResponse
   if (body.status === 'error' || !body.data) {
     throw new Error(body.error || 'Failed to fetch trace')
   }
@@ -208,7 +211,7 @@ export async function fetchDataSourceTraceServiceGraph(
     throw new Error(err.error || 'Failed to fetch trace service graph')
   }
 
-  const body = await response.json() as TraceServiceGraphResponse
+  const body = (await response.json()) as TraceServiceGraphResponse
   if (body.status === 'error' || !body.data) {
     throw new Error(body.error || 'Failed to fetch trace service graph')
   }
@@ -231,7 +234,7 @@ export async function searchDataSourceTraces(
     throw new Error(err.error || 'Failed to search traces')
   }
 
-  const body = await response.json() as TraceSearchResponse
+  const body = (await response.json()) as TraceSearchResponse
   if (body.status === 'error') {
     throw new Error(body.error || 'Failed to search traces')
   }
@@ -255,7 +258,7 @@ export async function fetchDataSourceTraceServices(id: string): Promise<string[]
     throw new Error(err.error || 'Failed to fetch trace services')
   }
 
-  const body = await response.json() as TraceServicesResponse
+  const body = (await response.json()) as TraceServicesResponse
   if (body.status === 'error') {
     throw new Error(body.error || 'Failed to fetch trace services')
   }
@@ -365,14 +368,15 @@ function parseSSEEvent(rawEvent: string): ParsedSSEEvent | null {
 }
 
 function isAbortError(error: unknown): boolean {
-  return (typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError') ||
+  return (
+    (typeof DOMException !== 'undefined' &&
+      error instanceof DOMException &&
+      error.name === 'AbortError') ||
     (error instanceof Error && error.name === 'AbortError')
+  )
 }
 
-function handleSSEEventPayload(
-  parsed: ParsedSSEEvent,
-  handlers: DataSourceLogStreamHandlers,
-) {
+function handleSSEEventPayload(parsed: ParsedSSEEvent, handlers: DataSourceLogStreamHandlers) {
   let payload: unknown
   try {
     payload = JSON.parse(parsed.data)
@@ -490,7 +494,7 @@ export async function fetchDataSourceLabels(id: string): Promise<string[]> {
     throw new Error(err.error || 'Failed to fetch labels')
   }
 
-  const body = await response.json() as LabelsResponse
+  const body = (await response.json()) as LabelsResponse
   if (body.status === 'error') {
     throw new Error(body.error || 'Failed to fetch labels')
   }
@@ -499,16 +503,19 @@ export async function fetchDataSourceLabels(id: string): Promise<string[]> {
 }
 
 export async function fetchDataSourceLabelValues(id: string, labelName: string): Promise<string[]> {
-  const response = await fetch(`${API_BASE}/api/datasources/${id}/labels/${encodeURIComponent(labelName)}/values`, {
-    headers: getAuthHeaders(),
-  })
+  const response = await fetch(
+    `${API_BASE}/api/datasources/${id}/labels/${encodeURIComponent(labelName)}/values`,
+    {
+      headers: getAuthHeaders(),
+    },
+  )
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     throw new Error(err.error || 'Failed to fetch label values')
   }
 
-  const body = await response.json() as LabelsResponse
+  const body = (await response.json()) as LabelsResponse
   if (body.status === 'error') {
     throw new Error(body.error || 'Failed to fetch label values')
   }

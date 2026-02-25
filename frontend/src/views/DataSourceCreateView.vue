@@ -1,12 +1,19 @@
 <script setup lang="ts">
+import {
+  ArrowLeft,
+  CheckCircle2,
+  CircleAlert,
+  Database,
+  HeartPulse,
+  Loader2,
+} from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, CheckCircle2, CircleAlert, Database, HeartPulse, Loader2 } from 'lucide-vue-next'
-import { useOrganization } from '../composables/useOrganization'
-import { useDatasource } from '../composables/useDatasource'
 import { getDataSource, testDataSourceDraftConnection } from '../api/datasources'
+import { useDatasource } from '../composables/useDatasource'
+import { useOrganization } from '../composables/useOrganization'
 import type { CreateDataSourceRequest, DataSource, DataSourceType } from '../types/datasource'
-import { dataSourceTypeLabels, isTracingType, isAlertingType } from '../types/datasource'
+import { dataSourceTypeLabels, isAlertingType, isTracingType } from '../types/datasource'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,54 +59,57 @@ const datasourceId = computed(() => {
 
 const isEditing = computed(() => datasourceId.value !== null)
 
-const pageTitle = computed(() => isEditing.value ? 'Edit Data Source' : 'Add Data Source')
+const pageTitle = computed(() => (isEditing.value ? 'Edit Data Source' : 'Add Data Source'))
 const pageDescription = computed(() =>
   isEditing.value
     ? 'Update connection details, test connectivity, then save your changes.'
     : 'Configure connection details, test connectivity, then save.',
 )
 const saveButtonText = computed(() =>
-  saveLoading.value
-    ? 'Saving...'
-    : isEditing.value
-      ? 'Save Changes'
-      : 'Save Data Source',
+  saveLoading.value ? 'Saving...' : isEditing.value ? 'Save Changes' : 'Save Data Source',
 )
 
 const isClickHouseType = computed(() => formType.value === 'clickhouse')
 const isCloudWatchType = computed(() => formType.value === 'cloudwatch')
 const isElasticsearchType = computed(() => formType.value === 'elasticsearch')
 const isVMAlertType = computed(() => formType.value === 'vmalert')
-const showAuthSettings = computed(() =>
-  (isTracingType(formType.value) || isClickHouseType.value || isElasticsearchType.value || isAlertingType(formType.value)) && !isCloudWatchType.value,
+const showAuthSettings = computed(
+  () =>
+    (isTracingType(formType.value) ||
+      isClickHouseType.value ||
+      isElasticsearchType.value ||
+      isAlertingType(formType.value)) &&
+    !isCloudWatchType.value,
 )
 
-const formSignature = computed(() => JSON.stringify({
-  name: formName.value.trim(),
-  type: formType.value,
-  url: formUrl.value.trim(),
-  isDefault: formIsDefault.value,
-  authType: formAuthType.value,
-  basicUsername: formBasicUsername.value.trim(),
-  basicPassword: formBasicPassword.value,
-  bearerToken: formBearerToken.value,
-  apiKeyHeader: formApiKeyHeader.value.trim(),
-  apiKeyValue: formApiKeyValue.value,
-  database: formDatabase.value.trim(),
-  cloudwatchRegion: formCloudWatchRegion.value.trim(),
-  cloudwatchMetricNamespace: formCloudWatchMetricNamespace.value.trim(),
-  cloudwatchLogGroup: formCloudWatchLogGroup.value.trim(),
-  cloudwatchAccessKeyId: formCloudWatchAccessKeyId.value.trim(),
-  cloudwatchSecretAccessKey: formCloudWatchSecretAccessKey.value,
-  cloudwatchSessionToken: formCloudWatchSessionToken.value,
-  elasticsearchIndex: formElasticsearchIndex.value.trim(),
-  elasticsearchTimestampField: formElasticsearchTimestampField.value.trim(),
-  elasticsearchMessageField: formElasticsearchMessageField.value.trim(),
-  elasticsearchLevelField: formElasticsearchLevelField.value.trim(),
-}))
+const formSignature = computed(() =>
+  JSON.stringify({
+    name: formName.value.trim(),
+    type: formType.value,
+    url: formUrl.value.trim(),
+    isDefault: formIsDefault.value,
+    authType: formAuthType.value,
+    basicUsername: formBasicUsername.value.trim(),
+    basicPassword: formBasicPassword.value,
+    bearerToken: formBearerToken.value,
+    apiKeyHeader: formApiKeyHeader.value.trim(),
+    apiKeyValue: formApiKeyValue.value,
+    database: formDatabase.value.trim(),
+    cloudwatchRegion: formCloudWatchRegion.value.trim(),
+    cloudwatchMetricNamespace: formCloudWatchMetricNamespace.value.trim(),
+    cloudwatchLogGroup: formCloudWatchLogGroup.value.trim(),
+    cloudwatchAccessKeyId: formCloudWatchAccessKeyId.value.trim(),
+    cloudwatchSecretAccessKey: formCloudWatchSecretAccessKey.value,
+    cloudwatchSessionToken: formCloudWatchSessionToken.value,
+    elasticsearchIndex: formElasticsearchIndex.value.trim(),
+    elasticsearchTimestampField: formElasticsearchTimestampField.value.trim(),
+    elasticsearchMessageField: formElasticsearchMessageField.value.trim(),
+    elasticsearchLevelField: formElasticsearchLevelField.value.trim(),
+  }),
+)
 
-const isTestStale = computed(() =>
-  lastTestedSignature.value !== null && lastTestedSignature.value !== formSignature.value,
+const isTestStale = computed(
+  () => lastTestedSignature.value !== null && lastTestedSignature.value !== formSignature.value,
 )
 
 function resetAuthForm() {

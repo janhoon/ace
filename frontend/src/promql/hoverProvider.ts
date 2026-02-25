@@ -6,7 +6,7 @@ function createHoverProvider(_monaco: typeof Monaco): Monaco.languages.HoverProv
   return {
     provideHover(
       model: Monaco.editor.ITextModel,
-      position: Monaco.Position
+      position: Monaco.Position,
     ): Monaco.languages.ProviderResult<Monaco.languages.Hover> {
       const word = model.getWordAtPosition(position)
       if (!word) return null
@@ -21,13 +21,13 @@ function createHoverProvider(_monaco: typeof Monaco): Monaco.languages.HoverProv
             startLineNumber: position.lineNumber,
             endLineNumber: position.lineNumber,
             startColumn: word.startColumn,
-            endColumn: word.endColumn
+            endColumn: word.endColumn,
           },
           contents: [
             { value: `**${wordText}**` },
             { value: `\`\`\`\n${funcInfo.signature}\n\`\`\`` },
-            { value: funcInfo.description }
-          ]
+            { value: funcInfo.description },
+          ],
         }
       }
 
@@ -44,7 +44,7 @@ function createHoverProvider(_monaco: typeof Monaco): Monaco.languages.HoverProv
           offset: 'Time offset for lookback',
           and: 'Intersection of two vectors',
           or: 'Union of two vectors',
-          unless: 'Complement of two vectors'
+          unless: 'Complement of two vectors',
         }
 
         const description = keywordDescriptions[wordText]
@@ -54,25 +54,19 @@ function createHoverProvider(_monaco: typeof Monaco): Monaco.languages.HoverProv
               startLineNumber: position.lineNumber,
               endLineNumber: position.lineNumber,
               startColumn: word.startColumn,
-              endColumn: word.endColumn
+              endColumn: word.endColumn,
             },
-            contents: [
-              { value: `**${wordText}** (keyword)` },
-              { value: description }
-            ]
+            contents: [{ value: `**${wordText}** (keyword)` }, { value: description }],
           }
         }
       }
 
       return null
-    }
+    },
   }
 }
 
 // Register the hover provider
 export function registerHoverProvider(monaco: typeof Monaco) {
-  monaco.languages.registerHoverProvider(
-    PROMQL_LANGUAGE_ID,
-    createHoverProvider(monaco)
-  )
+  monaco.languages.registerHoverProvider(PROMQL_LANGUAGE_ID, createHoverProvider(monaco))
 }

@@ -1,7 +1,7 @@
-import { ref, computed, readonly } from 'vue'
-import * as authApi from '../api/auth'
-import type { User, MeResponse } from '../api/auth'
+import { computed, readonly, ref } from 'vue'
 import { identifyUser, resetUserAnalytics, trackEvent } from '../analytics'
+import type { MeResponse, User } from '../api/auth'
+import * as authApi from '../api/auth'
 
 // Global state (singleton pattern)
 const user = ref<User | null>(null)

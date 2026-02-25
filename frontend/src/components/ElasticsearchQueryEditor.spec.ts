@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import ElasticsearchQueryEditor from './ElasticsearchQueryEditor.vue'
 
 describe('ElasticsearchQueryEditor', () => {
@@ -38,9 +38,13 @@ describe('ElasticsearchQueryEditor', () => {
       },
     })
 
-    await wrapper.find('#elasticsearch-query').setValue('{"query":{"query_string":{"query":"error"}}}')
+    await wrapper
+      .find('#elasticsearch-query')
+      .setValue('{"query":{"query_string":{"query":"error"}}}')
 
     expect(wrapper.emitted('update:modelValue')).toBeTruthy()
-    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['{"query":{"query_string":{"query":"error"}}}'])
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([
+      '{"query":{"query_string":{"query":"error"}}}',
+    ])
   })
 })

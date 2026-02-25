@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Explore from './Explore.vue'
 
 const mockFetchDatasources = vi.hoisted(() => vi.fn())
@@ -9,16 +9,16 @@ const mockSetCustomRange = vi.hoisted(() => vi.fn())
 vi.mock('../components/TimeRangePicker.vue', () => ({
   default: {
     name: 'TimeRangePicker',
-    template: '<div class="mock-time-range-picker">TimeRangePicker Mock</div>'
-  }
+    template: '<div class="mock-time-range-picker">TimeRangePicker Mock</div>',
+  },
 }))
 
 vi.mock('../components/LineChart.vue', () => ({
   default: {
     name: 'LineChart',
     props: ['series', 'height'],
-    template: '<div class="mock-line-chart">LineChart Mock</div>'
-  }
+    template: '<div class="mock-line-chart">LineChart Mock</div>',
+  },
 }))
 
 vi.mock('../components/QueryBuilder.vue', () => ({
@@ -33,8 +33,8 @@ vi.mock('../components/QueryBuilder.vue', () => ({
         :disabled="disabled"
         @input="$emit('update:modelValue', $event.target.value)"
       ></textarea>
-    `
-  }
+    `,
+  },
 }))
 
 vi.mock('../components/ClickHouseSQLEditor.vue', () => ({
@@ -93,15 +93,15 @@ vi.mock('../composables/useTimeRange', () => ({
     timeRange: { value: { start: Date.now() - 3600000, end: Date.now() } },
     onRefresh: vi.fn(() => () => {}),
     setCustomRange: mockSetCustomRange,
-  })
+  }),
 }))
 
 vi.mock('../composables/useOrganization', async () => {
   const { ref } = await import('vue')
   return {
     useOrganization: () => ({
-      currentOrg: ref({ id: 'org-1', name: 'Test Org', role: 'admin' })
-    })
+      currentOrg: ref({ id: 'org-1', name: 'Test Org', role: 'admin' }),
+    }),
   }
 })
 
@@ -161,7 +161,7 @@ vi.mock('../composables/useDatasource', async () => {
     useDatasource: () => ({
       metricsDatasources,
       fetchDatasources: mockFetchDatasources,
-    })
+    }),
   }
 })
 
@@ -180,7 +180,9 @@ import { transformToChartData } from '../composables/useProm'
 
 /** Find the datasource trigger button (contains datasource name) */
 function findDatasourceTrigger(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('button').find((b) => b.attributes('title')?.includes('Active datasource'))!
+  return wrapper
+    .findAll('button')
+    .find((b) => b.attributes('title')?.includes('Active datasource'))!
 }
 
 /** Find datasource dropdown options */
@@ -191,7 +193,9 @@ function findDatasourceOptions(wrapper: ReturnType<typeof mount>) {
 
 /** Find the Run Query button */
 function findRunButton(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('button').find((b) => b.text().includes('Run Query') || b.text().includes('Running'))!
+  return wrapper
+    .findAll('button')
+    .find((b) => b.text().includes('Run Query') || b.text().includes('Running'))!
 }
 
 /** Find error display (use rounded-xl to distinguish from the health badge which uses rounded-full) */
@@ -263,18 +267,20 @@ describe('Explore', () => {
         result: [
           {
             metric: { __name__: 'up' },
-            values: [[1609459200, '1']]
-          }
-        ]
+            values: [[1609459200, '1']],
+          },
+        ],
       },
     })
 
     vi.mocked(transformToChartData).mockReturnValue({
-      series: [{
-        name: 'up',
-        data: [{ timestamp: 1609459200, value: 1 }],
-        labels: { __name__: 'up' }
-      }]
+      series: [
+        {
+          name: 'up',
+          data: [{ timestamp: 1609459200, value: 1 }],
+          labels: { __name__: 'up' },
+        },
+      ],
     })
 
     const wrapper = mount(Explore)
@@ -287,7 +293,7 @@ describe('Explore', () => {
       'ds-1',
       expect.objectContaining({
         query: 'up',
-      })
+      }),
     )
     expect(wrapper.find('.mock-line-chart').exists()).toBe(true)
     expect(wrapper.text()).toContain('1 series')
@@ -316,7 +322,7 @@ describe('Explore', () => {
       resultType: 'metrics',
       data: {
         resultType: 'matrix',
-        result: []
+        result: [],
       },
     })
 
@@ -333,12 +339,15 @@ describe('Explore', () => {
   })
 
   it('prefills service query and time range from trace-to-metrics context', async () => {
-    localStorage.setItem('trace_metrics_navigation', JSON.stringify({
-      serviceName: 'payments',
-      startMs: 1_700_000_000_000,
-      endMs: 1_700_000_300_000,
-      createdAt: Date.now(),
-    }))
+    localStorage.setItem(
+      'trace_metrics_navigation',
+      JSON.stringify({
+        serviceName: 'payments',
+        startMs: 1_700_000_000_000,
+        endMs: 1_700_000_300_000,
+        createdAt: Date.now(),
+      }),
+    )
 
     const wrapper = mount(Explore)
     await flushPromises()
@@ -371,7 +380,9 @@ describe('Explore', () => {
 
     expect(wrapper.findComponent({ name: 'ClickHouseSQLEditor' }).exists()).toBe(true)
 
-    await wrapper.find('#clickhouse-query').setValue('SELECT timestamp, value, metric FROM metrics LIMIT 20')
+    await wrapper
+      .find('#clickhouse-query')
+      .setValue('SELECT timestamp, value, metric FROM metrics LIMIT 20')
     await findRunButton(wrapper).trigger('click')
     await flushPromises()
 
@@ -405,7 +416,9 @@ describe('Explore', () => {
 
     expect(wrapper.findComponent({ name: 'CloudWatchQueryEditor' }).exists()).toBe(true)
 
-    await wrapper.find('#cloudwatch-query').setValue('{"namespace":"AWS/EC2","metric_name":"CPUUtilization"}')
+    await wrapper
+      .find('#cloudwatch-query')
+      .setValue('{"namespace":"AWS/EC2","metric_name":"CPUUtilization"}')
     await findRunButton(wrapper).trigger('click')
     await flushPromises()
 

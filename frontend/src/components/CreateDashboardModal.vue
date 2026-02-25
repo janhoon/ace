@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import { X } from 'lucide-vue-next'
-import { createDashboard, importDashboardYaml } from '../api/dashboards'
+import { computed, ref } from 'vue'
 import { convertGrafanaDashboard } from '../api/converter'
+import { createDashboard, importDashboardYaml } from '../api/dashboards'
 import { useOrganization } from '../composables/useOrganization'
 
 type CreationMode = 'create' | 'import' | 'grafana'
 
-const props = withDefaults(defineProps<{
-  initialMode?: CreationMode
-}>(), {
-  initialMode: 'create',
-})
+const props = withDefaults(
+  defineProps<{
+    initialMode?: CreationMode
+  }>(),
+  {
+    initialMode: 'create',
+  },
+)
 
 const emit = defineEmits<{
   close: []
@@ -46,7 +49,9 @@ const submitLabel = computed(() => {
   return mode.value === 'create' ? 'Create Dashboard' : 'Import Dashboard'
 })
 
-const canConvertGrafana = computed(() => grafanaSource.value.trim().length > 0 && !convertingGrafana.value && !loading.value)
+const canConvertGrafana = computed(
+  () => grafanaSource.value.trim().length > 0 && !convertingGrafana.value && !loading.value,
+)
 
 function normalizeYamlValue(value: string): string {
   const trimmed = value.trim()
@@ -224,9 +229,10 @@ async function handleSubmit() {
   }
 
   if ((mode.value === 'import' || mode.value === 'grafana') && !importPreview.value) {
-    error.value = mode.value === 'grafana'
-      ? 'Convert Grafana JSON before importing'
-      : 'Upload a valid YAML file before importing'
+    error.value =
+      mode.value === 'grafana'
+        ? 'Convert Grafana JSON before importing'
+        : 'Upload a valid YAML file before importing'
     return
   }
 

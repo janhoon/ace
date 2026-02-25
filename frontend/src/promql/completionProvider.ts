@@ -1,6 +1,6 @@
 import type * as Monaco from 'monaco-editor'
+import { fetchLabels, fetchLabelValues, fetchMetrics } from '../composables/useProm'
 import { PROMQL_FUNCTIONS, PROMQL_KEYWORDS, PROMQL_LANGUAGE_ID } from './language'
-import { fetchMetrics, fetchLabels, fetchLabelValues } from '../composables/useProm'
 
 // Cache for metrics and labels
 interface MetadataCache {
@@ -15,7 +15,7 @@ const cache: MetadataCache = {
   metrics: [],
   labels: [],
   labelValues: new Map(),
-  lastFetch: 0
+  lastFetch: 0,
 }
 
 // Debounce helper
@@ -87,13 +87,13 @@ interface CompletionContext {
 
 function getCompletionContext(
   model: Monaco.editor.ITextModel,
-  position: Monaco.Position
+  position: Monaco.Position,
 ): CompletionContext {
   const textUntilPosition = model.getValueInRange({
     startLineNumber: 1,
     startColumn: 1,
     endLineNumber: position.lineNumber,
-    endColumn: position.column
+    endColumn: position.column,
   })
 
   // Check if we're inside label selectors { }
@@ -108,9 +108,16 @@ function getCompletionContext(
     const labelValueMatch = textAfterBrace.match(/(\w+)\s*(!?=~?)\s*["']?([^"',}]*)$/)
     if (labelValueMatch?.[2]) {
       const operator = labelValueMatch[2]
-      const afterOperator = textAfterBrace.slice(textAfterBrace.lastIndexOf(operator) + operator.length).trim()
+      const afterOperator = textAfterBrace
+        .slice(textAfterBrace.lastIndexOf(operator) + operator.length)
+        .trim()
       // If we have an operator and cursor is after it
-      if (afterOperator.startsWith('"') || afterOperator.startsWith("'") || afterOperator === '' || afterOperator.match(/^[^=!{},]+$/)) {
+      if (
+        afterOperator.startsWith('"') ||
+        afterOperator.startsWith("'") ||
+        afterOperator === '' ||
+        afterOperator.match(/^[^=!{},]+$/)
+      ) {
         return { type: 'labelValue', labelName: labelValueMatch[1] }
       }
     }
@@ -147,7 +154,7 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
 
     async provideCompletionItems(
       model: Monaco.editor.ITextModel,
-      position: Monaco.Position
+      position: Monaco.Position,
     ): Promise<Monaco.languages.CompletionList> {
       const context = getCompletionContext(model, position)
       const word = model.getWordUntilPosition(position)
@@ -155,7 +162,7 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
         startLineNumber: position.lineNumber,
         endLineNumber: position.lineNumber,
         startColumn: word.startColumn,
-        endColumn: word.endColumn
+        endColumn: word.endColumn,
       }
 
       const suggestions: Monaco.languages.CompletionItem[] = []
@@ -171,7 +178,7 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
               kind: monaco.languages.CompletionItemKind.Variable,
               insertText: metric,
               range,
-              detail: 'Metric'
+              detail: 'Metric',
             })
           }
 
@@ -184,7 +191,7 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               range,
               detail: info.signature,
-              documentation: info.description
+              documentation: info.description,
             })
           }
 
@@ -195,7 +202,7 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
               kind: monaco.languages.CompletionItemKind.Keyword,
               insertText: keyword,
               range,
-              detail: 'Keyword'
+              detail: 'Keyword',
             })
           }
           break
@@ -209,7 +216,7 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
               kind: monaco.languages.CompletionItemKind.Property,
               insertText: label,
               range,
-              detail: 'Label'
+              detail: 'Label',
             })
           }
           break
@@ -224,7 +231,7 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
                 kind: monaco.languages.CompletionItemKind.Value,
                 insertText: `"${value}"`,
                 range,
-                detail: `Value for ${context.labelName}`
+                detail: `Value for ${context.labelName}`,
               })
             }
           }
@@ -233,7 +240,7 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
       }
 
       return { suggestions }
-    }
+    },
   }
 }
 
@@ -241,6 +248,6 @@ function createCompletionProvider(monaco: typeof Monaco): Monaco.languages.Compl
 export function registerCompletionProvider(monaco: typeof Monaco) {
   monaco.languages.registerCompletionItemProvider(
     PROMQL_LANGUAGE_ID,
-    createCompletionProvider(monaco)
+    createCompletionProvider(monaco),
   )
 }

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { TraceServiceGraph, TraceServiceGraphEdge, TraceServiceGraphNode } from '../types/datasource'
+import type {
+  TraceServiceGraph,
+  TraceServiceGraphEdge,
+  TraceServiceGraphNode,
+} from '../types/datasource'
 
 interface PositionedNode extends TraceServiceGraphNode {
   x: number
@@ -21,7 +25,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select-service', serviceName: string): void
-  (e: 'select-edge', edge: { source: string, target: string }): void
+  (e: 'select-edge', edge: { source: string; target: string }): void
 }>()
 
 const graphWidth = 940
@@ -100,11 +104,14 @@ const positionedNodes = computed<PositionedNode[]>(() => {
   const positioned: PositionedNode[] = []
   for (let level = 0; level <= maxLevel; level += 1) {
     const list = levels.get(level) || []
-    list.sort((a, b) => b.requestCount - a.requestCount || a.serviceName.localeCompare(b.serviceName))
+    list.sort(
+      (a, b) => b.requestCount - a.requestCount || a.serviceName.localeCompare(b.serviceName),
+    )
 
-    const x = levelCount > 1
-      ? nodePaddingX + (level * (graphWidth - nodePaddingX * 2)) / (levelCount - 1)
-      : graphWidth / 2
+    const x =
+      levelCount > 1
+        ? nodePaddingX + (level * (graphWidth - nodePaddingX * 2)) / (levelCount - 1)
+        : graphWidth / 2
 
     if (list.length <= 1) {
       const node = list[0]
@@ -162,7 +169,7 @@ const canvasTransform = computed(() => {
 function edgePath(edge: PositionedEdge): string {
   const horizontalDistance = Math.abs(edge.targetX - edge.sourceX)
   const controlX = (edge.sourceX + edge.targetX) / 2
-  const controlY = ((edge.sourceY + edge.targetY) / 2) - Math.max(24, horizontalDistance * 0.08)
+  const controlY = (edge.sourceY + edge.targetY) / 2 - Math.max(24, horizontalDistance * 0.08)
   return `M ${edge.sourceX} ${edge.sourceY} Q ${controlX} ${controlY} ${edge.targetX} ${edge.targetY}`
 }
 

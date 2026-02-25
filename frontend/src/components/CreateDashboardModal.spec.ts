@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import CreateDashboardModal from './CreateDashboardModal.vue'
-import * as api from '../api/dashboards'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as converterApi from '../api/converter'
+import * as api from '../api/dashboards'
+import CreateDashboardModal from './CreateDashboardModal.vue'
 
 vi.mock('../api/dashboards')
 vi.mock('../api/converter')
@@ -25,7 +25,10 @@ describe('CreateDashboardModal', () => {
 
   it('emits close event when cancel is clicked', async () => {
     const wrapper = mount(CreateDashboardModal)
-    await wrapper.findAll('button').find(b => b.text() === 'Cancel')?.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Cancel')
+      ?.trigger('click')
     expect(wrapper.emitted('close')).toBeTruthy()
   })
 
@@ -40,7 +43,7 @@ describe('CreateDashboardModal', () => {
       id: '123',
       title: 'New Dashboard',
       created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      updated_at: '2024-01-01T00:00:00Z',
     })
 
     const wrapper = mount(CreateDashboardModal)
@@ -76,12 +79,19 @@ describe('CreateDashboardModal', () => {
     })
 
     const wrapper = mount(CreateDashboardModal)
-    await wrapper.findAll('button').find((button) => button.text() === 'Import YAML')?.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Import YAML')
+      ?.trigger('click')
 
     const input = wrapper.find('input#yaml-file')
-    const file = new File([
-      'schema_version: 1\ndashboard:\n  title: Imported Dashboard\n  panels:\n    - title: Requests\n      type: line_chart\n    - title: Errors\n      type: stat\n',
-    ], 'dashboard.yaml', { type: 'application/x-yaml' })
+    const file = new File(
+      [
+        'schema_version: 1\ndashboard:\n  title: Imported Dashboard\n  panels:\n    - title: Requests\n      type: line_chart\n    - title: Errors\n      type: stat\n',
+      ],
+      'dashboard.yaml',
+      { type: 'application/x-yaml' },
+    )
 
     Object.defineProperty(input.element, 'files', {
       value: [file],
@@ -95,13 +105,19 @@ describe('CreateDashboardModal', () => {
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    expect(api.importDashboardYaml).toHaveBeenCalledWith('org-1', expect.stringContaining('dashboard:'))
+    expect(api.importDashboardYaml).toHaveBeenCalledWith(
+      'org-1',
+      expect.stringContaining('dashboard:'),
+    )
     expect(wrapper.emitted('created')).toBeTruthy()
   })
 
   it('rejects invalid file extension in import mode', async () => {
     const wrapper = mount(CreateDashboardModal)
-    await wrapper.findAll('button').find((button) => button.text() === 'Import YAML')?.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Import YAML')
+      ?.trigger('click')
 
     const input = wrapper.find('input#yaml-file')
     const file = new File(['{}'], 'dashboard.json', { type: 'application/json' })
@@ -118,7 +134,10 @@ describe('CreateDashboardModal', () => {
 
   it('shows validation error for invalid dashboard yaml shape', async () => {
     const wrapper = mount(CreateDashboardModal)
-    await wrapper.findAll('button').find((button) => button.text() === 'Import YAML')?.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Import YAML')
+      ?.trigger('click')
 
     const input = wrapper.find('input#yaml-file')
     const file = new File(['schema_version: 1\nname: invalid\n'], 'dashboard.yaml', {
@@ -138,7 +157,8 @@ describe('CreateDashboardModal', () => {
   it('imports dashboard from grafana json conversion', async () => {
     vi.mocked(converterApi.convertGrafanaDashboard).mockResolvedValue({
       format: 'yaml',
-      content: 'schema_version: 1\ndashboard:\n  title: Converted Dashboard\n  panels:\n    - title: Requests\n',
+      content:
+        'schema_version: 1\ndashboard:\n  title: Converted Dashboard\n  panels:\n    - title: Requests\n',
       document: {
         schema_version: 1,
         dashboard: {
@@ -163,27 +183,45 @@ describe('CreateDashboardModal', () => {
     })
 
     const wrapper = mount(CreateDashboardModal)
-    await wrapper.findAll('button').find((button) => button.text() === 'Import Grafana')?.trigger('click')
-    await wrapper.get('[data-testid="grafana-source"]').setValue('{"dashboard":{"title":"grafana"}}')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Import Grafana')
+      ?.trigger('click')
+    await wrapper
+      .get('[data-testid="grafana-source"]')
+      .setValue('{"dashboard":{"title":"grafana"}}')
     await wrapper.get('[data-testid="grafana-convert"]').trigger('click')
     await flushPromises()
 
-    expect(converterApi.convertGrafanaDashboard).toHaveBeenCalledWith('{"dashboard":{"title":"grafana"}}', 'yaml')
+    expect(converterApi.convertGrafanaDashboard).toHaveBeenCalledWith(
+      '{"dashboard":{"title":"grafana"}}',
+      'yaml',
+    )
     expect(wrapper.get('[data-testid="yaml-preview"]').text()).toContain('Converted Dashboard')
-    expect(wrapper.get('[data-testid="grafana-warnings"]').text()).toContain('unsupported panel type')
+    expect(wrapper.get('[data-testid="grafana-warnings"]').text()).toContain(
+      'unsupported panel type',
+    )
 
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    expect(api.importDashboardYaml).toHaveBeenCalledWith('org-1', expect.stringContaining('schema_version'))
+    expect(api.importDashboardYaml).toHaveBeenCalledWith(
+      'org-1',
+      expect.stringContaining('schema_version'),
+    )
     expect(wrapper.emitted('created')).toBeTruthy()
   })
 
   it('shows conversion error when grafana payload is invalid', async () => {
-    vi.mocked(converterApi.convertGrafanaDashboard).mockRejectedValue(new Error('invalid grafana dashboard JSON'))
+    vi.mocked(converterApi.convertGrafanaDashboard).mockRejectedValue(
+      new Error('invalid grafana dashboard JSON'),
+    )
 
     const wrapper = mount(CreateDashboardModal)
-    await wrapper.findAll('button').find((button) => button.text() === 'Import Grafana')?.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Import Grafana')
+      ?.trigger('click')
     await wrapper.get('[data-testid="grafana-source"]').setValue('{')
     await wrapper.get('[data-testid="grafana-convert"]').trigger('click')
     await flushPromises()

@@ -1,23 +1,40 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { AlertCircle, Check, ChevronDown, ChevronUp, Loader2, Search, Waypoints } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
-import TimeRangePicker from '../components/TimeRangePicker.vue'
-import TraceTimeline from '../components/TraceTimeline.vue'
-import TraceSpanDetailsPanel from '../components/TraceSpanDetailsPanel.vue'
-import TraceServiceGraph from '../components/TraceServiceGraph.vue'
-import TraceListPanel from '../components/TraceListPanel.vue'
-import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
-import { useTimeRange } from '../composables/useTimeRange'
-import { useOrganization } from '../composables/useOrganization'
-import { useDatasource } from '../composables/useDatasource'
 import {
-  queryDataSource,
+  AlertCircle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Search,
+  Waypoints,
+} from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import {
   fetchDataSourceTrace,
   fetchDataSourceTraceServiceGraph,
   fetchDataSourceTraceServices,
+  queryDataSource,
   searchDataSourceTraces,
 } from '../api/datasources'
+import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
+import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
+import elasticsearchLogo from '../assets/datasources/elasticsearch-logo.svg'
+import lokiLogo from '../assets/datasources/loki-logo.svg'
+import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
+import tempoLogo from '../assets/datasources/tempo-logo.svg'
+import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
+import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
+import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
+import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
+import TimeRangePicker from '../components/TimeRangePicker.vue'
+import TraceListPanel from '../components/TraceListPanel.vue'
+import TraceServiceGraph from '../components/TraceServiceGraph.vue'
+import TraceSpanDetailsPanel from '../components/TraceSpanDetailsPanel.vue'
+import TraceTimeline from '../components/TraceTimeline.vue'
+import { useDatasource } from '../composables/useDatasource'
+import { useOrganization } from '../composables/useOrganization'
+import { useTimeRange } from '../composables/useTimeRange'
 import type {
   DataSourceType,
   Trace,
@@ -26,15 +43,6 @@ import type {
   TraceSummary,
 } from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
-import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
-import lokiLogo from '../assets/datasources/loki-logo.svg'
-import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
-import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
-import tempoLogo from '../assets/datasources/tempo-logo.svg'
-import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
-import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
-import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
-import elasticsearchLogo from '../assets/datasources/elasticsearch-logo.svg'
 
 interface TraceNavigationContext {
   datasourceId?: string
@@ -263,7 +271,13 @@ function isTraceErrorSpan(span: TraceSpan): boolean {
 }
 
 function getTraceIdForSpan(span: TraceSpan): string {
-  const traceIdFromTags = getTagValue(span.tags, ['traceId', 'trace_id', 'traceid', 'otelTraceId', 'trace'])
+  const traceIdFromTags = getTagValue(span.tags, [
+    'traceId',
+    'trace_id',
+    'traceid',
+    'otelTraceId',
+    'trace',
+  ])
   if (traceIdFromTags) {
     return traceIdFromTags
   }
@@ -315,9 +329,10 @@ function convertClickHouseSpansToTraceSummaries(spans: TraceSpan[]): TraceSummar
   const summaries: TraceSummary[] = []
   for (const group of grouped.values()) {
     const spanIds = new Set(group.spans.map((span) => span.spanId))
-    const rootSpan = [...group.spans]
-      .sort((left, right) => left.startTimeUnixNano - right.startTimeUnixNano)
-      .find((span) => !span.parentSpanId || !spanIds.has(span.parentSpanId)) || group.spans[0]
+    const rootSpan =
+      [...group.spans]
+        .sort((left, right) => left.startTimeUnixNano - right.startTimeUnixNano)
+        .find((span) => !span.parentSpanId || !spanIds.has(span.parentSpanId)) || group.spans[0]
 
     const startTimeUnixNano =
       group.startTimeUnixNano === Number.MAX_SAFE_INTEGER ? 0 : group.startTimeUnixNano
@@ -405,12 +420,14 @@ async function loadTrace(traceId: string) {
     loadingServiceGraph.value = true
     serviceGraphError.value = null
     try {
-      activeServiceGraph.value = await fetchDataSourceTraceServiceGraph(selectedDatasourceId.value, traceId)
+      activeServiceGraph.value = await fetchDataSourceTraceServiceGraph(
+        selectedDatasourceId.value,
+        traceId,
+      )
     } catch (graphError) {
       activeServiceGraph.value = null
-      serviceGraphError.value = graphError instanceof Error
-        ? graphError.message
-        : 'Failed to fetch trace service graph'
+      serviceGraphError.value =
+        graphError instanceof Error ? graphError.message : 'Failed to fetch trace service graph'
     } finally {
       loadingServiceGraph.value = false
     }
@@ -457,7 +474,7 @@ function handleSelectServiceFromGraph(serviceName: string) {
   void runSearch()
 }
 
-function handleSelectEdgeFromGraph(edge: { source: string, target: string }) {
+function handleSelectEdgeFromGraph(edge: { source: string; target: string }) {
   if (!edge.target) {
     return
   }
@@ -471,10 +488,10 @@ function toMilliseconds(unixNanoTimestamp: number): number {
   return Math.floor(unixNanoTimestamp / 1_000_000)
 }
 
-function buildNavigationWindow(payload: {
-  startTimeUnixNano: number
-  endTimeUnixNano: number
-}): { startMs: number, endMs: number } {
+function buildNavigationWindow(payload: { startTimeUnixNano: number; endTimeUnixNano: number }): {
+  startMs: number
+  endMs: number
+} {
   const startMs = toMilliseconds(payload.startTimeUnixNano)
   const endMs = toMilliseconds(payload.endTimeUnixNano)
   const paddedStartMs = Math.max(0, startMs - TRACE_TO_X_PADDING_MS)
@@ -558,9 +575,8 @@ function consumeTraceNavigationContext() {
     }
 
     pendingTraceId.value = parsed.traceId.trim()
-    pendingTraceDatasourceId.value = typeof parsed.datasourceId === 'string'
-      ? parsed.datasourceId.trim()
-      : ''
+    pendingTraceDatasourceId.value =
+      typeof parsed.datasourceId === 'string' ? parsed.datasourceId.trim() : ''
   } catch {
     // Ignore malformed navigation context.
   }
@@ -571,7 +587,10 @@ async function tryLoadPendingTrace() {
     return
   }
 
-  if (pendingTraceDatasourceId.value && pendingTraceDatasourceId.value !== selectedDatasourceId.value) {
+  if (
+    pendingTraceDatasourceId.value &&
+    pendingTraceDatasourceId.value !== selectedDatasourceId.value
+  ) {
     return
   }
 
@@ -653,10 +672,10 @@ onMounted(() => {
   if (typeof onRefresh === 'function') {
     unsubscribeRefresh = onRefresh(() => {
       if (
-        hasSearched.value
-        && selectedDatasourceId.value
-        && !loadingSearch.value
-        && !loadingTrace.value
+        hasSearched.value &&
+        selectedDatasourceId.value &&
+        !loadingSearch.value &&
+        !loadingTrace.value
       ) {
         void runSearch()
       }

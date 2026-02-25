@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import {
+  BellRing,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  Database,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Shield,
+} from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Settings, ChevronLeft, ChevronRight, Compass, LogOut, Database, ChevronDown, Shield, BellRing } from 'lucide-vue-next'
-import OrganizationDropdown from './OrganizationDropdown.vue'
-import CreateOrganizationModal from './CreateOrganizationModal.vue'
-import { useOrganization } from '../composables/useOrganization'
 import { useAuth } from '../composables/useAuth'
+import { useOrganization } from '../composables/useOrganization'
+import CreateOrganizationModal from './CreateOrganizationModal.vue'
+import OrganizationDropdown from './OrganizationDropdown.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,11 +75,14 @@ const settingsPath = computed(() => {
 
 const privacySettingsPath = '/settings/privacy'
 
-watch(() => route.path, (path) => {
-  if (path.startsWith('/explore')) {
-    openNavGroups.value.explore = true
-  }
-})
+watch(
+  () => route.path,
+  (path) => {
+    if (path.startsWith('/explore')) {
+      openNavGroups.value.explore = true
+    }
+  },
+)
 
 function isRouteMatch(path: string): boolean {
   return route.path === path || route.path.startsWith(`${path}/`)
@@ -76,7 +90,7 @@ function isRouteMatch(path: string): boolean {
 
 function isActive(item: NavItem): boolean {
   if (item.children) {
-    return item.children.some(child => isRouteMatch(child.path))
+    return item.children.some((child) => isRouteMatch(child.path))
   }
   return isRouteMatch(item.path)
 }

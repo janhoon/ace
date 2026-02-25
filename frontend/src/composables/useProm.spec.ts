@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
 import {
-  useProm,
+  type ChartData,
+  type PrometheusQueryResult,
   queryPrometheus,
   transformToChartData,
-  type PrometheusQueryResult,
-  type ChartData
+  useProm,
 } from './useProm'
 
 // Mock fetch globally
@@ -16,7 +16,7 @@ describe('transformToChartData', () => {
   it('returns empty series for error status', () => {
     const result: PrometheusQueryResult = {
       status: 'error',
-      error: 'some error'
+      error: 'some error',
     }
 
     const chartData = transformToChartData(result)
@@ -25,7 +25,7 @@ describe('transformToChartData', () => {
 
   it('returns empty series when data is undefined', () => {
     const result: PrometheusQueryResult = {
-      status: 'success'
+      status: 'success',
     }
 
     const chartData = transformToChartData(result)
@@ -42,11 +42,11 @@ describe('transformToChartData', () => {
             metric: { __name__: 'up', instance: 'localhost:9090', job: 'prometheus' },
             values: [
               [1704067200, '1'],
-              [1704067215, '1']
-            ]
-          }
-        ]
-      }
+              [1704067215, '1'],
+            ],
+          },
+        ],
+      },
     }
 
     const chartData = transformToChartData(result)
@@ -55,12 +55,12 @@ describe('transformToChartData', () => {
     expect(chartData.series[0].name).toBe('up{instance="localhost:9090",job="prometheus"}')
     expect(chartData.series[0].data).toEqual([
       { timestamp: 1704067200, value: 1 },
-      { timestamp: 1704067215, value: 1 }
+      { timestamp: 1704067215, value: 1 },
     ])
     expect(chartData.series[0].labels).toEqual({
       __name__: 'up',
       instance: 'localhost:9090',
-      job: 'prometheus'
+      job: 'prometheus',
     })
   })
 
@@ -72,14 +72,14 @@ describe('transformToChartData', () => {
         result: [
           {
             metric: { __name__: 'up', job: 'prometheus' },
-            values: [[1704067200, '1']]
+            values: [[1704067200, '1']],
           },
           {
             metric: { __name__: 'up', job: 'node' },
-            values: [[1704067200, '0']]
-          }
-        ]
-      }
+            values: [[1704067200, '0']],
+          },
+        ],
+      },
     }
 
     const chartData = transformToChartData(result)
@@ -97,10 +97,10 @@ describe('transformToChartData', () => {
         result: [
           {
             metric: { instance: 'localhost:9090' },
-            values: [[1704067200, '42']]
-          }
-        ]
-      }
+            values: [[1704067200, '42']],
+          },
+        ],
+      },
     }
 
     const chartData = transformToChartData(result)
@@ -116,10 +116,10 @@ describe('transformToChartData', () => {
         result: [
           {
             metric: { __name__: 'scalar_value' },
-            values: [[1704067200, '100']]
-          }
-        ]
-      }
+            values: [[1704067200, '100']],
+          },
+        ],
+      },
     }
 
     const chartData = transformToChartData(result)
@@ -138,11 +138,11 @@ describe('transformToChartData', () => {
             values: [
               [1704067200, '3.14159'],
               [1704067215, '-42.5'],
-              [1704067230, '0']
-            ]
-          }
-        ]
-      }
+              [1704067230, '0'],
+            ],
+          },
+        ],
+      },
     }
 
     const chartData = transformToChartData(result)
@@ -150,7 +150,7 @@ describe('transformToChartData', () => {
     expect(chartData.series[0].data).toEqual([
       { timestamp: 1704067200, value: Number('3.14159') },
       { timestamp: 1704067215, value: -42.5 },
-      { timestamp: 1704067230, value: 0 }
+      { timestamp: 1704067230, value: 0 },
     ])
   })
 })
@@ -163,10 +163,10 @@ describe('queryPrometheus', () => {
   it('constructs correct URL with query parameters', async () => {
     const mockResponse: PrometheusQueryResult = {
       status: 'success',
-      data: { resultType: 'matrix', result: [] }
+      data: { resultType: 'matrix', result: [] },
     }
     mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve(mockResponse)
+      json: () => Promise.resolve(mockResponse),
     })
 
     await queryPrometheus('up', 1704067200, 1704070800, 15)
@@ -188,13 +188,13 @@ describe('queryPrometheus', () => {
         result: [
           {
             metric: { __name__: 'up' },
-            values: [[1704067200, '1']]
-          }
-        ]
-      }
+            values: [[1704067200, '1']],
+          },
+        ],
+      },
     }
     mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve(mockResponse)
+      json: () => Promise.resolve(mockResponse),
     })
 
     const result = await queryPrometheus('up', 1704067200, 1704070800, 15)
@@ -205,10 +205,10 @@ describe('queryPrometheus', () => {
   it('floors timestamp values', async () => {
     const mockResponse: PrometheusQueryResult = {
       status: 'success',
-      data: { resultType: 'matrix', result: [] }
+      data: { resultType: 'matrix', result: [] },
     }
     mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve(mockResponse)
+      json: () => Promise.resolve(mockResponse),
     })
 
     await queryPrometheus('up', 1704067200.5, 1704070800.9, 15)
@@ -234,7 +234,7 @@ describe('useProm', () => {
       query: ref(''),
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: false
+      autoFetch: false,
     })
 
     expect(data.value).toBeNull()
@@ -248,7 +248,7 @@ describe('useProm', () => {
       query: ref(''),
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: false
+      autoFetch: false,
     })
 
     await fetch()
@@ -264,14 +264,14 @@ describe('useProm', () => {
     })
 
     mockFetch.mockReturnValueOnce({
-      json: () => pendingPromise
+      json: () => pendingPromise,
     })
 
     const { loading, fetch } = useProm({
       query: ref('up'),
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: false
+      autoFetch: false,
     })
 
     expect(loading.value).toBe(false)
@@ -298,22 +298,22 @@ describe('useProm', () => {
             metric: { __name__: 'up', job: 'prometheus' },
             values: [
               [1704067200, '1'],
-              [1704067215, '1']
-            ]
-          }
-        ]
-      }
+              [1704067215, '1'],
+            ],
+          },
+        ],
+      },
     }
 
     mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve(mockResponse)
+      json: () => Promise.resolve(mockResponse),
     })
 
     const { data, chartData, error, fetch } = useProm({
       query: ref('up'),
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: false
+      autoFetch: false,
     })
 
     await fetch()
@@ -327,18 +327,18 @@ describe('useProm', () => {
   it('handles error response from API', async () => {
     const mockResponse: PrometheusQueryResult = {
       status: 'error',
-      error: 'invalid query'
+      error: 'invalid query',
     }
 
     mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve(mockResponse)
+      json: () => Promise.resolve(mockResponse),
     })
 
     const { data, chartData, error, fetch } = useProm({
       query: ref('invalid{'),
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: false
+      autoFetch: false,
     })
 
     await fetch()
@@ -355,7 +355,7 @@ describe('useProm', () => {
       query: ref('up'),
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: false
+      autoFetch: false,
     })
 
     await fetch()
@@ -367,7 +367,8 @@ describe('useProm', () => {
 
   it('uses custom step value when provided', async () => {
     mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve({ status: 'success', data: { resultType: 'matrix', result: [] } })
+      json: () =>
+        Promise.resolve({ status: 'success', data: { resultType: 'matrix', result: [] } }),
     })
 
     const { fetch } = useProm({
@@ -375,7 +376,7 @@ describe('useProm', () => {
       start: ref(1704067200),
       end: ref(1704070800),
       step: ref(60),
-      autoFetch: false
+      autoFetch: false,
     })
 
     await fetch()
@@ -386,14 +387,15 @@ describe('useProm', () => {
 
   it('uses default step value when not provided', async () => {
     mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve({ status: 'success', data: { resultType: 'matrix', result: [] } })
+      json: () =>
+        Promise.resolve({ status: 'success', data: { resultType: 'matrix', result: [] } }),
     })
 
     const { fetch } = useProm({
       query: ref('up'),
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: false
+      autoFetch: false,
     })
 
     await fetch()
@@ -404,7 +406,8 @@ describe('useProm', () => {
 
   it('auto-fetches when query changes with autoFetch enabled', async () => {
     mockFetch.mockResolvedValue({
-      json: () => Promise.resolve({ status: 'success', data: { resultType: 'matrix', result: [] } })
+      json: () =>
+        Promise.resolve({ status: 'success', data: { resultType: 'matrix', result: [] } }),
     })
 
     const query = ref('up')
@@ -413,7 +416,7 @@ describe('useProm', () => {
       query,
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: true
+      autoFetch: true,
     })
 
     // Initial fetch on mount
@@ -435,7 +438,7 @@ describe('useProm', () => {
       query,
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: false
+      autoFetch: false,
     })
 
     await nextTick()
@@ -450,7 +453,7 @@ describe('useProm', () => {
       query,
       start: ref(1704067200),
       end: ref(1704070800),
-      autoFetch: true
+      autoFetch: true,
     })
 
     await nextTick()

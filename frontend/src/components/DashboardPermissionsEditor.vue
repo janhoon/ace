@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { listGroups } from '../api/groups'
+import { listMembers } from '../api/organizations'
+import { listDashboardPermissions, replaceDashboardPermissions } from '../api/permissions'
 import type { Dashboard } from '../types/dashboard'
 import type { Member } from '../types/organization'
 import type {
@@ -8,12 +11,6 @@ import type {
   ResourcePermissionLevel,
   UserGroup,
 } from '../types/rbac'
-import { listMembers } from '../api/organizations'
-import { listGroups } from '../api/groups'
-import {
-  listDashboardPermissions,
-  replaceDashboardPermissions,
-} from '../api/permissions'
 
 const props = defineProps<{
   dashboard: Dashboard
@@ -55,7 +52,9 @@ watch(newPrincipalType, () => {
 function principalLabel(entry: ResourcePermissionEntry): string {
   if (entry.principal_type === 'user') {
     const member = members.value.find((item) => item.user_id === entry.principal_id)
-    return member ? `${member.name || member.email} (${member.email})` : `Unknown user (${entry.principal_id})`
+    return member
+      ? `${member.name || member.email} (${member.email})`
+      : `Unknown user (${entry.principal_id})`
   }
 
   const group = groups.value.find((item) => item.id === entry.principal_id)

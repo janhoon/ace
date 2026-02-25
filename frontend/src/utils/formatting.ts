@@ -71,10 +71,7 @@ const FREQUENCY_UNITS = ['Hz', 'kHz', 'MHz', 'GHz', 'THz']
 /**
  * Format a value with the specified unit type and decimal places
  */
-export function formatValue(
-  value: number | null | undefined,
-  options: FormatOptions = {}
-): string {
+export function formatValue(value: number | null | undefined, options: FormatOptions = {}): string {
   const { unit = 'none', decimals = 2, nullValue = '-' } = options
 
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -227,12 +224,7 @@ export function formatDuration(seconds: number, decimals: number): string {
 /**
  * Helper to format with unit suffixes
  */
-function formatWithUnits(
-  value: number,
-  base: number,
-  units: string[],
-  decimals: number
-): string {
+function formatWithUnits(value: number, base: number, units: string[], decimals: number): string {
   const absValue = Math.abs(value)
   const sign = value < 0 ? '-' : ''
 
@@ -257,7 +249,7 @@ function formatWithUnits(
 export function applyThresholds(
   value: number,
   thresholds: Threshold[],
-  defaultColor: string = '#f5f5f5'
+  defaultColor: string = '#f5f5f5',
 ): { color: string; background?: string } {
   if (!thresholds || thresholds.length === 0) {
     return { color: defaultColor }
@@ -286,7 +278,7 @@ export function applyThresholds(
  */
 export function applyMappings(
   value: number | string,
-  mappings: ValueMapping[]
+  mappings: ValueMapping[],
 ): { text: string; color?: string } | null {
   if (!mappings || mappings.length === 0) {
     return null
@@ -316,7 +308,7 @@ export function formatDisplayValue(
     decimals?: number
     nullValue?: string
     mappings?: ValueMapping[]
-  } = {}
+  } = {},
 ): { text: string; mapped: boolean } {
   const { unit, decimals, nullValue, mappings } = options
 

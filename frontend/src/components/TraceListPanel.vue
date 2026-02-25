@@ -2,7 +2,12 @@
 import { computed, ref } from 'vue'
 import type { TraceSummary } from '../types/datasource'
 
-type TraceSortField = 'traceId' | 'startTimeUnixNano' | 'durationNano' | 'spanCount' | 'errorSpanCount'
+type TraceSortField =
+  | 'traceId'
+  | 'startTimeUnixNano'
+  | 'durationNano'
+  | 'spanCount'
+  | 'errorSpanCount'
 type TraceSortDirection = 'asc' | 'desc'
 
 const props = defineProps<{

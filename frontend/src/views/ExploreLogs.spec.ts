@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ExploreLogs from './ExploreLogs.vue'
 
 const mockFetchDatasources = vi.hoisted(() => vi.fn())
@@ -11,16 +11,16 @@ const mockSetCustomRange = vi.hoisted(() => vi.fn())
 vi.mock('../components/TimeRangePicker.vue', () => ({
   default: {
     name: 'TimeRangePicker',
-    template: '<div class="mock-time-range-picker">TimeRangePicker Mock</div>'
-  }
+    template: '<div class="mock-time-range-picker">TimeRangePicker Mock</div>',
+  },
 }))
 
 vi.mock('../components/LogViewer.vue', () => ({
   default: {
     name: 'LogViewer',
     props: ['logs', 'highlightedLogKeys'],
-    template: '<div class="mock-log-viewer">{{ logs.length }} logs</div>'
-  }
+    template: '<div class="mock-log-viewer">{{ logs.length }} logs</div>',
+  },
 }))
 
 vi.mock('../components/MonacoQueryEditor.vue', () => ({
@@ -43,7 +43,15 @@ vi.mock('../components/MonacoQueryEditor.vue', () => ({
 vi.mock('../components/LogQLQueryBuilder.vue', () => ({
   default: {
     name: 'LogQLQueryBuilder',
-    props: ['modelValue', 'disabled', 'indexedLabels', 'datasourceId', 'editorHeight', 'placeholder', 'queryLanguage'],
+    props: [
+      'modelValue',
+      'disabled',
+      'indexedLabels',
+      'datasourceId',
+      'editorHeight',
+      'placeholder',
+      'queryLanguage',
+    ],
     emits: ['update:modelValue', 'submit'],
     template: `
       <textarea
@@ -113,15 +121,15 @@ vi.mock('../composables/useTimeRange', () => ({
     timeRange: { value: { start: Date.now() - 3600000, end: Date.now() } },
     onRefresh: vi.fn(() => () => {}),
     setCustomRange: mockSetCustomRange,
-  })
+  }),
 }))
 
 vi.mock('../composables/useOrganization', async () => {
   const { ref } = await import('vue')
   return {
     useOrganization: () => ({
-      currentOrg: ref({ id: 'org-1', name: 'Test Org', role: 'admin' })
-    })
+      currentOrg: ref({ id: 'org-1', name: 'Test Org', role: 'admin' }),
+    }),
   }
 })
 
@@ -192,7 +200,7 @@ vi.mock('../composables/useDatasource', async () => {
     useDatasource: () => ({
       logsDatasources,
       fetchDatasources: mockFetchDatasources,
-    })
+    }),
   }
 })
 
@@ -204,7 +212,9 @@ vi.mock('../api/datasources', () => ({
 
 /** Find the datasource trigger button */
 function findDatasourceTrigger(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('button').find((b) => b.attributes('title')?.includes('Active datasource'))!
+  return wrapper
+    .findAll('button')
+    .find((b) => b.attributes('title')?.includes('Active datasource'))!
 }
 
 /** Find datasource dropdown options */
@@ -214,12 +224,16 @@ function findDatasourceOptions(wrapper: ReturnType<typeof mount>) {
 
 /** Find the Run Query button */
 function findRunButton(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('button').find((b) => b.text().includes('Run Query') || b.text().includes('Running'))!
+  return wrapper
+    .findAll('button')
+    .find((b) => b.text().includes('Run Query') || b.text().includes('Running'))!
 }
 
 /** Find the Live button */
 function findLiveButton(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('button').find((b) => b.text().includes('Start Live') || b.text().includes('Stop Live'))!
+  return wrapper
+    .findAll('button')
+    .find((b) => b.text().includes('Start Live') || b.text().includes('Stop Live'))!
 }
 
 /** Find error display (use rounded-xl to distinguish from the health badge which uses rounded-full) */
@@ -295,7 +309,7 @@ describe('ExploreLogs', () => {
         query: '{job=~".+"}',
         step: 15,
         limit: 1000,
-      })
+      }),
     )
     expect(wrapper.find('.mock-log-viewer').exists()).toBe(true)
     expect(wrapper.find('.mock-log-viewer').text()).toContain('1 logs')
@@ -336,8 +350,11 @@ describe('ExploreLogs', () => {
     await findRunButton(wrapper).trigger('click')
     await flushPromises()
 
-    const viewerLogs = wrapper.findComponent({ name: 'LogViewer' }).props('logs') as Array<{ timestamp: string, line: string }>
-    expect(viewerLogs.map(log => log.line)).toEqual(['newest', 'middle', 'older'])
+    const viewerLogs = wrapper.findComponent({ name: 'LogViewer' }).props('logs') as Array<{
+      timestamp: string
+      line: string
+    }>
+    expect(viewerLogs.map((log) => log.line)).toEqual(['newest', 'middle', 'older'])
   })
 
   it('shows an error message when query response fails', async () => {
@@ -388,14 +405,18 @@ describe('ExploreLogs', () => {
     const wrapper = mount(ExploreLogs)
     await flushPromises()
 
-    expect(wrapper.findComponent({ name: 'LogQLQueryBuilder' }).props('queryLanguage')).toBe('logql')
+    expect(wrapper.findComponent({ name: 'LogQLQueryBuilder' }).props('queryLanguage')).toBe(
+      'logql',
+    )
 
     await findDatasourceTrigger(wrapper).trigger('click')
     const options = findDatasourceOptions(wrapper)
     await options[1].trigger('click')
     await flushPromises()
 
-    expect(wrapper.findComponent({ name: 'LogQLQueryBuilder' }).props('queryLanguage')).toBe('logsql')
+    expect(wrapper.findComponent({ name: 'LogQLQueryBuilder' }).props('queryLanguage')).toBe(
+      'logsql',
+    )
   })
 
   it('uses ClickHouse SQL editor and passes logs signal for clickhouse datasource', async () => {
@@ -442,13 +463,16 @@ describe('ExploreLogs', () => {
   })
 
   it('prefills query and time range from trace-to-logs context', async () => {
-    localStorage.setItem('trace_logs_navigation', JSON.stringify({
-      traceId: 'trace-abc-123',
-      serviceName: 'checkout',
-      startMs: 1_700_000_000_000,
-      endMs: 1_700_000_300_000,
-      createdAt: Date.now(),
-    }))
+    localStorage.setItem(
+      'trace_logs_navigation',
+      JSON.stringify({
+        traceId: 'trace-abc-123',
+        serviceName: 'checkout',
+        startMs: 1_700_000_000_000,
+        endMs: 1_700_000_300_000,
+        createdAt: Date.now(),
+      }),
+    )
 
     const wrapper = mount(ExploreLogs)
     await flushPromises()

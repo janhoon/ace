@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  LayoutDashboard,
   AlertCircle,
-  Folder as FolderIcon,
-  Shield,
-  ChevronRight,
   ChevronDown,
-  Search,
+  ChevronRight,
   FileText,
+  Folder as FolderIcon,
+  LayoutDashboard,
+  Pencil,
+  Plus,
+  Search,
+  Shield,
+  Trash2,
 } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { deleteDashboard, listDashboards, updateDashboard } from '../api/dashboards'
+import { createFolder, listFolders } from '../api/folders'
+import { useOrganization } from '../composables/useOrganization'
 import type { Dashboard } from '../types/dashboard'
 import type { Folder } from '../types/folder'
-import { listDashboards, deleteDashboard, updateDashboard } from '../api/dashboards'
-import { listFolders, createFolder } from '../api/folders'
-import { useOrganization } from '../composables/useOrganization'
 import CreateDashboardModal from './CreateDashboardModal.vue'
 import EditDashboardModal from './EditDashboardModal.vue'
 import FolderPermissionsModal from './FolderPermissionsModal.vue'
@@ -77,8 +77,12 @@ interface Breadcrumb {
 }
 
 const isOrgAdmin = computed(() => currentOrg.value?.role === 'admin')
-const canCreateFolder = computed(() => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor')
-const canManageDashboards = computed(() => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor')
+const canCreateFolder = computed(
+  () => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor',
+)
+const canManageDashboards = computed(
+  () => currentOrg.value?.role === 'admin' || currentOrg.value?.role === 'editor',
+)
 const normalizedSearchQuery = computed(() => searchQuery.value.trim().toLowerCase())
 const hasSearchQuery = computed(() => normalizedSearchQuery.value.length > 0)
 
@@ -115,7 +119,8 @@ const dashboardsByFolder = computed(() => {
 const folderChildrenMap = computed(() => {
   const map = new Map<string | null, Folder[]>()
   for (const folder of folders.value) {
-    const parentId = folder.parent_id && folderById.value.has(folder.parent_id) ? folder.parent_id : null
+    const parentId =
+      folder.parent_id && folderById.value.has(folder.parent_id) ? folder.parent_id : null
     const children = map.get(parentId) ?? []
     children.push(folder)
     map.set(parentId, children)
@@ -175,7 +180,9 @@ const selectedFolder = computed(() => {
 
 const unfiledDashboards = computed(() => {
   const folderIds = new Set(folders.value.map((folder) => folder.id))
-  return dashboards.value.filter((dashboard) => !dashboard.folder_id || !folderIds.has(dashboard.folder_id))
+  return dashboards.value.filter(
+    (dashboard) => !dashboard.folder_id || !folderIds.has(dashboard.folder_id),
+  )
 })
 
 const groupedDashboardSections = computed<DashboardSection[]>(() => {
@@ -190,7 +197,9 @@ const groupedDashboardSections = computed<DashboardSection[]>(() => {
     }))
 })
 
-const isCompletelyEmpty = computed(() => dashboards.value.length === 0 && folders.value.length === 0)
+const isCompletelyEmpty = computed(
+  () => dashboards.value.length === 0 && folders.value.length === 0,
+)
 const hasNoFolders = computed(() => folders.value.length === 0)
 
 const sectionScopeFolderIds = computed(() => {
@@ -212,7 +221,9 @@ const selectedFolderChildren = computed(() => {
     return []
   }
 
-  return (folderChildrenMap.value.get(selectedFolderId.value) ?? []).filter((folder) => folderVisibilityForSearch.value.get(folder.id))
+  return (folderChildrenMap.value.get(selectedFolderId.value) ?? []).filter((folder) =>
+    folderVisibilityForSearch.value.get(folder.id),
+  )
 })
 
 const folderVisibilityForSearch = computed(() => {
@@ -282,7 +293,9 @@ const explorerTreeRows = computed<FolderTreeRow[]>(() => {
         continue
       }
 
-      const visibleChildren = (folderChildrenMap.value.get(folder.id) ?? []).filter((child) => folderVisibilityForSearch.value.get(child.id))
+      const visibleChildren = (folderChildrenMap.value.get(folder.id) ?? []).filter((child) =>
+        folderVisibilityForSearch.value.get(child.id),
+      )
       const visibleDashboards = treeDashboardsByFolder.value.get(folder.id) ?? []
       const isExpanded = hasSearchQuery.value || expanded.has(folder.id)
 
@@ -305,11 +318,13 @@ const explorerTreeRows = computed<FolderTreeRow[]>(() => {
 })
 
 const breadcrumbs = computed<Breadcrumb[]>(() => {
-  const items: Breadcrumb[] = [{
-    id: 'all',
-    label: 'Dashboards',
-    type: 'all',
-  }]
+  const items: Breadcrumb[] = [
+    {
+      id: 'all',
+      label: 'Dashboards',
+      type: 'all',
+    },
+  ]
 
   if (!selectedFolderId.value || !selectedFolder.value) {
     return items
@@ -433,11 +448,17 @@ function ensureRootFoldersExpanded() {
     selectedExplorerNode.value = 'all'
   }
 
-  if (hoveredDashboardId.value && !dashboards.value.some((dashboard) => dashboard.id === hoveredDashboardId.value)) {
+  if (
+    hoveredDashboardId.value &&
+    !dashboards.value.some((dashboard) => dashboard.id === hoveredDashboardId.value)
+  ) {
     hoveredDashboardId.value = null
   }
 
-  if (selectedTreeDashboardId.value && !dashboards.value.some((dashboard) => dashboard.id === selectedTreeDashboardId.value)) {
+  if (
+    selectedTreeDashboardId.value &&
+    !dashboards.value.some((dashboard) => dashboard.id === selectedTreeDashboardId.value)
+  ) {
     selectedTreeDashboardId.value = null
   }
 }

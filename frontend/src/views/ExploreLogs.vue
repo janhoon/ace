@@ -1,28 +1,38 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { Play, AlertCircle, History, X, Loader2, HeartPulse, CircleAlert, ChevronDown, ChevronUp, Check } from 'lucide-vue-next'
-import TimeRangePicker from '../components/TimeRangePicker.vue'
-import LogViewer from '../components/LogViewer.vue'
-import LogQLQueryBuilder from '../components/LogQLQueryBuilder.vue'
-import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
-import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
-import ElasticsearchQueryEditor from '../components/ElasticsearchQueryEditor.vue'
-import { useTimeRange } from '../composables/useTimeRange'
-import { useOrganization } from '../composables/useOrganization'
-import { useDatasource } from '../composables/useDatasource'
-import { queryDataSource, fetchDataSourceLabels, streamDataSourceLogs } from '../api/datasources'
-import type { DataSourceType } from '../types/datasource'
-import { dataSourceTypeLabels } from '../types/datasource'
-import type { LogEntry } from '../types/datasource'
-import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
-import lokiLogo from '../assets/datasources/loki-logo.svg'
-import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
-import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
-import tempoLogo from '../assets/datasources/tempo-logo.svg'
-import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
+import {
+  AlertCircle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  CircleAlert,
+  HeartPulse,
+  History,
+  Loader2,
+  Play,
+  X,
+} from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { fetchDataSourceLabels, queryDataSource, streamDataSourceLogs } from '../api/datasources'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
 import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
 import elasticsearchLogo from '../assets/datasources/elasticsearch-logo.svg'
+import lokiLogo from '../assets/datasources/loki-logo.svg'
+import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
+import tempoLogo from '../assets/datasources/tempo-logo.svg'
+import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
+import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
+import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
+import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
+import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
+import ElasticsearchQueryEditor from '../components/ElasticsearchQueryEditor.vue'
+import LogQLQueryBuilder from '../components/LogQLQueryBuilder.vue'
+import LogViewer from '../components/LogViewer.vue'
+import TimeRangePicker from '../components/TimeRangePicker.vue'
+import { useDatasource } from '../composables/useDatasource'
+import { useOrganization } from '../composables/useOrganization'
+import { useTimeRange } from '../composables/useTimeRange'
+import type { DataSourceType, LogEntry } from '../types/datasource'
+import { dataSourceTypeLabels } from '../types/datasource'
 
 const { timeRange, onRefresh, setCustomRange } = useTimeRange()
 const { currentOrg } = useOrganization()
@@ -104,9 +114,7 @@ function buildTraceLogsQuery(type_: DataSourceType, traceId: string, serviceName
   const escapedServiceNameSql = escapeForSingleQuotedValue(serviceName)
 
   if (type_ === 'loki') {
-    const selector = escapedServiceName
-      ? `{service_name="${escapedServiceName}"}`
-      : '{job=~".+"}'
+    const selector = escapedServiceName ? `{service_name="${escapedServiceName}"}` : '{job=~".+"}'
     return `${selector} |= "${escapedTraceId}"`
   }
 
@@ -166,11 +174,14 @@ function consumeTraceLogsNavigationContext() {
     }
 
     pendingTraceId.value = parsed.traceId.trim()
-    pendingServiceName.value = typeof parsed.serviceName === 'string'
-      ? parsed.serviceName.trim()
-      : ''
+    pendingServiceName.value =
+      typeof parsed.serviceName === 'string' ? parsed.serviceName.trim() : ''
 
-    if (typeof parsed.startMs === 'number' && typeof parsed.endMs === 'number' && parsed.endMs > parsed.startMs) {
+    if (
+      typeof parsed.startMs === 'number' &&
+      typeof parsed.endMs === 'number' &&
+      parsed.endMs > parsed.startMs
+    ) {
       pendingStartMs.value = parsed.startMs
       pendingEndMs.value = parsed.endMs
     }
@@ -234,40 +245,37 @@ watch(
       return
     }
 
-    const hasSelected = sources.some(ds => ds.id === selectedDatasourceId.value)
+    const hasSelected = sources.some((ds) => ds.id === selectedDatasourceId.value)
     if (!hasSelected) {
-      const defaultDatasource = sources.find(ds => ds.is_default)
+      const defaultDatasource = sources.find((ds) => ds.is_default)
       selectedDatasourceId.value = defaultDatasource?.id || sources[0].id
     }
   },
   { immediate: true },
 )
 
-watch(
-  logsDatasources,
-  (sources) => {
-    const sourceIds = new Set(sources.map(ds => ds.id))
-    datasourceHealth.value = Object.fromEntries(
-      Object.entries(datasourceHealth.value).filter(([id]) => sourceIds.has(id)),
-    )
-    datasourceHealthErrors.value = Object.fromEntries(
-      Object.entries(datasourceHealthErrors.value).filter(([id]) => sourceIds.has(id)),
-    )
+watch(logsDatasources, (sources) => {
+  const sourceIds = new Set(sources.map((ds) => ds.id))
+  datasourceHealth.value = Object.fromEntries(
+    Object.entries(datasourceHealth.value).filter(([id]) => sourceIds.has(id)),
+  )
+  datasourceHealthErrors.value = Object.fromEntries(
+    Object.entries(datasourceHealthErrors.value).filter(([id]) => sourceIds.has(id)),
+  )
 
-    const filteredCache = new Map<string, string[]>()
-    for (const [id, labels] of labelsCache.value.entries()) {
-      if (sourceIds.has(id)) {
-        filteredCache.set(id, labels)
-      }
+  const filteredCache = new Map<string, string[]>()
+  for (const [id, labels] of labelsCache.value.entries()) {
+    if (sourceIds.has(id)) {
+      filteredCache.set(id, labels)
     }
-    labelsCache.value = filteredCache
-  },
-)
+  }
+  labelsCache.value = filteredCache
+})
 
 function addToHistory(q: string) {
   if (!q.trim()) return
 
-  const filtered = queryHistory.value.filter(h => h !== q)
+  const filtered = queryHistory.value.filter((h) => h !== q)
   queryHistory.value = [q, ...filtered].slice(0, MAX_HISTORY)
   sessionStorage.setItem(HISTORY_KEY, JSON.stringify(queryHistory.value))
 }
@@ -298,7 +306,7 @@ function sortLogsNewestFirst(entries: LogEntry[]): LogEntry[] {
 
       return b.timestampMs - a.timestampMs
     })
-    .map(entry => entry.log)
+    .map((entry) => entry.log)
 }
 
 function getLogKey(log: LogEntry): string {
@@ -380,7 +388,10 @@ function appendStreamLog(entry: LogEntry) {
   markLogAsNew(key)
 
   const timestampSec = toUnixSeconds(entry.timestamp)
-  if (timestampSec !== null && (lastLiveTimestampSec.value === null || timestampSec > lastLiveTimestampSec.value)) {
+  if (
+    timestampSec !== null &&
+    (lastLiveTimestampSec.value === null || timestampSec > lastLiveTimestampSec.value)
+  ) {
     lastLiveTimestampSec.value = timestampSec
   }
 
@@ -390,7 +401,7 @@ function appendStreamLog(entry: LogEntry) {
 
     const remainingKeys = new Set(logs.value.map(getLogKey))
     highlightedLogKeys.value = new Set(
-      Array.from(highlightedLogKeys.value).filter(logKey => remainingKeys.has(logKey)),
+      Array.from(highlightedLogKeys.value).filter((logKey) => remainingKeys.has(logKey)),
     )
 
     const nextTimeouts = new Map(highlightTimeoutIds.value)
@@ -601,7 +612,12 @@ async function runQuery() {
 
     const response = await queryDataSource(selectedDatasourceId.value, {
       query: query.value,
-      signal: isClickHouseDatasource.value || isCloudWatchDatasource.value || isElasticsearchDatasource.value ? 'logs' : undefined,
+      signal:
+        isClickHouseDatasource.value ||
+        isCloudWatchDatasource.value ||
+        isElasticsearchDatasource.value
+          ? 'logs'
+          : undefined,
       start,
       end,
       step: 15,
@@ -706,9 +722,11 @@ const liveStatusLabel = computed(() => {
   }
   return ''
 })
-const isLiveBusy = computed(() => liveState.value === 'connecting' || liveState.value === 'reconnecting')
+const isLiveBusy = computed(
+  () => liveState.value === 'connecting' || liveState.value === 'reconnecting',
+)
 const activeDatasource = computed(
-  () => logsDatasources.value.find(ds => ds.id === selectedDatasourceId.value) || null,
+  () => logsDatasources.value.find((ds) => ds.id === selectedDatasourceId.value) || null,
 )
 const isClickHouseDatasource = computed(() => activeDatasource.value?.type === 'clickhouse')
 const isCloudWatchDatasource = computed(() => activeDatasource.value?.type === 'cloudwatch')
@@ -781,7 +799,7 @@ function getSmokeQuery(type_: DataSourceType): string {
     return 'up'
   }
   if (type_ === 'clickhouse') {
-    return 'SELECT now() AS timestamp, \'healthcheck\' AS message LIMIT 1'
+    return "SELECT now() AS timestamp, 'healthcheck' AS message LIMIT 1"
   }
   if (type_ === 'cloudwatch') {
     return 'fields @timestamp, @message | sort @timestamp desc | limit 1'
@@ -805,7 +823,10 @@ async function checkDatasourceHealth(datasourceId: string, type_: DataSourceType
   try {
     const healthResult = await queryDataSource(datasourceId, {
       query: getSmokeQuery(type_),
-      signal: type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch' ? 'logs' : undefined,
+      signal:
+        type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch'
+          ? 'logs'
+          : undefined,
       start,
       end,
       step: 15,
@@ -858,14 +879,18 @@ watch(query, (nextQuery, previousQuery) => {
   }
 })
 
-watch(() => selectedDatasourceId.value, (datasourceId) => {
-  if (!datasourceId || !supportsLabelDiscovery.value) {
-    indexedLabels.value = []
-    return
-  }
+watch(
+  () => selectedDatasourceId.value,
+  (datasourceId) => {
+    if (!datasourceId || !supportsLabelDiscovery.value) {
+      indexedLabels.value = []
+      return
+    }
 
-  void loadIndexedLabels(datasourceId)
-}, { immediate: true })
+    void loadIndexedLabels(datasourceId)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

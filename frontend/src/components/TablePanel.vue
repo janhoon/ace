@@ -20,7 +20,7 @@ const props = withDefaults(
   {
     height: '100%',
     decimals: 2,
-  }
+  },
 )
 
 // Get all unique timestamps across all series, sorted

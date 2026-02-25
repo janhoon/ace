@@ -1,34 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ArrowLeft, Edit2, Shield, Trash2, UserPlus, Users } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, UserPlus, Trash2, Shield, Edit2, Users } from 'lucide-vue-next'
-import type { Organization, Member, MembershipRole } from '../types/organization'
-import type { UserGroup, UserGroupMembership } from '../types/rbac'
 import {
-  getOrganization,
-  updateOrganization,
-  deleteOrganization,
-  listMembers,
-  createInvitation,
-  updateMemberRole,
-  removeMember,
-} from '../api/organizations'
-import {
-  listGroups,
+  addGroupMember,
   createGroup,
-  updateGroup,
   deleteGroup,
   listGroupMembers,
-  addGroupMember,
+  listGroups,
   removeGroupMember,
+  updateGroup,
 } from '../api/groups'
 import {
+  createInvitation,
+  deleteOrganization,
+  getOrganization,
+  listMembers,
+  removeMember,
+  updateMemberRole,
+  updateOrganization,
+} from '../api/organizations'
+import {
   getGoogleSSOConfig,
-  updateGoogleSSOConfig,
   getMicrosoftSSOConfig,
+  updateGoogleSSOConfig,
   updateMicrosoftSSOConfig,
 } from '../api/sso'
 import { useOrganization } from '../composables/useOrganization'
+import type { Member, MembershipRole, Organization } from '../types/organization'
+import type { UserGroup, UserGroupMembership } from '../types/rbac'
 
 const route = useRoute()
 const router = useRouter()

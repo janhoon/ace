@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import Sidebar from './components/Sidebar.vue'
 import CookieConsentBanner from './components/CookieConsentBanner.vue'
+import Sidebar from './components/Sidebar.vue'
 import { useAuth } from './composables/useAuth'
 
 const route = useRoute()

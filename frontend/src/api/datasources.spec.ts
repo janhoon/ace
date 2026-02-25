@@ -1,19 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  listDataSources,
-  getDataSource,
   createDataSource,
-  updateDataSource,
   deleteDataSource,
-  queryDataSource,
-  testDataSourceConnection,
-  testDataSourceDraftConnection,
   fetchDataSourceLabels,
   fetchDataSourceLabelValues,
   fetchDataSourceTrace,
   fetchDataSourceTraceServiceGraph,
-  searchDataSourceTraces,
   fetchDataSourceTraceServices,
+  getDataSource,
+  listDataSources,
+  queryDataSource,
+  searchDataSourceTraces,
+  testDataSourceConnection,
+  testDataSourceDraftConnection,
+  updateDataSource,
 } from './datasources'
 
 const mockFetch = vi.fn()
@@ -154,9 +154,9 @@ describe('datasources API', () => {
         json: () => Promise.resolve({ error: 'Query failed' }),
       })
 
-      await expect(
-        queryDataSource('1', { query: 'up', start: 1000, end: 2000 }),
-      ).rejects.toThrow('Query failed')
+      await expect(queryDataSource('1', { query: 'up', start: 1000, end: 2000 })).rejects.toThrow(
+        'Query failed',
+      )
     })
   })
 
@@ -180,7 +180,9 @@ describe('datasources API', () => {
         json: () => Promise.resolve({ error: 'connection test failed: timeout' }),
       })
 
-      await expect(testDataSourceConnection('ds-1')).rejects.toThrow('connection test failed: timeout')
+      await expect(testDataSourceConnection('ds-1')).rejects.toThrow(
+        'connection test failed: timeout',
+      )
     })
   })
 
@@ -210,11 +212,13 @@ describe('datasources API', () => {
         json: () => Promise.resolve({}),
       })
 
-      await expect(testDataSourceDraftConnection('org-1', {
-        name: 'Draft Prometheus',
-        type: 'prometheus',
-        url: 'http://localhost:9090',
-      })).rejects.toThrow('Only admins can test datasource connections')
+      await expect(
+        testDataSourceDraftConnection('org-1', {
+          name: 'Draft Prometheus',
+          type: 'prometheus',
+          url: 'http://localhost:9090',
+        }),
+      ).rejects.toThrow('Only admins can test datasource connections')
     })
   })
 
@@ -272,16 +276,18 @@ describe('datasources API', () => {
     })
 
     it('searches traces for a datasource', async () => {
-      const summaries = [{
-        traceId: 'trace-1',
-        rootServiceName: 'api',
-        rootOperationName: 'GET /health',
-        startTimeUnixNano: 1000,
-        durationNano: 5000,
-        spanCount: 4,
-        serviceCount: 2,
-        errorSpanCount: 0,
-      }]
+      const summaries = [
+        {
+          traceId: 'trace-1',
+          rootServiceName: 'api',
+          rootOperationName: 'GET /health',
+          startTimeUnixNano: 1000,
+          durationNano: 5000,
+          spanCount: 4,
+          serviceCount: 2,
+          errorSpanCount: 0,
+        },
+      ]
 
       mockFetch.mockResolvedValueOnce({
         ok: true,

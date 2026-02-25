@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ExploreTraces from './ExploreTraces.vue'
 
 const mockFetchDatasources = vi.hoisted(() => vi.fn())
@@ -152,9 +152,14 @@ vi.mock('../api/datasources', () => ({
 
 /** Find the datasource trigger button */
 function findDatasourceTrigger(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('button').find((b) =>
-    b.attributes('title')?.includes('datasource') || b.text().includes('Tempo Main') || b.text().includes('Active Source')
-  )!
+  return wrapper
+    .findAll('button')
+    .find(
+      (b) =>
+        b.attributes('title')?.includes('datasource') ||
+        b.text().includes('Tempo Main') ||
+        b.text().includes('Active Source'),
+    )!
 }
 
 /** Find datasource dropdown options */
@@ -164,12 +169,21 @@ function findDatasourceOptions(wrapper: ReturnType<typeof mount>) {
 
 /** Find the Search button */
 function findSearchButton(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('button').find((b) => b.text().includes('Search Traces') || b.text().includes('Searching') || b.text().includes('Run Query'))!
+  return wrapper
+    .findAll('button')
+    .find(
+      (b) =>
+        b.text().includes('Search Traces') ||
+        b.text().includes('Searching') ||
+        b.text().includes('Run Query'),
+    )!
 }
 
 /** Find trace result rows (buttons in the results sidebar that contain trace IDs) */
 function findTraceResultRows(wrapper: ReturnType<typeof mount>) {
-  return wrapper.findAll('button').filter((b) => b.find('code')?.exists() && b.find('.grid')?.exists())
+  return wrapper
+    .findAll('button')
+    .filter((b) => b.find('code')?.exists() && b.find('.grid')?.exists())
 }
 
 /** Find error display */
@@ -412,18 +426,26 @@ describe('ExploreTraces', () => {
   })
 
   it('auto-loads trace from dashboard navigation context', async () => {
-    localStorage.setItem('dashboard_trace_navigation', JSON.stringify({
-      datasourceId: 'ds-trace-1',
-      traceId: 'trace-from-dashboard',
-      createdAt: Date.now(),
-    }))
+    localStorage.setItem(
+      'dashboard_trace_navigation',
+      JSON.stringify({
+        datasourceId: 'ds-trace-1',
+        traceId: 'trace-from-dashboard',
+        createdAt: Date.now(),
+      }),
+    )
 
     const wrapper = mount(ExploreTraces)
     await flushPromises()
 
     expect(mockFetchDataSourceTrace).toHaveBeenCalledWith('ds-trace-1', 'trace-from-dashboard')
-    expect(mockFetchDataSourceTraceServiceGraph).toHaveBeenCalledWith('ds-trace-1', 'trace-from-dashboard')
-    expect((wrapper.get('#trace-id-input').element as HTMLInputElement).value).toBe('trace-from-dashboard')
+    expect(mockFetchDataSourceTraceServiceGraph).toHaveBeenCalledWith(
+      'ds-trace-1',
+      'trace-from-dashboard',
+    )
+    expect((wrapper.get('#trace-id-input').element as HTMLInputElement).value).toBe(
+      'trace-from-dashboard',
+    )
     expect(localStorage.getItem('dashboard_trace_navigation')).toBeNull()
   })
 
@@ -466,9 +488,7 @@ describe('ExploreTraces', () => {
     await wrapper.find('.mock-select-span').trigger('click')
     await flushPromises()
 
-    const logsButton = wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'View Logs')
+    const logsButton = wrapper.findAll('button').find((button) => button.text() === 'View Logs')
     expect(logsButton).toBeTruthy()
 
     if (!logsButton) {

@@ -1,10 +1,10 @@
+import { trackEvent } from '../analytics'
 import type {
   GoogleSSOConfig,
   MicrosoftSSOConfig,
   UpdateGoogleSSOConfigRequest,
   UpdateMicrosoftSSOConfigRequest,
 } from '../types/sso'
-import { trackEvent } from '../analytics'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -17,7 +17,7 @@ function getAuthHeaders(): HeadersInit {
 }
 
 async function getErrorMessage(response: Response, fallback: string): Promise<string> {
-  const error = await response.json().catch(() => ({})) as { error?: string }
+  const error = (await response.json().catch(() => ({}))) as { error?: string }
   return error.error || fallback
 }
 

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import {
   Check,
   CircleAlert,
@@ -12,20 +10,22 @@ import {
   Plus,
   Trash2,
 } from 'lucide-vue-next'
-import { useOrganization } from '../composables/useOrganization'
-import { useDatasource } from '../composables/useDatasource'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { testDataSourceConnection } from '../api/datasources'
-import type { DataSource, DataSourceType } from '../types/datasource'
-import { dataSourceTypeLabels } from '../types/datasource'
-import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
-import lokiLogo from '../assets/datasources/loki-logo.svg'
-import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
-import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
-import tempoLogo from '../assets/datasources/tempo-logo.svg'
-import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import clickhouseLogo from '../assets/datasources/clickhouse-logo.svg'
 import cloudwatchLogo from '../assets/datasources/cloudwatch-logo.svg'
 import elasticsearchLogo from '../assets/datasources/elasticsearch-logo.svg'
+import lokiLogo from '../assets/datasources/loki-logo.svg'
+import prometheusLogo from '../assets/datasources/prometheus-logo.svg'
+import tempoLogo from '../assets/datasources/tempo-logo.svg'
+import victoriaLogsLogo from '../assets/datasources/victorialogs-logo.svg'
+import victoriaMetricsLogo from '../assets/datasources/victoriametrics-logo.svg'
+import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
+import { useDatasource } from '../composables/useDatasource'
+import { useOrganization } from '../composables/useOrganization'
+import type { DataSource, DataSourceType } from '../types/datasource'
+import { dataSourceTypeLabels } from '../types/datasource'
 
 const router = useRouter()
 const { currentOrg } = useOrganization()

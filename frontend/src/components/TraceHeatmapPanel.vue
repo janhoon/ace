@@ -97,7 +97,7 @@ const maxCellCount = computed(() => {
 })
 
 const heatmapRows = computed(() => {
-  const rows = [] as Array<{ label: string, cells: number[] }>
+  const rows = [] as Array<{ label: string; cells: number[] }>
 
   for (let i = durationBuckets.length - 1; i >= 0; i -= 1) {
     rows.push({

@@ -1,17 +1,17 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  formatValue,
-  formatNumber,
-  formatShort,
+  applyMappings,
+  applyThresholds,
   formatBinaryBytes,
-  formatDecimalBytes,
   formatBits,
   formatDataRate,
-  formatFrequency,
-  formatDuration,
-  applyThresholds,
-  applyMappings,
+  formatDecimalBytes,
   formatDisplayValue,
+  formatDuration,
+  formatFrequency,
+  formatNumber,
+  formatShort,
+  formatValue,
 } from './formatting'
 
 describe('formatNumber', () => {
@@ -293,9 +293,7 @@ describe('applyThresholds', () => {
   })
 
   it('includes background color when provided', () => {
-    const thresholds = [
-      { value: 80, color: '#ff6b6b', background: 'rgba(255, 0, 0, 0.1)' },
-    ]
+    const thresholds = [{ value: 80, color: '#ff6b6b', background: 'rgba(255, 0, 0, 0.1)' }]
     const result = applyThresholds(90, thresholds)
     expect(result.color).toBe('#ff6b6b')
     expect(result.background).toBe('rgba(255, 0, 0, 0.1)')
@@ -346,9 +344,7 @@ describe('applyMappings', () => {
   })
 
   it('handles numeric string comparison', () => {
-    const mappings = [
-      { value: '0', text: 'Zero' },
-    ]
+    const mappings = [{ value: '0', text: 'Zero' }]
     expect(applyMappings(0, mappings)).toEqual({ text: 'Zero', color: undefined })
   })
 })
@@ -356,7 +352,10 @@ describe('applyMappings', () => {
 describe('formatDisplayValue', () => {
   it('handles null values', () => {
     expect(formatDisplayValue(null)).toEqual({ text: '-', mapped: false })
-    expect(formatDisplayValue(undefined, { nullValue: 'N/A' })).toEqual({ text: 'N/A', mapped: false })
+    expect(formatDisplayValue(undefined, { nullValue: 'N/A' })).toEqual({
+      text: 'N/A',
+      mapped: false,
+    })
   })
 
   it('applies mappings first', () => {

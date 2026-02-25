@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { updateDashboard } from '../api/dashboards'
 import type { Dashboard } from '../types/dashboard'
 import type { Folder } from '../types/folder'
-import { updateDashboard } from '../api/dashboards'
 
 const props = defineProps<{
   dashboard: Dashboard

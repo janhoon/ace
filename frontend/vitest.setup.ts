@@ -1,6 +1,9 @@
 // Polyfill localStorage for Node.js v22+ where a native but incomplete
 // localStorage global exists and conflicts with happy-dom's implementation.
-if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage.getItem !== 'function') {
+if (
+  typeof globalThis.localStorage === 'undefined' ||
+  typeof globalThis.localStorage.getItem !== 'function'
+) {
   const store: Record<string, string> = {}
   globalThis.localStorage = {
     getItem(key: string) {
@@ -26,7 +29,10 @@ if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localSto
   } as Storage
 }
 
-if (typeof globalThis.sessionStorage === 'undefined' || typeof globalThis.sessionStorage.getItem !== 'function') {
+if (
+  typeof globalThis.sessionStorage === 'undefined' ||
+  typeof globalThis.sessionStorage.getItem !== 'function'
+) {
   const store: Record<string, string> = {}
   globalThis.sessionStorage = {
     getItem(key: string) {

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { listPanels, createPanel, updatePanel, deletePanel } from './panels'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPanel, deletePanel, listPanels, updatePanel } from './panels'
 
 describe('Panel API', () => {
   const mockFetch = vi.fn()
@@ -21,7 +21,7 @@ describe('Panel API', () => {
       localStorage.setItem('access_token', 'token-123')
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockData)
+        json: () => Promise.resolve(mockData),
       })
 
       const result = await listPanels('dashboard-123')
@@ -32,7 +32,7 @@ describe('Panel API', () => {
             'Content-Type': 'application/json',
             Authorization: 'Bearer token-123',
           },
-        }
+        },
       )
       expect(result).toEqual(mockData)
     })
@@ -49,12 +49,12 @@ describe('Panel API', () => {
       localStorage.setItem('access_token', 'token-123')
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockData)
+        json: () => Promise.resolve(mockData),
       })
 
       const result = await createPanel('dashboard-123', {
         title: 'New Panel',
-        grid_pos: { x: 0, y: 0, w: 6, h: 4 }
+        grid_pos: { x: 0, y: 0, w: 6, h: 4 },
       })
       expect(mockFetch).toHaveBeenCalledWith(
         'http://localhost:8080/api/dashboards/dashboard-123/panels',
@@ -66,19 +66,21 @@ describe('Panel API', () => {
           },
           body: JSON.stringify({
             title: 'New Panel',
-            grid_pos: { x: 0, y: 0, w: 6, h: 4 }
-          })
-        })
+            grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+          }),
+        }),
       )
       expect(result).toEqual(mockData)
     })
 
     it('throws error on failure', async () => {
       mockFetch.mockResolvedValue({ ok: false })
-      await expect(createPanel('dashboard-123', {
-        title: 'Test',
-        grid_pos: { x: 0, y: 0, w: 6, h: 4 }
-      })).rejects.toThrow('Failed to create panel')
+      await expect(
+        createPanel('dashboard-123', {
+          title: 'Test',
+          grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+        }),
+      ).rejects.toThrow('Failed to create panel')
     })
   })
 
@@ -88,7 +90,7 @@ describe('Panel API', () => {
       localStorage.setItem('access_token', 'token-123')
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockData)
+        json: () => Promise.resolve(mockData),
       })
 
       const result = await updatePanel('panel-1', { title: 'Updated' })
@@ -100,8 +102,8 @@ describe('Panel API', () => {
             'Content-Type': 'application/json',
             Authorization: 'Bearer token-123',
           },
-          body: JSON.stringify({ title: 'Updated' })
-        })
+          body: JSON.stringify({ title: 'Updated' }),
+        }),
       )
       expect(result).toEqual(mockData)
     })
@@ -126,7 +128,7 @@ describe('Panel API', () => {
             'Content-Type': 'application/json',
             Authorization: 'Bearer token-123',
           },
-        })
+        }),
       )
     })
 

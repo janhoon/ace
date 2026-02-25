@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { importDashboardYaml } from './dashboards'
 
 describe('importDashboardYaml', () => {
@@ -18,12 +18,13 @@ describe('importDashboardYaml', () => {
   it('imports yaml payload into organization dashboards', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({
-        id: 'dashboard-1',
-        title: 'Imported Dashboard',
-        created_at: '2026-01-01T00:00:00Z',
-        updated_at: '2026-01-01T00:00:00Z',
-      }),
+      json: () =>
+        Promise.resolve({
+          id: 'dashboard-1',
+          title: 'Imported Dashboard',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        }),
     })
 
     const yamlPayload = 'schema_version: 1\ndashboard:\n  title: Imported Dashboard\n'
@@ -45,6 +46,8 @@ describe('importDashboardYaml', () => {
   it('throws validation error for invalid yaml', async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 400 })
 
-    await expect(importDashboardYaml('org-1', 'not valid')).rejects.toThrow('Invalid YAML dashboard document')
+    await expect(importDashboardYaml('org-1', 'not valid')).rejects.toThrow(
+      'Invalid YAML dashboard document',
+    )
   })
 })

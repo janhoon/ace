@@ -108,9 +108,9 @@ type AMClusterStatus struct {
 
 // AMStatus represents the status response from AlertManager.
 type AMStatus struct {
-	Cluster    AMClusterStatus `json:"cluster"`
-	VersionInfo AMVersionInfo  `json:"versionInfo"`
-	Uptime     time.Time       `json:"uptime"`
+	Cluster     AMClusterStatus `json:"cluster"`
+	VersionInfo AMVersionInfo   `json:"versionInfo"`
+	Uptime      time.Time       `json:"uptime"`
 }
 
 // GetAlerts fetches alerts from AlertManager.

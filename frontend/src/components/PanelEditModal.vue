@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { X, Plus, Trash2 } from 'lucide-vue-next'
-import type { Panel } from '../types/panel'
-import { isTracingType } from '../types/datasource'
+import { Plus, Trash2, X } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
 import { createPanel, updatePanel } from '../api/panels'
 import { useDatasource } from '../composables/useDatasource'
 import { useOrganization } from '../composables/useOrganization'
-import QueryBuilder from './QueryBuilder.vue'
+import { isTracingType } from '../types/datasource'
+import type { Panel } from '../types/panel'
 import ClickHouseSQLEditor from './ClickHouseSQLEditor.vue'
 import CloudWatchQueryEditor from './CloudWatchQueryEditor.vue'
 import ElasticsearchQueryEditor from './ElasticsearchQueryEditor.vue'
+import QueryBuilder from './QueryBuilder.vue'
 
 interface Threshold {
   value: number
@@ -50,7 +50,7 @@ const isEditing = computed(() => !!props.panel)
 const title = ref(props.panel?.title || '')
 const panelType = ref(props.panel?.type || 'line_chart')
 const selectedDatasourceId = ref(
-  typeof props.panel?.query?.datasource_id === 'string' ? props.panel.query.datasource_id : ''
+  typeof props.panel?.query?.datasource_id === 'string' ? props.panel.query.datasource_id : '',
 )
 // Extract promql/expr from query config, or use empty string
 const promqlQuery = ref(
@@ -58,12 +58,12 @@ const promqlQuery = ref(
     ? props.panel.query.promql
     : typeof props.panel?.query?.expr === 'string'
       ? props.panel.query.expr
-      : ''
+      : '',
 )
 const querySignal = ref<QuerySignal>(
   isQuerySignal(props.panel?.query?.signal)
     ? props.panel.query.signal
-    : getDefaultQuerySignal(props.panel?.type || 'line_chart')
+    : getDefaultQuerySignal(props.panel?.type || 'line_chart'),
 )
 
 onMounted(() => {
@@ -73,60 +73,44 @@ onMounted(() => {
 })
 
 // Gauge-specific options
-const gaugeMin = ref(
-  typeof props.panel?.query?.min === 'number' ? props.panel.query.min : 0
-)
-const gaugeMax = ref(
-  typeof props.panel?.query?.max === 'number' ? props.panel.query.max : 100
-)
-const gaugeUnit = ref(
-  typeof props.panel?.query?.unit === 'string' ? props.panel.query.unit : ''
-)
+const gaugeMin = ref(typeof props.panel?.query?.min === 'number' ? props.panel.query.min : 0)
+const gaugeMax = ref(typeof props.panel?.query?.max === 'number' ? props.panel.query.max : 100)
+const gaugeUnit = ref(typeof props.panel?.query?.unit === 'string' ? props.panel.query.unit : '')
 const gaugeDecimals = ref(
-  typeof props.panel?.query?.decimals === 'number' ? props.panel.query.decimals : 2
+  typeof props.panel?.query?.decimals === 'number' ? props.panel.query.decimals : 2,
 )
 const gaugeThresholds = ref<Threshold[]>(
   Array.isArray(props.panel?.query?.thresholds)
     ? (props.panel.query.thresholds as Threshold[])
-    : [{ value: 80, color: '#ff6b6b' }]
+    : [{ value: 80, color: '#ff6b6b' }],
 )
 
 // Pie chart-specific options
 const pieDisplayAs = ref<'pie' | 'donut'>(
-  props.panel?.query?.displayAs === 'donut' ? 'donut' : 'pie'
+  props.panel?.query?.displayAs === 'donut' ? 'donut' : 'pie',
 )
-const pieShowLegend = ref(
-  props.panel?.query?.showLegend !== false
-)
-const pieShowLabels = ref(
-  props.panel?.query?.showLabels !== false
-)
+const pieShowLegend = ref(props.panel?.query?.showLegend !== false)
+const pieShowLabels = ref(props.panel?.query?.showLabels !== false)
 
 // Stat panel-specific options
-const statUnit = ref(
-  typeof props.panel?.query?.unit === 'string' ? props.panel.query.unit : ''
-)
+const statUnit = ref(typeof props.panel?.query?.unit === 'string' ? props.panel.query.unit : '')
 const statDecimals = ref(
-  typeof props.panel?.query?.decimals === 'number' ? props.panel.query.decimals : 2
+  typeof props.panel?.query?.decimals === 'number' ? props.panel.query.decimals : 2,
 )
-const statShowTrend = ref(
-  props.panel?.query?.showTrend !== false
-)
-const statShowSparkline = ref(
-  props.panel?.query?.showSparkline !== false
-)
+const statShowTrend = ref(props.panel?.query?.showTrend !== false)
+const statShowSparkline = ref(props.panel?.query?.showSparkline !== false)
 const statThresholds = ref<Threshold[]>(
   Array.isArray(props.panel?.query?.thresholds)
     ? (props.panel.query.thresholds as Threshold[])
-    : []
+    : [],
 )
 const traceService = ref(
-  typeof props.panel?.query?.service === 'string' ? props.panel.query.service : ''
+  typeof props.panel?.query?.service === 'string' ? props.panel.query.service : '',
 )
 const traceLimit = ref(
   typeof props.panel?.query?.limit === 'number' && Number.isFinite(props.panel.query.limit)
     ? Math.max(1, Math.min(200, Math.floor(props.panel.query.limit)))
-    : 50
+    : 50,
 )
 
 const loading = ref(false)
@@ -136,15 +120,20 @@ const isGaugeType = computed(() => panelType.value === 'gauge')
 const isPieType = computed(() => panelType.value === 'pie')
 const isStatType = computed(() => panelType.value === 'stat')
 const isTracePanelType = computed(
-  () => panelType.value === 'trace_list' || panelType.value === 'trace_heatmap'
+  () => panelType.value === 'trace_list' || panelType.value === 'trace_heatmap',
 )
 const selectedDatasource = computed(() => {
-  return datasources.value.find((datasource) => datasource.id === selectedDatasourceId.value) || null
+  return (
+    datasources.value.find((datasource) => datasource.id === selectedDatasourceId.value) || null
+  )
 })
 const isClickHouseDatasource = computed(() => selectedDatasource.value?.type === 'clickhouse')
 const isCloudWatchDatasource = computed(() => selectedDatasource.value?.type === 'cloudwatch')
 const isElasticsearchDatasource = computed(() => selectedDatasource.value?.type === 'elasticsearch')
-const isSignalDatasource = computed(() => isClickHouseDatasource.value || isCloudWatchDatasource.value || isElasticsearchDatasource.value)
+const isSignalDatasource = computed(
+  () =>
+    isClickHouseDatasource.value || isCloudWatchDatasource.value || isElasticsearchDatasource.value,
+)
 const nonTraceSignal = computed<'logs' | 'metrics'>({
   get() {
     return querySignal.value === 'logs' ? 'logs' : 'metrics'
@@ -165,32 +154,38 @@ watch(
   [panelType, datasources],
   () => {
     if (isTracePanelType.value) {
-      if (!availableDatasources.value.some((datasource) => datasource.id === selectedDatasourceId.value)) {
+      if (
+        !availableDatasources.value.some(
+          (datasource) => datasource.id === selectedDatasourceId.value,
+        )
+      ) {
         selectedDatasourceId.value = availableDatasources.value[0]?.id || ''
       }
       return
     }
 
-    if (selectedDatasourceId.value && !datasources.value.some((datasource) => datasource.id === selectedDatasourceId.value)) {
+    if (
+      selectedDatasourceId.value &&
+      !datasources.value.some((datasource) => datasource.id === selectedDatasourceId.value)
+    ) {
       selectedDatasourceId.value = ''
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
-watch(
-  panelType,
-  (nextType) => {
-    if (!isSignalDatasource.value) {
-      return
-    }
-    querySignal.value = getDefaultQuerySignal(nextType)
-  },
-)
+watch(panelType, (nextType) => {
+  if (!isSignalDatasource.value) {
+    return
+  }
+  querySignal.value = getDefaultQuerySignal(nextType)
+})
 
 watch(selectedDatasource, (nextDatasource, prevDatasource) => {
   const switchedToSignalDatasource =
-    (nextDatasource?.type === 'clickhouse' || nextDatasource?.type === 'cloudwatch' || nextDatasource?.type === 'elasticsearch') &&
+    (nextDatasource?.type === 'clickhouse' ||
+      nextDatasource?.type === 'cloudwatch' ||
+      nextDatasource?.type === 'elasticsearch') &&
     prevDatasource?.type !== nextDatasource?.type
 
   if (switchedToSignalDatasource) {
@@ -199,9 +194,10 @@ watch(selectedDatasource, (nextDatasource, prevDatasource) => {
 })
 
 function addThreshold() {
-  const lastValue = gaugeThresholds.value.length > 0
-    ? gaugeThresholds.value[gaugeThresholds.value.length - 1].value + 10
-    : 50
+  const lastValue =
+    gaugeThresholds.value.length > 0
+      ? gaugeThresholds.value[gaugeThresholds.value.length - 1].value + 10
+      : 50
   gaugeThresholds.value.push({ value: lastValue, color: '#feca57' })
 }
 
@@ -210,9 +206,10 @@ function removeThreshold(index: number) {
 }
 
 function addStatThreshold() {
-  const lastValue = statThresholds.value.length > 0
-    ? statThresholds.value[statThresholds.value.length - 1].value + 10
-    : 50
+  const lastValue =
+    statThresholds.value.length > 0
+      ? statThresholds.value[statThresholds.value.length - 1].value + 10
+      : 50
   statThresholds.value.push({ value: lastValue, color: '#feca57' })
 }
 
@@ -248,7 +245,10 @@ async function handleSubmit() {
   }
 
   if (isSignalDatasource.value) {
-    if ((isCloudWatchDatasource.value || isElasticsearchDatasource.value) && querySignal.value === 'traces') {
+    if (
+      (isCloudWatchDatasource.value || isElasticsearchDatasource.value) &&
+      querySignal.value === 'traces'
+    ) {
       query.signal = panelType.value === 'logs' ? 'logs' : 'metrics'
     } else {
       query.signal = querySignal.value
@@ -303,14 +303,14 @@ async function handleSubmit() {
       await updatePanel(props.panel.id, {
         title: title.value.trim(),
         type: panelType.value,
-        query: finalQuery
+        query: finalQuery,
       })
     } else {
       await createPanel(props.dashboardId, {
         title: title.value.trim(),
         type: panelType.value,
         grid_pos: { x: 0, y: 0, w: 6, h: 4 },
-        query: finalQuery
+        query: finalQuery,
       })
     }
     emit('saved')

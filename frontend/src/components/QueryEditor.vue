@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
 import { Play, Tag } from 'lucide-vue-next'
-import { queryPrometheus, type PrometheusQueryResult } from '../composables/useProm'
+import { computed, ref, watch } from 'vue'
+import { type PrometheusQueryResult, queryPrometheus } from '../composables/useProm'
 
 const props = defineProps<{
   modelValue: string
@@ -14,7 +14,7 @@ const emit = defineEmits<{
 
 const query = computed({
   get: () => props.modelValue,
-  set: (value: string) => emit('update:modelValue', value)
+  set: (value: string) => emit('update:modelValue', value),
 })
 
 const loading = ref(false)
@@ -83,7 +83,7 @@ const previewData = computed(() => {
     return {
       metric: metric.metric,
       latestValue: lastValue ? lastValue[1] : 'N/A',
-      valueCount: values.length
+      valueCount: values.length,
     }
   })
 })

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import DashboardDetailView from './DashboardDetailView.vue'
 
 // Mock vue-router
@@ -8,11 +8,11 @@ const mockPush = vi.fn()
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({
-    params: mockRouteParams
+    params: mockRouteParams,
   }),
   useRouter: () => ({
-    push: mockPush
-  })
+    push: mockPush,
+  }),
 }))
 
 // Mock api functions
@@ -21,7 +21,7 @@ const mockDashboard = {
   title: 'Test Dashboard',
   description: 'Test Description',
   created_at: '2026-02-02T00:00:00Z',
-  updated_at: '2026-02-02T00:00:00Z'
+  updated_at: '2026-02-02T00:00:00Z',
 }
 
 const mockPanels = [
@@ -33,7 +33,7 @@ const mockPanels = [
     grid_pos: { x: 0, y: 0, w: 6, h: 3 },
     query: { promql: 'up' },
     created_at: '2026-02-02T00:00:00Z',
-    updated_at: '2026-02-02T00:00:00Z'
+    updated_at: '2026-02-02T00:00:00Z',
   },
   {
     id: 'panel-2',
@@ -43,18 +43,18 @@ const mockPanels = [
     grid_pos: { x: 6, y: 0, w: 6, h: 3 },
     query: { promql: 'process_cpu_seconds_total' },
     created_at: '2026-02-02T00:00:00Z',
-    updated_at: '2026-02-02T00:00:00Z'
-  }
+    updated_at: '2026-02-02T00:00:00Z',
+  },
 ]
 
 vi.mock('../api/dashboards', () => ({
-  getDashboard: vi.fn(() => Promise.resolve(mockDashboard))
+  getDashboard: vi.fn(() => Promise.resolve(mockDashboard)),
 }))
 
 vi.mock('../api/panels', () => ({
   listPanels: vi.fn(() => Promise.resolve(mockPanels)),
   deletePanel: vi.fn(() => Promise.resolve()),
-  updatePanel: vi.fn(() => Promise.resolve())
+  updatePanel: vi.fn(() => Promise.resolve()),
 }))
 
 vi.mock('../api/datasources', () => ({
@@ -99,17 +99,28 @@ vi.mock('vue3-grid-layout-next', () => ({
   GridLayout: {
     name: 'GridLayout',
     template: '<div class="grid-layout"><slot /></div>',
-    props: ['layout', 'colNum', 'rowHeight', 'isDraggable', 'isResizable', 'verticalCompact', 'useCssTransforms', 'responsive', 'breakpoints', 'cols']
+    props: [
+      'layout',
+      'colNum',
+      'rowHeight',
+      'isDraggable',
+      'isResizable',
+      'verticalCompact',
+      'useCssTransforms',
+      'responsive',
+      'breakpoints',
+      'cols',
+    ],
   },
   GridItem: {
     name: 'GridItem',
     template: '<div class="grid-item"><slot /></div>',
-    props: ['i', 'x', 'y', 'w', 'h', 'minW', 'minH', 'dragAllowFrom', 'dragIgnoreFrom']
-  }
+    props: ['i', 'x', 'y', 'w', 'h', 'minW', 'minH', 'dragAllowFrom', 'dragIgnoreFrom'],
+  },
 }))
 
 // Mock useTimeRange
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 vi.mock('../composables/useTimeRange', () => ({
   useTimeRange: () => ({
@@ -132,8 +143,8 @@ vi.mock('../composables/useTimeRange', () => ({
     setPreset: vi.fn(),
     setCustomRange: vi.fn(),
     setRefreshInterval: vi.fn(),
-    refresh: vi.fn()
-  })
+    refresh: vi.fn(),
+  }),
 }))
 
 // Mock useProm (used by Panel component)
@@ -145,8 +156,8 @@ vi.mock('../composables/useProm', () => ({
     chartData: { value: { series: [] } },
     loading: { value: false },
     error: { value: null },
-    fetch: vi.fn()
-  })
+    fetch: vi.fn(),
+  }),
 }))
 
 // Mock MonacoQueryEditor component (Monaco doesn't work in test environment)
@@ -163,8 +174,8 @@ vi.mock('../components/MonacoQueryEditor.vue', () => ({
         :placeholder="placeholder"
         @input="$emit('update:modelValue', $event.target.value)"
       ></textarea>
-    `
-  }
+    `,
+  },
 }))
 
 describe('DashboardDetailView', () => {
@@ -206,10 +217,12 @@ describe('DashboardDetailView', () => {
     const wrapper = mount(DashboardDetailView)
     await flushPromises()
 
-    const backBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'Back to Dashboards')
+    const backBtn = wrapper
+      .findAll('button')
+      .find((b) => b.attributes('title') === 'Back to Dashboards')
     expect(backBtn).toBeDefined()
 
-    await backBtn!.trigger('click')
+    await backBtn?.trigger('click')
     expect(mockPush).toHaveBeenCalledWith('/dashboards')
   })
 
@@ -219,7 +232,7 @@ describe('DashboardDetailView', () => {
 
     const addBtn = wrapper.findAll('button').find((b) => b.text().includes('Add Panel'))
     expect(addBtn).toBeDefined()
-    expect(addBtn!.text()).toContain('Add Panel')
+    expect(addBtn?.text()).toContain('Add Panel')
   })
 
   it('should hide dashboard permissions button from dashboard header', async () => {
@@ -270,7 +283,7 @@ describe('DashboardDetailView', () => {
     await flushPromises()
 
     const addBtn = wrapper.findAll('button').find((b) => b.text().includes('Add Panel'))
-    await addBtn!.trigger('click')
+    await addBtn?.trigger('click')
 
     expect(wrapper.findComponent({ name: 'PanelEditModal' }).exists()).toBe(true)
   })

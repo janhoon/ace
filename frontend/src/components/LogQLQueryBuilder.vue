@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
-import { Layers, Code, Plus, X } from 'lucide-vue-next'
-import MonacoQueryEditor from './MonacoQueryEditor.vue'
+import { Code, Layers, Plus, X } from 'lucide-vue-next'
+import { computed, nextTick, ref, watch } from 'vue'
 import { fetchDataSourceLabelValues } from '../api/datasources'
+import MonacoQueryEditor from './MonacoQueryEditor.vue'
 
 const LOGQL_LABEL_OPERATORS = [
   { value: '=', label: '=' },
@@ -41,20 +41,23 @@ interface LabelFilter {
   value: string
 }
 
-const props = withDefaults(defineProps<{
-  modelValue: string
-  indexedLabels: string[]
-  datasourceId: string
-  queryLanguage?: QueryLanguage
-  disabled?: boolean
-  editorHeight?: number
-  placeholder?: string
-}>(), {
-  queryLanguage: 'logql',
-  disabled: false,
-  editorHeight: 130,
-  placeholder: '{job=~".+"} |= "error"',
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    indexedLabels: string[]
+    datasourceId: string
+    queryLanguage?: QueryLanguage
+    disabled?: boolean
+    editorHeight?: number
+    placeholder?: string
+  }>(),
+  {
+    queryLanguage: 'logql',
+    disabled: false,
+    editorHeight: 130,
+    placeholder: '{job=~".+"} |= "error"',
+  },
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -87,24 +90,26 @@ const textOperators = computed(() => {
   return isLogsQL.value ? LOGSQL_TEXT_OPERATORS : LOGQL_LINE_FILTER_OPERATORS
 })
 
-const generatedQueryLabel = computed(() => (isLogsQL.value ? 'Generated LogsQL' : 'Generated LogQL'))
+const generatedQueryLabel = computed(() =>
+  isLogsQL.value ? 'Generated LogsQL' : 'Generated LogQL',
+)
 const codeEditorLabel = computed(() => (isLogsQL.value ? 'LogsQL Query' : 'LogQL Query'))
-const lineFilterLabel = computed(() => (isLogsQL.value ? 'Message Filter (Optional)' : 'Line Filter (Optional)'))
+const lineFilterLabel = computed(() =>
+  isLogsQL.value ? 'Message Filter (Optional)' : 'Line Filter (Optional)',
+)
 const lineFilterPlaceholder = computed(() => {
-  return isLogsQL.value
-    ? 'Phrase or regex for _msg field'
-    : 'Contains text, regex, or exact match'
+  return isLogsQL.value ? 'Phrase or regex for _msg field' : 'Contains text, regex, or exact match'
 })
 
 function normalizeFieldOperator(value: string) {
-  if (fieldOperators.value.some(operator => operator.value === value)) {
+  if (fieldOperators.value.some((operator) => operator.value === value)) {
     return value
   }
   return fieldOperators.value[0].value
 }
 
 function normalizeTextOperator(value: string) {
-  if (textOperators.value.some(operator => operator.value === value)) {
+  if (textOperators.value.some((operator) => operator.value === value)) {
     return value
   }
   return textOperators.value[0].value
@@ -159,7 +164,7 @@ function buildLogsQLTextFilter() {
 const generatedQuery = computed(() => {
   if (isLogsQL.value) {
     const filters = labelFilters.value
-      .filter(filter => filter.label && filter.value.trim())
+      .filter((filter) => filter.label && filter.value.trim())
       .map(buildLogsQLFieldFilter)
 
     const textFilter = buildLogsQLTextFilter()
@@ -176,8 +181,11 @@ const generatedQuery = computed(() => {
   }
 
   const selectorFilters = labelFilters.value
-    .filter(filter => filter.label && filter.value.trim())
-    .map(filter => `${filter.label}${normalizeFieldOperator(filter.operator)}"${escapeLogQLValue(filter.value.trim())}"`)
+    .filter((filter) => filter.label && filter.value.trim())
+    .map(
+      (filter) =>
+        `${filter.label}${normalizeFieldOperator(filter.operator)}"${escapeLogQLValue(filter.value.trim())}"`,
+    )
 
   const hasLineFilter = lineFilterValue.value.trim().length > 0
   if (selectorFilters.length === 0 && !hasLineFilter) {
@@ -213,11 +221,11 @@ function addLabelFilter() {
 }
 
 function removeLabelFilter(id: string) {
-  labelFilters.value = labelFilters.value.filter(filter => filter.id !== id)
+  labelFilters.value = labelFilters.value.filter((filter) => filter.id !== id)
 }
 
 function updateLabelFilter(id: string, updates: Partial<LabelFilter>) {
-  const filter = labelFilters.value.find(current => current.id === id)
+  const filter = labelFilters.value.find((current) => current.id === id)
   if (!filter) return
   Object.assign(filter, updates)
 }
@@ -259,28 +267,37 @@ function emitSubmit() {
   emit('submit')
 }
 
-watch(() => props.datasourceId, () => {
-  labelValuesCache.value = new Map()
-  loadingLabelValues.value = null
-})
+watch(
+  () => props.datasourceId,
+  () => {
+    labelValuesCache.value = new Map()
+    loadingLabelValues.value = null
+  },
+)
 
-watch(() => props.queryLanguage, () => {
-  lineFilterOperator.value = textOperators.value[0].value
-  labelFilters.value = labelFilters.value.map(filter => ({
-    ...filter,
-    operator: normalizeFieldOperator(filter.operator),
-  }))
-})
+watch(
+  () => props.queryLanguage,
+  () => {
+    lineFilterOperator.value = textOperators.value[0].value
+    labelFilters.value = labelFilters.value.map((filter) => ({
+      ...filter,
+      operator: normalizeFieldOperator(filter.operator),
+    }))
+  },
+)
 
-watch(() => props.modelValue, (newValue) => {
-  if (isEmitting.value) return
-  if (newValue === activeQuery.value) return
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    if (isEmitting.value) return
+    if (newValue === activeQuery.value) return
 
-  codeQuery.value = newValue
-  if (newValue !== generatedQuery.value) {
-    mode.value = 'code'
-  }
-})
+    codeQuery.value = newValue
+    if (newValue !== generatedQuery.value) {
+      mode.value = 'code'
+    }
+  },
+)
 
 watch(mode, (newMode, oldMode) => {
   if (newMode === 'code' && oldMode === 'builder' && generatedQuery.value) {

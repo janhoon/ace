@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import VChart from 'vue-echarts'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
+import type { EChartsOption } from 'echarts'
 import { LineChart as EChartsLineChart } from 'echarts/charts'
 import {
+  GridComponent,
+  LegendComponent,
   TitleComponent,
   TooltipComponent,
-  LegendComponent,
-  GridComponent,
 } from 'echarts/components'
-import type { EChartsOption } from 'echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import VChart from 'vue-echarts'
 
 // Register ECharts components
 use([
@@ -47,7 +47,7 @@ const props = withDefaults(
   {
     title: '',
     height: '100%',
-  }
+  },
 )
 
 const chartRef = ref<typeof VChart | null>(null)
@@ -140,9 +140,7 @@ const chartOption = computed<EChartsOption>(() => {
         const timeStr = formatFullDateTime(timestamp / 1000)
         let result = `<div style="font-weight: 500; margin-bottom: 6px; color: #64748b; font-size: 11px;">${timeStr}</div>`
         for (const param of params) {
-          const value = typeof param.data[1] === 'number'
-            ? param.data[1].toFixed(4)
-            : param.data[1]
+          const value = typeof param.data[1] === 'number' ? param.data[1].toFixed(4) : param.data[1]
           result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
             <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%;"></span>
             <span style="color: #64748b; font-size: 12px;">${param.seriesName}:</span>

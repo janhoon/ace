@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { Search, Plus, X, Code, Layers, ChevronDown, ChevronUp } from 'lucide-vue-next'
-import MonacoQueryEditor from './MonacoQueryEditor.vue'
+import { ChevronDown, ChevronUp, Code, Layers, Plus, Search, X } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import {
-  useQueryBuilder,
   AGGREGATION_FUNCTIONS,
   LABEL_OPERATORS,
-  type LabelFilter
+  type LabelFilter,
+  useQueryBuilder,
 } from '../composables/useQueryBuilder'
+import MonacoQueryEditor from './MonacoQueryEditor.vue'
 
 const props = defineProps<{
   modelValue: string
@@ -41,7 +41,7 @@ const {
   removeLabelFilter,
   updateLabelFilter,
   toggleGroupByLabel,
-  setQuery
+  setQuery,
 } = useQueryBuilder(props.modelValue)
 
 // Track when we're emitting to avoid reacting to our own changes
@@ -54,9 +54,7 @@ const showMetricDropdown = ref(false)
 const filteredMetrics = computed(() => {
   if (!metricSearch.value) return metricsCache.value.slice(0, 100)
   const search = metricSearch.value.toLowerCase()
-  return metricsCache.value
-    .filter(m => m.toLowerCase().includes(search))
-    .slice(0, 100)
+  return metricsCache.value.filter((m) => m.toLowerCase().includes(search)).slice(0, 100)
 })
 
 // Group by expanded state
@@ -64,18 +62,18 @@ const showGroupBy = ref(false)
 
 // Available labels for group by (exclude __name__)
 const availableLabelsForGroupBy = computed(() => {
-  return labelsCache.value.filter(l => l !== '__name__')
+  return labelsCache.value.filter((l) => l !== '__name__')
 })
 
 // Check if aggregation requires range
 const aggregationRequiresRange = computed(() => {
-  const func = AGGREGATION_FUNCTIONS.find(f => f.value === aggregation.value)
+  const func = AGGREGATION_FUNCTIONS.find((f) => f.value === aggregation.value)
   return func && 'requiresRange' in func && func.requiresRange
 })
 
 // Check if aggregation requires K value
 const aggregationRequiresK = computed(() => {
-  const func = AGGREGATION_FUNCTIONS.find(f => f.value === aggregation.value)
+  const func = AGGREGATION_FUNCTIONS.find((f) => f.value === aggregation.value)
   return func && 'requiresK' in func && func.requiresK
 })
 
@@ -99,13 +97,16 @@ onMounted(async () => {
 })
 
 // Sync with v-model
-watch(() => props.modelValue, (newValue) => {
-  // Ignore changes triggered by our own emit
-  if (isEmitting.value) return
-  if (newValue !== activeQuery.value) {
-    setQuery(newValue)
-  }
-})
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    // Ignore changes triggered by our own emit
+    if (isEmitting.value) return
+    if (newValue !== activeQuery.value) {
+      setQuery(newValue)
+    }
+  },
+)
 
 watch(activeQuery, (newValue) => {
   isEmitting.value = true

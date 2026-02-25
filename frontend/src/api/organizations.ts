@@ -1,13 +1,13 @@
-import type {
-  Organization,
-  CreateOrganizationRequest,
-  UpdateOrganizationRequest,
-  Member,
-  Invitation,
-  CreateInvitationRequest,
-  UpdateMemberRoleRequest,
-} from '../types/organization'
 import { trackEvent } from '../analytics'
+import type {
+  CreateInvitationRequest,
+  CreateOrganizationRequest,
+  Invitation,
+  Member,
+  Organization,
+  UpdateMemberRoleRequest,
+  UpdateOrganizationRequest,
+} from '../types/organization'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -60,7 +60,7 @@ export async function createOrganization(data: CreateOrganizationRequest): Promi
 
 export async function updateOrganization(
   id: string,
-  data: UpdateOrganizationRequest
+  data: UpdateOrganizationRequest,
 ): Promise<Organization> {
   const response = await fetch(`${API_BASE}/api/orgs/${id}`, {
     method: 'PUT',
@@ -103,7 +103,7 @@ export async function deleteOrganization(id: string): Promise<void> {
 
 export async function createInvitation(
   orgId: string,
-  data: CreateInvitationRequest
+  data: CreateInvitationRequest,
 ): Promise<Invitation> {
   const response = await fetch(`${API_BASE}/api/orgs/${orgId}/invitations`, {
     method: 'POST',
@@ -149,7 +149,7 @@ export async function listMembers(orgId: string): Promise<Member[]> {
 export async function updateMemberRole(
   orgId: string,
   userId: string,
-  data: UpdateMemberRoleRequest
+  data: UpdateMemberRoleRequest,
 ): Promise<void> {
   const response = await fetch(`${API_BASE}/api/orgs/${orgId}/members/${userId}/role`, {
     method: 'PUT',

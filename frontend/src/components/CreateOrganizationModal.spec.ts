@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import CreateOrganizationModal from './CreateOrganizationModal.vue'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as organizationsApi from '../api/organizations'
+import CreateOrganizationModal from './CreateOrganizationModal.vue'
 
 vi.mock('../api/organizations')
 

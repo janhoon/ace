@@ -2,12 +2,15 @@
 import { computed, ref, watch } from 'vue'
 import type { LogEntry } from '../types/datasource'
 
-const props = withDefaults(defineProps<{
-  logs: LogEntry[]
-  highlightedLogKeys?: string[]
-}>(), {
-  highlightedLogKeys: () => [],
-})
+const props = withDefaults(
+  defineProps<{
+    logs: LogEntry[]
+    highlightedLogKeys?: string[]
+  }>(),
+  {
+    highlightedLogKeys: () => [],
+  },
+)
 
 interface DetectedField {
   key: string
@@ -180,9 +183,7 @@ function getMessageFields(log: LogEntry): DetectedField[] {
   return parseKeyValueFields(log.line)
 }
 
-const detectedFieldsByRow = computed(() =>
-  displayLogs.value.map(log => getMessageFields(log)),
-)
+const detectedFieldsByRow = computed(() => displayLogs.value.map((log) => getMessageFields(log)))
 
 watch(displayLogs, () => {
   expandedRows.value = new Set<number>()

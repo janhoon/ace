@@ -1,19 +1,19 @@
-import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
 import App from './App.vue'
 
 vi.mock('vue-router', () => ({
   RouterView: {
     name: 'RouterView',
-    template: '<div data-testid="router-view">Router View</div>'
+    template: '<div data-testid="router-view">Router View</div>',
   },
   useRoute: () => ({
     path: '/dashboards',
-    params: {}
+    params: {},
   }),
   useRouter: () => ({
-    push: vi.fn()
-  })
+    push: vi.fn(),
+  }),
 }))
 
 describe('App', () => {
@@ -22,9 +22,9 @@ describe('App', () => {
       global: {
         stubs: {
           RouterView: true,
-          Sidebar: true
-        }
-      }
+          Sidebar: true,
+        },
+      },
     })
     expect(wrapper.findComponent({ name: 'RouterView' }).exists()).toBe(true)
   })

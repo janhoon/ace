@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed } from 'vue'
 import Panel from './Panel.vue'
 
@@ -143,7 +143,9 @@ describe('Panel', () => {
       props: { panel: mockPanel },
     })
     // Find button by title attribute since we use icons now
-    const deleteBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'Delete panel')
+    const deleteBtn = wrapper
+      .findAll('button')
+      .find((b) => b.attributes('title') === 'Delete panel')
     expect(deleteBtn).toBeDefined()
     if (!deleteBtn) {
       throw new Error('Expected delete button to be present')

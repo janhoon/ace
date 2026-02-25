@@ -154,12 +154,13 @@ describe('sso API', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({
-        client_id: 'google-client-id',
-        enabled: true,
-        created_at: '2026-02-08T00:00:00Z',
-        updated_at: '2026-02-08T00:00:00Z',
-      }),
+      json: () =>
+        Promise.resolve({
+          client_id: 'google-client-id',
+          enabled: true,
+          created_at: '2026-02-08T00:00:00Z',
+          updated_at: '2026-02-08T00:00:00Z',
+        }),
     })
 
     await getGoogleSSOConfig('org-1')

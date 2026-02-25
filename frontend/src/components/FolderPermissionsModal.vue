@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { Shield, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
-import { X, Shield } from 'lucide-vue-next'
+import { listGroups } from '../api/groups'
+import { listMembers } from '../api/organizations'
+import { listFolderPermissions, replaceFolderPermissions } from '../api/permissions'
 import type { Folder } from '../types/folder'
 import type { Member } from '../types/organization'
 import type {
@@ -9,12 +12,6 @@ import type {
   ResourcePermissionLevel,
   UserGroup,
 } from '../types/rbac'
-import { listMembers } from '../api/organizations'
-import { listGroups } from '../api/groups'
-import {
-  listFolderPermissions,
-  replaceFolderPermissions,
-} from '../api/permissions'
 
 const props = defineProps<{
   folder: Folder
@@ -61,7 +58,9 @@ watch(newPrincipalType, () => {
 function principalLabel(entry: ResourcePermissionEntry): string {
   if (entry.principal_type === 'user') {
     const member = members.value.find((item) => item.user_id === entry.principal_id)
-    return member ? `${member.name || member.email} (${member.email})` : `Unknown user (${entry.principal_id})`
+    return member
+      ? `${member.name || member.email} (${member.email})`
+      : `Unknown user (${entry.principal_id})`
   }
 
   const group = groups.value.find((item) => item.id === entry.principal_id)

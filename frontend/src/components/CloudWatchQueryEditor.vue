@@ -23,7 +23,8 @@ const emit = defineEmits<{
 }>()
 
 const examples: Record<CloudWatchSignal, string> = {
-  metrics: '{\n  "namespace": "AWS/EC2",\n  "metric_name": "CPUUtilization",\n  "dimensions": {\n    "InstanceId": "i-1234567890"\n  },\n  "stat": "Average",\n  "period": 60\n}',
+  metrics:
+    '{\n  "namespace": "AWS/EC2",\n  "metric_name": "CPUUtilization",\n  "dimensions": {\n    "InstanceId": "i-1234567890"\n  },\n  "stat": "Average",\n  "period": 60\n}',
   logs: 'fields @timestamp, @message, @logStream\n| filter @message like /error/\n| sort @timestamp desc\n| limit 200',
 }
 

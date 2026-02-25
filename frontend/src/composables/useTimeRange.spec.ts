@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useTimeRange, TIME_RANGE_PRESETS, REFRESH_INTERVALS } from './useTimeRange'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { REFRESH_INTERVALS, TIME_RANGE_PRESETS, useTimeRange } from './useTimeRange'
 
 describe('useTimeRange', () => {
   beforeEach(() => {
@@ -22,13 +22,19 @@ describe('useTimeRange', () => {
   describe('TIME_RANGE_PRESETS', () => {
     it('should have all expected presets', () => {
       expect(TIME_RANGE_PRESETS).toHaveLength(7)
-      expect(TIME_RANGE_PRESETS.map(p => p.value)).toEqual([
-        '5m', '15m', '30m', '1h', '6h', '24h', '7d'
+      expect(TIME_RANGE_PRESETS.map((p) => p.value)).toEqual([
+        '5m',
+        '15m',
+        '30m',
+        '1h',
+        '6h',
+        '24h',
+        '7d',
       ])
     })
 
     it('should have correct durations', () => {
-      const presetMap = Object.fromEntries(TIME_RANGE_PRESETS.map(p => [p.value, p.duration]))
+      const presetMap = Object.fromEntries(TIME_RANGE_PRESETS.map((p) => [p.value, p.duration]))
       expect(presetMap['5m']).toBe(5 * 60 * 1000)
       expect(presetMap['15m']).toBe(15 * 60 * 1000)
       expect(presetMap['30m']).toBe(30 * 60 * 1000)
@@ -42,13 +48,11 @@ describe('useTimeRange', () => {
   describe('REFRESH_INTERVALS', () => {
     it('should have all expected intervals', () => {
       expect(REFRESH_INTERVALS).toHaveLength(6)
-      expect(REFRESH_INTERVALS.map(r => r.value)).toEqual([
-        'off', '5s', '15s', '30s', '1m', '5m'
-      ])
+      expect(REFRESH_INTERVALS.map((r) => r.value)).toEqual(['off', '5s', '15s', '30s', '1m', '5m'])
     })
 
     it('should have correct intervals in milliseconds', () => {
-      const intervalMap = Object.fromEntries(REFRESH_INTERVALS.map(r => [r.value, r.interval]))
+      const intervalMap = Object.fromEntries(REFRESH_INTERVALS.map((r) => [r.value, r.interval]))
       expect(intervalMap.off).toBe(0)
       expect(intervalMap['5s']).toBe(5000)
       expect(intervalMap['15s']).toBe(15000)
@@ -329,7 +333,8 @@ describe('useTimeRange', () => {
 
   describe('resumeAutoRefresh', () => {
     it('should resume auto-refresh after pause', () => {
-      const { setRefreshInterval, onRefresh, pauseAutoRefresh, resumeAutoRefresh, isPaused } = useTimeRange()
+      const { setRefreshInterval, onRefresh, pauseAutoRefresh, resumeAutoRefresh, isPaused } =
+        useTimeRange()
       const callback = vi.fn()
 
       onRefresh(callback)
