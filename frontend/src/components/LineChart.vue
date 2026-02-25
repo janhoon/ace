@@ -54,14 +54,14 @@ const chartRef = ref<typeof VChart | null>(null)
 
 // Dashboard palette for line series
 const lineColors = [
-  '#F59E0B',
+  '#059669',
   '#60A5FA',
-  '#f59e0b',
+  '#64748b',
   '#fb7185',
   '#22d3ee',
   '#a3e635',
-  '#f97316',
-  '#D97706',
+  '#f59e0b',
+  '#e11d48',
 ]
 
 // Format timestamp for display (compact format for axis labels)
@@ -119,7 +119,7 @@ const chartOption = computed<EChartsOption>(() => {
           text: props.title,
           left: 'center',
           textStyle: {
-            color: '#f5f5f5',
+            color: '#334155',
             fontSize: 13,
             fontWeight: 500,
           },
@@ -127,26 +127,26 @@ const chartOption = computed<EChartsOption>(() => {
       : undefined,
     tooltip: {
       trigger: 'axis',
-      backgroundColor: '#1a1a1a',
-      borderColor: '#2a2a2a',
+      backgroundColor: '#fff',
+      borderColor: '#e2e8f0',
       borderWidth: 1,
       textStyle: {
-        color: '#f5f5f5',
+        color: '#334155',
         fontSize: 12,
       },
       formatter: (params: TooltipParam[]) => {
         if (!Array.isArray(params) || params.length === 0) return ''
         const timestamp = params[0].data[0]
         const timeStr = formatFullDateTime(timestamp / 1000)
-        let result = `<div style="font-weight: 500; margin-bottom: 6px; color: #a0a0a0; font-size: 11px;">${timeStr}</div>`
+        let result = `<div style="font-weight: 500; margin-bottom: 6px; color: #64748b; font-size: 11px;">${timeStr}</div>`
         for (const param of params) {
           const value = typeof param.data[1] === 'number'
             ? param.data[1].toFixed(4)
             : param.data[1]
           result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
             <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%;"></span>
-            <span style="color: #a0a0a0; font-size: 12px;">${param.seriesName}:</span>
-            <span style="font-weight: 600; color: #f5f5f5;">${value}</span>
+            <span style="color: #64748b; font-size: 12px;">${param.seriesName}:</span>
+            <span style="font-weight: 600; color: #334155;">${value}</span>
           </div>`
         }
         return result
@@ -156,7 +156,7 @@ const chartOption = computed<EChartsOption>(() => {
       show: props.series.length > 1,
       bottom: 0,
       textStyle: {
-        color: '#a0a0a0',
+        color: '#64748b',
         fontSize: 11,
       },
       itemWidth: 16,
@@ -172,13 +172,16 @@ const chartOption = computed<EChartsOption>(() => {
     xAxis: {
       type: 'time',
       axisLine: {
-        show: false,
+        show: true,
+        lineStyle: {
+          color: '#e2e8f0',
+        },
       },
       axisTick: {
         show: false,
       },
       axisLabel: {
-        color: '#666666',
+        color: '#64748b',
         fontSize: 10,
         hideOverlap: true,
         formatter: (value: number) => formatTime(value / 1000),
@@ -186,7 +189,7 @@ const chartOption = computed<EChartsOption>(() => {
       splitLine: {
         show: true,
         lineStyle: {
-          color: '#1a1a1a',
+          color: '#e2e8f0',
           type: 'solid',
         },
       },
@@ -194,19 +197,22 @@ const chartOption = computed<EChartsOption>(() => {
     yAxis: {
       type: 'value',
       axisLine: {
-        show: false,
+        show: true,
+        lineStyle: {
+          color: '#e2e8f0',
+        },
       },
       axisTick: {
         show: false,
       },
       axisLabel: {
-        color: '#666666',
+        color: '#64748b',
         fontSize: 10,
       },
       splitLine: {
         show: true,
         lineStyle: {
-          color: '#1a1a1a',
+          color: '#e2e8f0',
           type: 'solid',
         },
       },
@@ -237,24 +243,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="line-chart" :style="{ height: typeof height === 'number' ? `${height}px` : height }">
+  <div class="h-full w-full" :style="{ height: typeof height === 'number' ? `${height}px` : height }">
     <VChart
       ref="chartRef"
       :option="chartOption"
       :autoresize="true"
-      class="chart"
+      class="h-full w-full"
     />
   </div>
 </template>
-
-<style scoped>
-.line-chart {
-  width: 100%;
-  min-height: 200px;
-}
-
-.chart {
-  width: 100%;
-  height: 100%;
-}
-</style>
