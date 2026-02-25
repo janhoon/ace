@@ -150,483 +150,127 @@ watch(
 </script>
 
 <template>
-  <div class="datasource-settings">
-    <header class="page-header">
+  <div class="px-8 py-6 max-w-[1120px] mx-auto">
+    <header class="flex items-center justify-between mb-6">
       <div>
-        <h1>Data Sources</h1>
-        <p class="page-subtitle">Manage connections to your monitoring systems</p>
+        <h1 class="text-lg font-bold text-slate-900">Data Sources</h1>
+        <p class="text-sm text-slate-500 mt-1">Manage connections to your monitoring systems</p>
       </div>
-      <div class="header-actions">
+      <div class="flex items-center gap-2.5">
         <button
-          class="btn btn-secondary btn-header btn-test-all"
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed min-w-[96px]"
           :disabled="datasources.length === 0 || testAllLoading"
           @click="testAllDatasources"
         >
-          <Loader2 v-if="testAllLoading" :size="16" class="icon-spin" />
+          <Loader2 v-if="testAllLoading" :size="16" class="animate-spin" />
           <HeartPulse v-else :size="16" />
           {{ testAllLoading ? 'Testing...' : 'Test All' }}
         </button>
-        <button class="btn btn-primary btn-header" :disabled="!canCreate" @click="openCreatePage">
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="!canCreate"
+          @click="openCreatePage"
+        >
           <Plus :size="16" />
           Add Data Source
         </button>
       </div>
     </header>
 
-    <div v-if="error" class="error-banner">{{ error }}</div>
+    <div v-if="error" class="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700 mb-6">{{ error }}</div>
 
-    <div v-if="loading && datasources.length === 0" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading datasources...</p>
+    <div v-if="loading && datasources.length === 0" class="flex flex-col items-center justify-center py-16 px-8 text-center gap-4">
+      <div class="h-8 w-8 rounded-full border-3 border-slate-200 border-t-emerald-500 animate-spin"></div>
+      <p class="text-sm text-slate-500">Loading datasources...</p>
     </div>
 
-    <div v-else-if="datasources.length === 0" class="empty-state">
-      <Database :size="48" class="empty-icon" />
-      <h3>No data sources configured</h3>
-      <p>Add a data source to start querying your monitoring systems.</p>
-      <button class="btn btn-primary" :disabled="!canCreate" @click="openCreatePage">
+    <div v-else-if="datasources.length === 0" class="flex flex-col items-center justify-center py-16 px-8 text-center gap-4">
+      <Database :size="48" class="text-slate-300" />
+      <h3 class="text-lg font-semibold text-slate-900 m-0">No data sources configured</h3>
+      <p class="text-sm text-slate-500 m-0">Add a data source to start querying your monitoring systems.</p>
+      <button
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        :disabled="!canCreate"
+        @click="openCreatePage"
+      >
         <Plus :size="16" />
         Add Data Source
       </button>
     </div>
 
-    <div v-else class="datasource-grid">
+    <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
       <div
         v-for="ds in datasources"
         :key="ds.id"
-        class="datasource-card"
+        class="rounded-xl border border-slate-200 bg-white transition hover:border-emerald-300 hover:shadow-md"
       >
-        <div class="card-header">
-          <div class="card-title-row">
+        <div class="flex justify-between items-start p-4 pb-0 gap-3">
+          <div class="flex items-start flex-wrap gap-2.5 min-w-0">
             <div
-              class="type-panel"
+              class="flex items-center gap-2.5 rounded-lg border px-3.5 py-1.5 min-w-0"
               :style="{ borderColor: getTypeColor(ds.type) + '4d', background: getTypeColor(ds.type) + '14' }"
             >
-              <img v-if="getTypeLogo(ds.type)" :src="getTypeLogo(ds.type)" :alt="`${dataSourceTypeLabels[ds.type]} logo`" class="type-panel-logo" />
-              <Database v-else :size="26" class="type-panel-logo-icon" />
-              <div class="type-panel-meta">
-                <span class="type-panel-label">Source Type</span>
-                <strong class="type-panel-name">{{ dataSourceTypeLabels[ds.type] }}</strong>
+              <img v-if="getTypeLogo(ds.type)" :src="getTypeLogo(ds.type)" :alt="`${dataSourceTypeLabels[ds.type]} logo`" class="w-[26px] h-[26px] object-contain shrink-0" />
+              <Database v-else :size="26" class="shrink-0 text-slate-400" />
+              <div class="flex flex-col gap-px min-w-0">
+                <span class="text-[0.64rem] tracking-[0.05em] uppercase text-slate-400">Source Type</span>
+                <strong class="text-sm font-bold text-slate-900 leading-tight">{{ dataSourceTypeLabels[ds.type] }}</strong>
               </div>
             </div>
-            <span v-if="ds.is_default" class="default-badge">
+            <span v-if="ds.is_default" class="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-xs font-medium">
               <Check :size="12" />
               Default
             </span>
           </div>
-          <div class="card-actions">
-            <button class="btn-icon" @click="openEditPage(ds.id)" title="Edit">
+          <div class="flex gap-1">
+            <button class="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition border-none bg-transparent cursor-pointer" @click="openEditPage(ds.id)" title="Edit">
               <Pencil :size="16" />
             </button>
-            <button class="btn-icon btn-icon-danger" @click="handleDelete(ds)" title="Delete">
+            <button class="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition border-none bg-transparent cursor-pointer" @click="handleDelete(ds)" title="Delete">
               <Trash2 :size="16" />
             </button>
           </div>
         </div>
-        <div class="card-body">
-          <div class="card-main">
-            <h3 class="ds-name">{{ ds.name }}</h3>
-            <div class="ds-url">
-              <ExternalLink :size="14" />
-              <span>{{ ds.url }}</span>
+        <div class="flex flex-col gap-3 p-4">
+          <div class="flex flex-col gap-2">
+            <h3 class="text-sm font-semibold text-slate-900 m-0">{{ ds.name }}</h3>
+            <div class="flex items-center gap-1.5 text-xs text-slate-400 break-all">
+              <ExternalLink :size="14" class="shrink-0" />
+              <span class="truncate">{{ ds.url }}</span>
             </div>
           </div>
-          <div class="card-footer">
+          <div class="flex items-center justify-between gap-3">
             <span
-              class="health-badge"
-              :class="`health-${getHealthStatus(ds.id)}`"
+              class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs border"
+              :class="{
+                'text-slate-500 bg-slate-50 border-slate-200': getHealthStatus(ds.id) === 'unknown',
+                'text-sky-600 bg-sky-50 border-sky-200': getHealthStatus(ds.id) === 'checking',
+                'text-emerald-700 bg-emerald-50 border-emerald-200': getHealthStatus(ds.id) === 'healthy',
+                'text-rose-700 bg-rose-50 border-rose-200': getHealthStatus(ds.id) === 'unhealthy',
+              }"
               :title="healthErrors[ds.id] || getHealthLabel(ds.id)"
             >
-              <Loader2 v-if="getHealthStatus(ds.id) === 'checking'" :size="12" class="icon-spin" />
-              <HeartPulse v-else-if="getHealthStatus(ds.id) === 'healthy'" :size="12" />
-              <CircleAlert v-else-if="getHealthStatus(ds.id) === 'unhealthy'" :size="12" />
+              <Loader2 v-if="getHealthStatus(ds.id) === 'checking'" :size="12" class="animate-spin" />
+              <span v-else-if="getHealthStatus(ds.id) === 'healthy'" class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+              <span v-else-if="getHealthStatus(ds.id) === 'unhealthy'" class="h-2.5 w-2.5 rounded-full bg-rose-500"></span>
+              <span v-else class="h-2.5 w-2.5 rounded-full bg-amber-500"></span>
               <span>{{ getHealthLabel(ds.id) }}</span>
             </span>
 
             <button
-              class="btn btn-secondary btn-test"
+              class="inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="getHealthStatus(ds.id) === 'checking'"
               @click="testDatasource(ds)"
               title="Run connection test"
             >
-              <Loader2 v-if="getHealthStatus(ds.id) === 'checking'" :size="14" class="icon-spin" />
+              <Loader2 v-if="getHealthStatus(ds.id) === 'checking'" :size="14" class="animate-spin" />
               <HeartPulse v-else :size="14" />
               {{ getHealthStatus(ds.id) === 'checking' ? 'Testing...' : 'Test' }}
             </button>
           </div>
-          <div v-if="healthErrors[ds.id]" class="health-error">{{ healthErrors[ds.id] }}</div>
+          <div v-if="healthErrors[ds.id]" class="mt-1 text-xs text-rose-600 leading-relaxed">{{ healthErrors[ds.id] }}</div>
         </div>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.datasource-settings {
-  padding: 1.25rem 1.5rem;
-  max-width: 1120px;
-  margin: 0 auto;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 1rem 1.15rem;
-  border: 1px solid var(--border-primary);
-  border-radius: 14px;
-  background: var(--surface-1);
-  box-shadow: var(--shadow-sm);
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-}
-
-.btn-header {
-  padding: 0.5rem 0.875rem;
-  font-size: 0.8125rem;
-  border-radius: 10px;
-}
-
-.btn-test-all {
-  min-width: 96px;
-}
-
-.page-header h1 {
-  font-size: 1.03rem;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.page-subtitle {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  margin: 0.25rem 0 0;
-}
-
-.error-banner {
-  padding: 0.75rem 1rem;
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  border-radius: 8px;
-  color: var(--accent-danger);
-  font-size: 0.875rem;
-  margin-bottom: 1.5rem;
-}
-
-.loading-state,
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
-  gap: 1rem;
-}
-
-.empty-icon {
-  color: var(--text-tertiary);
-}
-
-.empty-state h3 {
-  margin: 0;
-  font-size: 1.125rem;
-  color: var(--text-primary);
-}
-
-.empty-state p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
-
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border-primary);
-  border-top-color: var(--accent-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.datasource-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
-}
-
-.datasource-card {
-  background: linear-gradient(180deg, rgba(16, 27, 42, 0.92), rgba(13, 23, 36, 0.9));
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
-  box-shadow: var(--shadow-sm);
-}
-
-.datasource-card:hover {
-  border-color: rgba(245, 158, 11, 0.35);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 1rem 1rem 0;
-  gap: 0.75rem;
-}
-
-.card-title-row {
-  display: flex;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 0.625rem;
-  min-width: 0;
-}
-
-.type-panel {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 11px;
-  border: 1px solid;
-  min-width: 0;
-}
-
-.type-panel-logo {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.type-panel-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.08rem;
-  min-width: 0;
-}
-
-.type-panel-label {
-  font-size: 0.64rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-.type-panel-name {
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.2;
-}
-
-.default-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  background: rgba(245, 158, 11, 0.16);
-  color: var(--accent-primary);
-}
-
-.card-actions {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.card-body {
-  padding: 0.875rem 1rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.card-main {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.ds-name {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.ds-url {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.78rem;
-  color: var(--text-tertiary);
-  word-break: break-all;
-  padding: 0.45rem 0.6rem;
-  border-radius: 7px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-primary);
-}
-
-.card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.health-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.22rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid var(--border-primary);
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-  background: var(--bg-tertiary);
-}
-
-.health-unknown {
-  color: var(--text-secondary);
-  background: var(--bg-tertiary);
-  border-color: var(--border-primary);
-}
-
-.health-checking {
-  color: #6ec6ff;
-  background: rgba(110, 198, 255, 0.12);
-  border-color: rgba(110, 198, 255, 0.35);
-}
-
-.health-healthy {
-  color: #59a14f;
-  background: rgba(89, 161, 79, 0.12);
-  border-color: rgba(89, 161, 79, 0.35);
-}
-
-.health-unhealthy {
-  color: var(--accent-danger);
-  background: rgba(255, 107, 107, 0.12);
-  border-color: rgba(255, 107, 107, 0.35);
-}
-
-.btn-test {
-  padding: 0.28rem 0.55rem;
-  font-size: 0.72rem;
-  border-radius: 999px;
-  min-height: 28px;
-  line-height: 1;
-}
-
-.health-error {
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--accent-danger);
-  line-height: 1.4;
-}
-
-.icon-spin {
-  animation: spin 0.8s linear infinite;
-}
-
-@media (max-width: 840px) {
-  .datasource-settings {
-    padding: 0.9rem;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .header-actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-}
-
-.btn-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-icon:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.btn-icon-danger:hover {
-  background: rgba(251, 113, 133, 0.15);
-  color: var(--accent-danger);
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: transparent;
-  border-color: #F59E0B;
-  color: #FCD34D;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: var(--bg-hover);
-}
-
-.btn-primary {
-  background: var(--accent-primary);
-  color: #1a0f00;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--accent-primary-hover);
-}
-</style>
