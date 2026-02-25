@@ -221,7 +221,7 @@ defineExpose({ focus })
 }
 
 .monaco-editor .margin {
-  background: var(--bg-secondary, #f8fafc) !important;
+  background: #f8fafc !important;
 }
 
 .monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
@@ -238,7 +238,7 @@ defineExpose({ focus })
 }
 
 .monaco-editor .suggest-widget .monaco-list-row.focused {
-  background-color: var(--bg-hover, #f1f5f9) !important;
+  background-color: #f1f5f9 !important;
 }
 
 .monaco-editor .monaco-hover {
@@ -256,25 +256,25 @@ body > .monaco-aria-container {
 
 /* Style the fixed overflow widgets */
 .overflowingContentWidgets .suggest-widget {
-  background: var(--bg-tertiary, #1a1a1a) !important;
-  border: 1px solid var(--border-primary, #2a2a2a) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
   border-radius: 6px !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
 }
 
 .overflowingContentWidgets .suggest-widget .monaco-list-row.focused {
-  background-color: var(--bg-hover, #242424) !important;
+  background-color: #f1f5f9 !important;
 }
 
 .overflowingContentWidgets .suggest-widget .monaco-list-row:hover {
-  background-color: var(--bg-hover, #242424) !important;
+  background-color: #f1f5f9 !important;
 }
 
 .overflowingContentWidgets .monaco-hover {
-  background: var(--bg-tertiary, #1a1a1a) !important;
-  border: 1px solid var(--border-primary, #2a2a2a) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
   border-radius: 6px !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
 }
 
 .overflowingContentWidgets .monaco-hover-content {
