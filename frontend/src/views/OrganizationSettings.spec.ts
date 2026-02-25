@@ -273,7 +273,7 @@ describe('OrganizationSettings', () => {
     const membersLink = wrapper.get('[data-testid="settings-section-members"]')
     const groupsLink = wrapper.get('[data-testid="settings-section-groups"]')
 
-    expect(generalLink.classes()).toContain('active')
+    expect(generalLink.classes()).toContain('text-emerald-600')
     expect(wrapper.text()).toContain('Single Sign-On')
 
     await membersLink.trigger('click')

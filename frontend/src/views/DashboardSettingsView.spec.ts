@@ -100,7 +100,7 @@ describe('DashboardSettingsView', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="dashboard-settings-sidebar"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="settings-section-general"]').classes()).toContain('active')
+    expect(wrapper.get('[data-testid="settings-section-general"]').classes()).toContain('text-emerald-600')
     expect(wrapper.text()).toContain('Dashboard Settings')
   })
 
