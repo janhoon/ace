@@ -218,6 +218,14 @@ func main() {
 	mux.HandleFunc("GET /api/datasources/{id}/alertmanager/receivers", auth.RequireAuth(jwtManager, alertManagerHandler.ListReceivers))
 	mux.HandleFunc("GET /api/datasources/{id}/alertmanager/health", auth.RequireAuth(jwtManager, alertManagerHandler.Health))
 
+	// GitHub Copilot routes
+	githubCopilotHandler := handlers.NewGitHubCopilotHandler(pool, jwtManager)
+	mux.HandleFunc("GET /api/auth/github/login", githubCopilotHandler.Login)
+	mux.HandleFunc("GET /api/auth/github/callback", githubCopilotHandler.Callback)
+	mux.HandleFunc("GET /api/auth/github/connection", auth.RequireAuth(jwtManager, githubCopilotHandler.GetConnection))
+	mux.HandleFunc("DELETE /api/auth/github/connection", auth.RequireAuth(jwtManager, githubCopilotHandler.Disconnect))
+	mux.HandleFunc("POST /api/copilot/chat", auth.RequireAuth(jwtManager, githubCopilotHandler.Chat))
+
 	// Grafana conversion route
 	grafanaConverterHandler := handlers.NewGrafanaConverterHandler()
 	mux.HandleFunc("POST /api/convert/grafana", auth.RequireAuth(jwtManager, grafanaConverterHandler.Convert))

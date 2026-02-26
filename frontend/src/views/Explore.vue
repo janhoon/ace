@@ -9,6 +9,7 @@ import {
   History,
   Loader2,
   Play,
+  Sparkles,
   X,
 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -26,6 +27,7 @@ import victoriaTracesLogo from '../assets/datasources/victoriatraces-logo.svg'
 import vmalertLogo from '../assets/datasources/vmalert-logo.svg'
 import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
 import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
+import CopilotPanel from '../components/CopilotPanel.vue'
 import ElasticsearchQueryEditor from '../components/ElasticsearchQueryEditor.vue'
 import type { ChartSeries } from '../components/LineChart.vue'
 import LineChart from '../components/LineChart.vue'
@@ -67,6 +69,9 @@ interface TraceMetricsNavigationContext {
 
 const TRACE_METRICS_NAVIGATION_CONTEXT_KEY = 'trace_metrics_navigation'
 const TRACE_NAVIGATION_MAX_AGE_MS = 5 * 60 * 1000
+
+// Copilot
+const showCopilot = ref(false)
 
 // Query state
 const selectedDatasourceId = ref('')
@@ -522,12 +527,22 @@ watch(selectedDatasourceId, () => {
 </script>
 
 <template>
-  <div class="flex flex-col min-h-full px-8 py-6" @keydown="handleKeydown">
+  <div class="flex min-h-full" @keydown="handleKeydown">
+    <div class="flex flex-col flex-1 min-w-0 px-8 py-6">
     <header class="flex items-center justify-between mb-6">
       <div class="flex items-center flex-wrap gap-3">
         <h1 class="text-2xl font-bold text-slate-900 m-0">Explore</h1>
         <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-700">Metrics</span>
       </div>
+      <button
+        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold cursor-pointer transition hover:bg-amber-50 hover:border-amber-300"
+        :class="showCopilot ? 'text-amber-600 border-amber-300 bg-amber-50' : 'text-slate-600'"
+        @click="showCopilot = !showCopilot"
+        title="Toggle AI assistant"
+      >
+        <Sparkles :size="14" />
+        AI
+      </button>
     </header>
 
     <div class="flex flex-col gap-6 flex-1">
@@ -733,5 +748,14 @@ watch(selectedDatasourceId, () => {
         </div>
       </div>
     </div>
+    </div>
+
+    <CopilotPanel
+      v-if="showCopilot"
+      :datasource-type="activeDatasource?.type || 'prometheus'"
+      :datasource-name="activeDatasource?.name || ''"
+      :on-insert-query="(q: string) => { query = q }"
+      @close="showCopilot = false"
+    />
   </div>
 </template>

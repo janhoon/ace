@@ -208,6 +208,22 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		`ALTER TABLE datasources
 			ADD CONSTRAINT datasources_type_check
 			CHECK (type IN ('prometheus', 'loki', 'victorialogs', 'victoriametrics', 'tempo', 'victoriatraces', 'clickhouse', 'cloudwatch', 'elasticsearch', 'vmalert', 'alertmanager'))`,
+		// GitHub Copilot connections (007_github_copilot.sql)
+		`CREATE TABLE IF NOT EXISTS user_github_connections (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			github_user_id VARCHAR(255) NOT NULL,
+			github_username VARCHAR(255) NOT NULL,
+			github_email VARCHAR(255),
+			access_token TEXT NOT NULL,
+			scopes TEXT NOT NULL DEFAULT '',
+			has_copilot BOOLEAN NOT NULL DEFAULT false,
+			copilot_checked_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW(),
+			UNIQUE(user_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_github_connections_user_id ON user_github_connections(user_id)`,
 	}
 
 	for _, migration := range migrations {
