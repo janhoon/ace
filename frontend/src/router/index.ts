@@ -194,6 +194,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/settings/user',
+    name: 'user-settings',
+    component: () => import('../views/UserSettingsView.vue'),
+    alias: '/app/settings/user',
+    meta: {
+      layout: 'app',
+      title: 'User Settings | Ace',
+      description: 'Manage your profile, integrations, and connected services.',
+    },
+  },
+  {
     path: '/settings/privacy',
     name: 'privacy-settings',
     component: () => import('../views/PrivacySettingsView.vue'),
