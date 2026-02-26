@@ -79,34 +79,46 @@ func (c *VictoriaTracesClient) GetTrace(ctx context.Context, traceID string) (*T
 }
 
 func (c *VictoriaTracesClient) SearchTraces(ctx context.Context, req TraceSearchRequest) ([]TraceSummary, error) {
+	// VictoriaTraces Jaeger API requires a service name. When none is
+	// provided, fetch the known services and query each one individually.
+	if strings.TrimSpace(req.Service) == "" {
+		services, err := c.Services(ctx)
+		if err != nil || len(services) == 0 {
+			return []TraceSummary{}, nil
+		}
+
+		var allTraces []TraceSummary
+		for _, svc := range services {
+			svcReq := req
+			svcReq.Service = svc
+			traces, err := c.searchTracesForService(ctx, svcReq)
+			if err != nil {
+				continue
+			}
+			allTraces = append(allTraces, traces...)
+		}
+
+		return normalizeTraceSearchResults(allTraces, req.Limit), nil
+	}
+
+	return c.searchTracesForService(ctx, req)
+}
+
+func (c *VictoriaTracesClient) searchTracesForService(ctx context.Context, req TraceSearchRequest) ([]TraceSummary, error) {
 	params := buildTraceSearchParams(req)
-	endpoints := []string{
-		"/select/jaeger/api/traces?" + params.Encode(),
-		"/api/search?" + params.Encode(),
+	endpoint := "/select/jaeger/api/traces?" + params.Encode()
+
+	payload, err := doTracingRequest(ctx, c.httpClient, c.datasource, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	var lastErr error
-	for _, endpoint := range endpoints {
-		payload, err := doTracingRequest(ctx, c.httpClient, c.datasource, http.MethodGet, endpoint, nil)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-
-		traces, err := parseTraceSearchResponse(payload)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-
-		return normalizeTraceSearchResults(traces, req.Limit), nil
+	traces, err := parseTraceSearchResponse(payload)
+	if err != nil {
+		return nil, err
 	}
 
-	if lastErr != nil {
-		return nil, lastErr
-	}
-
-	return nil, fmt.Errorf("failed to search traces")
+	return traces, nil
 }
 
 func (c *VictoriaTracesClient) Services(ctx context.Context) ([]string, error) {
