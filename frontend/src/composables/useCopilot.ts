@@ -24,6 +24,35 @@ export interface CopilotModel {
   premium_multiplier: number
 }
 
+export interface ToolDefinition {
+  type: 'function'
+  function: {
+    name: string
+    description: string
+    parameters: Record<string, unknown>
+  }
+}
+
+export interface ToolCall {
+  id: string
+  type: 'function'
+  function: {
+    name: string
+    arguments: string
+  }
+}
+
+interface ToolMessage {
+  role: 'tool'
+  tool_call_id: string
+  content: string
+}
+
+export type ChatRequestMessage =
+  | { role: 'user' | 'assistant' | 'system'; content: string }
+  | { role: 'assistant'; content: string | null; tool_calls: ToolCall[] }
+  | ToolMessage
+
 export function useCopilot() {
   const isConnected = ref(false)
   const githubUsername = ref('')
@@ -74,8 +103,8 @@ export function useCopilot() {
       const data = await response.json()
       models.value = data.models || []
       // Auto-select first model if none selected or current selection no longer available
-      if (models.value.length > 0 && !models.value.find(m => m.id === selectedModel.value)) {
-        const defaultModel = models.value.find(m => m.id === 'claude-sonnet-4.6')
+      if (models.value.length > 0 && !models.value.find((m) => m.id === selectedModel.value)) {
+        const defaultModel = models.value.find((m) => m.id === 'claude-sonnet-4.6')
         selectedModel.value = defaultModel?.id || models.value[0]!.id
       }
     } catch {
@@ -256,6 +285,82 @@ export function useCopilot() {
     }
   }
 
+  async function sendChatRequest(
+    datasourceType: string,
+    datasourceName: string,
+    messages: ChatRequestMessage[],
+    tools?: ToolDefinition[],
+  ): Promise<{ content: string | null; toolCalls: ToolCall[] }> {
+    const body: Record<string, unknown> = {
+      datasource_type: datasourceType,
+      datasource_name: datasourceName,
+      model: selectedModel.value || undefined,
+      messages,
+    }
+    if (tools && tools.length > 0) {
+      body.tools = tools
+      body.stream = false
+    }
+
+    const response = await fetch(`${API_BASE}/api/copilot/chat`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}))
+      throw new Error(errData.error || `Copilot request failed (${response.status})`)
+    }
+
+    const contentType = response.headers.get('content-type') || ''
+
+    // If SSE streaming response (no tools), collect all chunks
+    if (contentType.includes('text/event-stream')) {
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('No response stream')
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let fullContent = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed || trimmed === 'data: [DONE]') continue
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const json = JSON.parse(trimmed.slice(6))
+              const content = json.choices?.[0]?.delta?.content
+              if (content) fullContent += content
+            } catch {
+              // skip malformed
+            }
+          }
+        }
+      }
+
+      return { content: fullContent, toolCalls: [] }
+    }
+
+    // JSON response (with tools)
+    const data = await response.json()
+    const choice = data.choices?.[0]
+    if (!choice) throw new Error('No response from model')
+
+    return {
+      content: choice.message?.content ?? null,
+      toolCalls: choice.message?.tool_calls ?? [],
+    }
+  }
+
   return {
     isConnected,
     githubUsername,
@@ -273,5 +378,6 @@ export function useCopilot() {
     cancelDeviceFlow,
     disconnect,
     sendMessage,
+    sendChatRequest,
   }
 }
