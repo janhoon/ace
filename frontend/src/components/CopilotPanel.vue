@@ -237,6 +237,7 @@ function handleKeydown(e: KeyboardEvent) {
 
 function clearChat() {
   messages.value = []
+  renderedHtml.value = {}
 }
 
 watch(
