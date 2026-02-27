@@ -28,7 +28,7 @@ const mainMargin = computed(() => {
 })
 
 const showCopilot = ref(false)
-const { isConnected, hasCopilot } = useCopilot()
+const { isConnected, hasCopilot, checkConnection } = useCopilot()
 const { currentOrg } = useOrganization()
 const { metricsDatasources, fetchDatasources } = useDatasource()
 
@@ -42,6 +42,14 @@ watch(
   () => currentOrg.value?.id,
   (orgId) => {
     if (orgId) fetchDatasources(orgId)
+  },
+  { immediate: true },
+)
+
+watch(
+  isAuthenticated,
+  (authed) => {
+    if (authed) checkConnection()
   },
   { immediate: true },
 )
@@ -64,10 +72,9 @@ watch(
       @close="showCopilot = false"
     />
     <button
-      v-if="showSidebar"
-      class="fixed bottom-6 right-6 z-50 flex items-center justify-center h-12 w-12 rounded-full shadow-lg cursor-pointer border-none transition"
-      :class="showCopilot ? 'bg-accent text-white hover:bg-accent-hover' : 'bg-surface-raised text-text-secondary border border-border hover:bg-surface-overlay hover:text-text-primary'"
-      @click="showCopilot = !showCopilot"
+      v-if="showSidebar && !showCopilot"
+      class="fixed bottom-6 right-6 z-50 flex items-center justify-center h-12 w-12 rounded-full shadow-lg cursor-pointer border-none transition bg-surface-raised text-text-secondary border border-border hover:bg-surface-overlay hover:text-text-primary"
+      @click="showCopilot = true"
       title="Toggle AI assistant"
     >
       <Sparkles :size="20" />

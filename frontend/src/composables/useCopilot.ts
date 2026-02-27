@@ -351,14 +351,24 @@ export function useCopilot() {
     }
 
     // JSON response (with tools)
+    // GitHub Copilot API may split content and tool_calls across multiple choices,
+    // so we merge all choices to extract both.
     const data = await response.json()
-    const choice = data.choices?.[0]
-    if (!choice) throw new Error('No response from model')
+    const choices = data.choices
+    if (!choices || choices.length === 0) throw new Error('No response from model')
 
-    return {
-      content: choice.message?.content ?? null,
-      toolCalls: choice.message?.tool_calls ?? [],
+    let content: string | null = null
+    let toolCalls: ToolCall[] = []
+    for (const choice of choices) {
+      if (choice.message?.content && !content) {
+        content = choice.message.content
+      }
+      if (choice.message?.tool_calls?.length) {
+        toolCalls = choice.message.tool_calls
+      }
     }
+
+    return { content, toolCalls }
   }
 
   return {
