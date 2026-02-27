@@ -793,15 +793,15 @@ onMounted(() => {
 <template>
   <div class="mx-auto max-w-[1560px] px-7 pt-6 pb-8">
     <!-- Page header -->
-    <header class="mb-4 flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-raised p-4 shadow-sm">
+    <header class="mb-4 flex items-center justify-between gap-4 rounded border border-border bg-surface-raised p-4 shadow-sm">
       <div>
-        <h1 class="mb-1 text-lg font-bold tracking-wide text-text-primary uppercase">Dashboards</h1>
-        <p class="text-sm text-slate-500">File explorer for folders and monitoring dashboards</p>
+        <h1 class="mb-1 text-lg font-bold tracking-wide text-text-primary">Dashboards</h1>
+        <p class="text-sm text-text-secondary">File explorer for folders and monitoring dashboards</p>
       </div>
       <div class="inline-flex items-center gap-2.5">
         <button
           v-if="canCreateFolder"
-          class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
+          class="inline-flex items-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
           data-testid="new-folder-header"
           @click="openCreateFolderModal"
         >
@@ -809,7 +809,7 @@ onMounted(() => {
           <span>New Folder</span>
         </button>
         <button
-          class="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer"
+          class="inline-flex items-center gap-2 rounded-sm bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer"
           @click="openCreateModal"
         >
           <Plus :size="18" />
@@ -819,17 +819,17 @@ onMounted(() => {
     </header>
 
     <!-- Loading state -->
-    <div v-if="loading" class="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-border bg-surface-raised py-16 text-center text-slate-500">
-      <div class="mb-4 h-10 w-10 animate-spin rounded-full border-3 border-slate-300 border-t-accent"></div>
+    <div v-if="loading" class="flex min-h-[320px] flex-col items-center justify-center rounded border border-border bg-surface-raised py-16 text-center text-text-secondary">
+      <div class="mb-4 h-10 w-10 animate-spin rounded-sm border-3 border-border border-t-accent"></div>
       <p>Loading dashboards...</p>
     </div>
 
     <!-- Error state -->
-    <div v-else-if="error" class="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-border bg-surface-raised py-16 text-center text-rose-600">
+    <div v-else-if="error" class="flex min-h-[320px] flex-col items-center justify-center rounded border border-border bg-surface-raised py-16 text-center text-rose-600">
       <AlertCircle :size="48" />
       <p class="mb-5 mt-4">{{ error }}</p>
       <button
-        class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
+        class="inline-flex items-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
         @click="fetchDashboards"
       >
         Try Again
@@ -837,8 +837,8 @@ onMounted(() => {
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="isCompletelyEmpty" class="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-border bg-surface-raised py-16 text-center text-slate-500">
-      <div class="mb-4 flex h-28 w-28 items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-accent-muted to-slate-50 text-slate-300">
+    <div v-else-if="isCompletelyEmpty" class="flex min-h-[320px] flex-col items-center justify-center rounded border border-border bg-surface-raised py-16 text-center text-text-secondary">
+      <div class="mb-4 flex h-28 w-28 items-center justify-center rounded border border-border bg-gradient-to-br from-accent-muted to-surface-raised text-text-muted">
         <LayoutDashboard :size="64" />
       </div>
       <h2 class="mt-4 mb-2 text-lg font-semibold text-text-primary">No dashboards yet</h2>
@@ -846,7 +846,7 @@ onMounted(() => {
       <div class="flex gap-3">
         <button
           v-if="canCreateFolder"
-          class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
+          class="inline-flex items-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
           data-testid="new-folder-empty"
           @click="openCreateFolderModal"
         >
@@ -854,7 +854,7 @@ onMounted(() => {
           <span>Create Folder</span>
         </button>
         <button
-          class="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer"
+          class="inline-flex items-center gap-2 rounded-sm bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer"
           @click="openCreateModal"
         >
           <Plus :size="18" />
@@ -866,49 +866,49 @@ onMounted(() => {
     <!-- Explorer shell: sidebar + main + preview -->
     <div v-else class="grid grid-cols-1 items-start gap-4">
       <!-- Sidebar / folder tree -->
-      <aside class="min-h-[640px] rounded-xl border border-border bg-surface-raised p-4 shadow-sm">
+      <aside class="min-h-[640px] rounded border border-border bg-surface-raised p-4 shadow-sm">
         <!-- Search -->
-        <div class="mb-3 flex items-center gap-2 rounded-lg border border-border bg-surface-overlay px-3 py-2 text-slate-400">
+        <div class="mb-3 flex items-center gap-2 rounded-sm border border-border bg-surface-overlay px-3 py-2 text-text-muted">
           <Search :size="16" />
           <input
             v-model="searchQuery"
             type="search"
             placeholder="Search folders and dashboards"
             data-testid="explorer-search"
-            class="w-full border-none bg-transparent text-sm text-text-primary placeholder:text-slate-400 focus:outline-none"
+            class="w-full border-none bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
           />
         </div>
 
         <!-- Finder header / breadcrumbs -->
-        <div class="mb-2.5 rounded-lg border border-border bg-surface-overlay px-2.5 py-2">
+        <div class="mb-2.5 rounded-sm border border-border bg-surface-overlay px-2.5 py-2">
           <div class="flex flex-wrap items-center gap-1" aria-label="Current folder path">
             <template v-for="(item, index) in breadcrumbs" :key="`sidebar-${item.type === 'folder' ? item.id : item.type}`">
               <button
-                class="border-none bg-transparent px-1 py-0.5 text-xs text-slate-500 cursor-pointer"
+                class="border-none bg-transparent px-1 py-0.5 text-xs text-text-secondary cursor-pointer"
                 :class="{ 'font-semibold text-text-primary': index === breadcrumbs.length - 1 }"
                 @click="onBreadcrumbSelect(item)"
               >
                 {{ item.label }}
               </button>
-              <ChevronRight v-if="index < breadcrumbs.length - 1" :size="14" class="text-slate-300" />
+              <ChevronRight v-if="index < breadcrumbs.length - 1" :size="14" class="text-text-muted" />
             </template>
           </div>
         </div>
 
         <!-- Tree toolbar -->
         <div class="mb-2.5 flex items-center justify-between gap-2.5">
-          <p class="m-0 text-xs font-semibold tracking-widest text-slate-400 uppercase">Explorer</p>
+          <p class="m-0 text-xs font-semibold tracking-widest text-text-muted uppercase">Explorer</p>
           <div class="inline-flex items-center gap-1.5">
             <button
               type="button"
-              class="rounded-md border border-border bg-surface-overlay px-2 py-0.5 text-xs text-slate-500 transition cursor-pointer hover:border-border-strong hover:bg-slate-100 hover:text-slate-700"
+              class="rounded-sm border border-border bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary transition cursor-pointer hover:border-border-strong hover:bg-surface-overlay hover:text-text-primary"
               @click="expandAllFolders"
             >
               Expand all
             </button>
             <button
               type="button"
-              class="rounded-md border border-border bg-surface-overlay px-2 py-0.5 text-xs text-slate-500 transition cursor-pointer hover:border-border-strong hover:bg-slate-100 hover:text-slate-700"
+              class="rounded-sm border border-border bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary transition cursor-pointer hover:border-border-strong hover:bg-surface-overlay hover:text-text-primary"
               @click="collapseTree"
             >
               Collapse
@@ -921,7 +921,7 @@ onMounted(() => {
           <!-- Root "All Dashboards" node -->
           <div :style="{ paddingLeft: '0px' }">
             <div
-              class="flex items-center gap-1 rounded-lg border border-transparent transition"
+              class="flex items-center gap-1 rounded-sm border border-transparent transition"
               :class="dropTargetSectionId === normalizeSectionId(null) ? 'border-accent-border bg-accent-muted' : 'hover:border-border hover:bg-surface-overlay'"
               data-testid="tree-row-root"
               @dragover.prevent="onSectionDragOver(null)"
@@ -929,16 +929,16 @@ onMounted(() => {
             >
               <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center"></span>
               <button
-                class="flex w-full items-center gap-2 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm text-slate-600 transition cursor-pointer"
+                class="flex w-full items-center gap-2 rounded-sm border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-secondary transition cursor-pointer"
                 :class="selectedExplorerNode === 'all' ? 'border-accent-border bg-accent-muted font-medium text-accent' : 'hover:bg-surface-overlay hover:text-text-primary'"
                 data-testid="tree-node-all"
                 @click="selectExplorerAll"
               >
-                <LayoutDashboard :size="15" :class="selectedExplorerNode === 'all' ? 'text-accent' : 'text-slate-400'" />
+                <LayoutDashboard :size="15" :class="selectedExplorerNode === 'all' ? 'text-accent' : 'text-text-muted'" />
                 <span>All Dashboards</span>
                 <span
-                  class="ml-auto inline-flex h-6 min-w-6 items-center justify-center rounded-full border text-xs font-mono"
-                  :class="selectedExplorerNode === 'all' ? 'border-accent-border bg-accent-muted text-accent' : 'border-border bg-surface-overlay text-slate-500'"
+                  class="ml-auto inline-flex h-6 min-w-6 items-center justify-center rounded-sm border text-xs font-mono"
+                  :class="selectedExplorerNode === 'all' ? 'border-accent-border bg-accent-muted text-accent' : 'border-border bg-surface-overlay text-text-secondary'"
                 >
                   {{ dashboards.length }}
                 </span>
@@ -949,7 +949,7 @@ onMounted(() => {
           <!-- Folder rows -->
           <div v-for="row in explorerTreeRows" :key="row.folder.id" :style="{ paddingLeft: `${row.depth * 14}px` }">
             <div
-              class="flex items-center gap-1 rounded-lg border border-transparent transition"
+              class="flex items-center gap-1 rounded-sm border border-transparent transition"
               :class="dropTargetSectionId === normalizeSectionId(row.folder.id) ? 'border-accent-border bg-accent-muted' : 'hover:border-border hover:bg-surface-overlay'"
               :data-testid="`tree-row-${row.folder.id}`"
               @dragover.prevent="onSectionDragOver(row.folder.id)"
@@ -957,7 +957,7 @@ onMounted(() => {
             >
               <button
                 v-if="row.hasChildren"
-                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-none bg-transparent text-slate-400 cursor-pointer transition hover:bg-slate-100"
+                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border-none bg-transparent text-text-muted cursor-pointer transition hover:bg-surface-overlay"
                 :data-testid="`folder-toggle-${row.folder.id}`"
                 @click.stop="toggleFolderExpanded(row.folder.id)"
               >
@@ -967,16 +967,16 @@ onMounted(() => {
               <span v-else class="inline-flex h-6 w-6 shrink-0 items-center justify-center"></span>
 
               <button
-                class="flex w-full items-center gap-2 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm text-slate-600 transition cursor-pointer"
+                class="flex w-full items-center gap-2 rounded-sm border border-transparent bg-transparent px-2 py-1.5 text-sm text-text-secondary transition cursor-pointer"
                 :class="selectedExplorerNode === `folder:${row.folder.id}` ? 'border-accent-border bg-accent-muted font-medium text-accent' : 'hover:bg-surface-overlay hover:text-text-primary'"
                 :data-testid="`tree-node-${row.folder.id}`"
                 @click="onTreeFolderClick(row.folder.id, row.hasChildren)"
               >
-                <FolderIcon :size="14" :class="selectedExplorerNode === `folder:${row.folder.id}` ? 'text-accent' : 'text-slate-400'" />
+                <FolderIcon :size="14" :class="selectedExplorerNode === `folder:${row.folder.id}` ? 'text-accent' : 'text-text-muted'" />
                 <span>{{ row.folder.name }}</span>
                 <span
-                  class="ml-auto inline-flex h-6 min-w-6 items-center justify-center rounded-full border text-xs font-mono"
-                  :class="selectedExplorerNode === `folder:${row.folder.id}` ? 'border-accent-border bg-accent-muted text-accent' : 'border-border bg-surface-overlay text-slate-500'"
+                  class="ml-auto inline-flex h-6 min-w-6 items-center justify-center rounded-sm border text-xs font-mono"
+                  :class="selectedExplorerNode === `folder:${row.folder.id}` ? 'border-accent-border bg-accent-muted text-accent' : 'border-border bg-surface-overlay text-text-secondary'"
                 >
                   {{ folderDashboardCountMap.get(row.folder.id) ?? 0 }}
                 </span>
@@ -998,9 +998,9 @@ onMounted(() => {
               >
                 <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center"></span>
                 <button
-                  class="flex w-full items-center gap-2 rounded-lg border border-transparent bg-transparent px-2 py-1 text-xs text-slate-400 transition cursor-pointer"
+                  class="flex w-full items-center gap-2 rounded-sm border border-transparent bg-transparent px-2 py-1 text-xs text-text-muted transition cursor-pointer"
                   :class="[
-                    selectedTreeDashboardId === dashboard.id ? 'border-accent-border bg-accent-muted text-accent' : 'hover:border-border hover:text-slate-700',
+                    selectedTreeDashboardId === dashboard.id ? 'border-accent-border bg-accent-muted text-accent' : 'hover:border-border hover:text-text-primary',
                     canManageDashboards ? '[&[draggable=true]]:cursor-grab [&[draggable=true]]:active:cursor-grabbing' : '',
                   ]"
                   :data-testid="`tree-dashboard-${dashboard.id}`"
@@ -1030,9 +1030,9 @@ onMounted(() => {
             >
               <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center"></span>
               <button
-                class="flex w-full items-center gap-2 rounded-lg border border-transparent bg-transparent px-2 py-1 text-xs text-slate-400 transition cursor-pointer"
+                class="flex w-full items-center gap-2 rounded-sm border border-transparent bg-transparent px-2 py-1 text-xs text-text-muted transition cursor-pointer"
                 :class="[
-                  selectedTreeDashboardId === dashboard.id ? 'border-accent-border bg-accent-muted text-accent' : 'hover:border-border hover:text-slate-700',
+                  selectedTreeDashboardId === dashboard.id ? 'border-accent-border bg-accent-muted text-accent' : 'hover:border-border hover:text-text-primary',
                   canManageDashboards ? '[&[draggable=true]]:cursor-grab [&[draggable=true]]:active:cursor-grabbing' : '',
                 ]"
                 :data-testid="`tree-dashboard-${dashboard.id}`"
@@ -1049,8 +1049,8 @@ onMounted(() => {
         </nav>
 
         <!-- Inline folder creation form -->
-        <div v-if="showInlineFolderForm" class="mt-3 rounded-lg border border-border bg-surface-overlay p-3" data-testid="inline-folder-create">
-          <p v-if="activeCreateParent" class="mb-2 text-xs text-slate-500">Parent: {{ activeCreateParent.name }}</p>
+        <div v-if="showInlineFolderForm" class="mt-3 rounded-sm border border-border bg-surface-overlay p-3" data-testid="inline-folder-create">
+          <p v-if="activeCreateParent" class="mb-2 text-xs text-text-secondary">Parent: {{ activeCreateParent.name }}</p>
           <form @submit.prevent="handleCreateFolder">
             <div class="flex flex-col gap-1.5">
               <label for="folder-name" class="text-sm font-medium text-text-primary">Folder Name</label>
@@ -1061,14 +1061,14 @@ onMounted(() => {
                 placeholder="Operations"
                 :disabled="creatingFolder"
                 autocomplete="off"
-                class="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition"
+                class="rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition"
               />
             </div>
             <p v-if="folderError" class="mt-1.5 text-sm text-rose-600">{{ folderError }}</p>
             <div class="mt-3 flex justify-end gap-2">
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
+                class="inline-flex items-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
                 :disabled="creatingFolder"
                 @click="closeCreateFolderModal"
               >
@@ -1076,7 +1076,7 @@ onMounted(() => {
               </button>
               <button
                 type="submit"
-                class="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer"
+                class="inline-flex items-center gap-2 rounded-sm bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer"
                 :disabled="creatingFolder"
               >
                 {{ creatingFolder ? 'Creating...' : 'Create' }}
@@ -1087,48 +1087,48 @@ onMounted(() => {
       </aside>
 
       <!-- Main content area (hidden on mobile, shown via grid on larger screens) -->
-      <section class="hidden rounded-xl border border-border bg-surface-raised p-4 shadow-sm lg:block">
+      <section class="hidden rounded border border-border bg-surface-raised p-4 shadow-sm lg:block">
         <!-- Breadcrumbs -->
         <div class="mb-3 flex flex-wrap items-center gap-1" aria-label="Current folder path">
           <template v-for="(item, index) in breadcrumbs" :key="item.type === 'folder' ? `folder-${item.id}` : item.type">
             <button
-              class="border-none bg-transparent px-1 py-0.5 text-xs text-slate-500 cursor-pointer"
+              class="border-none bg-transparent px-1 py-0.5 text-xs text-text-secondary cursor-pointer"
               :class="{ 'font-semibold text-text-primary': index === breadcrumbs.length - 1 }"
               @click="onBreadcrumbSelect(item)"
             >
               {{ item.label }}
             </button>
-            <ChevronRight v-if="index < breadcrumbs.length - 1" :size="14" class="text-slate-300" />
+            <ChevronRight v-if="index < breadcrumbs.length - 1" :size="14" class="text-text-muted" />
           </template>
         </div>
 
         <!-- Messages -->
-        <p v-if="folderPermissionsMessage" class="mb-3 rounded-lg border border-accent-border bg-accent-muted px-3.5 py-2.5 text-sm text-accent">
+        <p v-if="folderPermissionsMessage" class="mb-3 rounded-sm border border-accent-border bg-accent-muted px-3.5 py-2.5 text-sm text-accent">
           {{ folderPermissionsMessage }}
         </p>
-        <p v-if="moveError" class="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-600">
+        <p v-if="moveError" class="mb-3 rounded-sm border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-600">
           {{ moveError }}
         </p>
 
         <!-- Section heading -->
         <div class="mb-3">
-          <h2 class="text-base font-bold tracking-wide text-text-primary uppercase">{{ activeExplorerTitle }}</h2>
+          <h2 class="text-base font-bold tracking-wide text-text-primary">{{ activeExplorerTitle }}</h2>
         </div>
 
         <!-- Subfolders strip -->
-        <div v-if="selectedFolderChildren.length > 0" class="mb-4 rounded-xl border border-border bg-surface-overlay p-3">
-          <p class="mb-2 text-xs font-semibold tracking-widest text-slate-400 uppercase">Subfolders</p>
+        <div v-if="selectedFolderChildren.length > 0" class="mb-4 rounded border border-border bg-surface-overlay p-3">
+          <p class="mb-2 text-xs font-semibold tracking-widest text-text-muted uppercase">Subfolders</p>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="child in selectedFolderChildren"
               :key="child.id"
               type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-border bg-surface-raised px-3 py-1.5 text-xs text-slate-600 transition cursor-pointer hover:border-accent-border hover:text-text-primary"
+              class="inline-flex items-center gap-2 rounded-sm border border-border bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition cursor-pointer hover:border-accent-border hover:text-text-primary"
               @click="selectExplorerFolder(child.id)"
             >
               <FolderIcon :size="14" />
               <span>{{ child.name }}</span>
-              <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-border text-[11px] font-mono">
+              <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-border text-[11px] font-mono">
                 {{ folderDashboardCountMap.get(child.id) ?? 0 }}
               </span>
             </button>
@@ -1136,14 +1136,14 @@ onMounted(() => {
         </div>
 
         <!-- No folders CTA -->
-        <div v-if="hasNoFolders" class="mb-4 flex items-center justify-between gap-4 rounded-xl border border-dashed border-slate-300 bg-surface-overlay p-4" data-testid="folder-empty-cta">
+        <div v-if="hasNoFolders" class="mb-4 flex items-center justify-between gap-4 rounded border border-dashed border-border bg-surface-overlay p-4" data-testid="folder-empty-cta">
           <div>
-            <h2 class="text-sm font-bold tracking-wide text-text-primary uppercase">No folders yet</h2>
-            <p class="mt-1 text-sm text-slate-500">Use folders to organize dashboards by team, service, or environment.</p>
+            <h2 class="text-sm font-bold tracking-wide text-text-primary">No Folders Yet</h2>
+            <p class="mt-1 text-sm text-text-secondary">Use folders to organize dashboards by team, service, or environment.</p>
           </div>
           <button
             v-if="canCreateFolder"
-            class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
+            class="inline-flex items-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
             data-testid="new-folder-cta"
             @click="openCreateFolderModal"
           >
@@ -1157,7 +1157,7 @@ onMounted(() => {
           <!-- Root dashboards -->
           <section
             v-if="rootDashboardsForMain.length > 0"
-            class="rounded-xl border border-border bg-surface-overlay p-4 transition"
+            class="rounded border border-border bg-surface-overlay p-4 transition"
             :class="{ 'ring-2 ring-accent/50': dropTargetSectionId === normalizeSectionId(null) }"
             data-testid="folder-section-root"
             @dragover.prevent="onSectionDragOver(null)"
@@ -1167,7 +1167,7 @@ onMounted(() => {
               <div
                 v-for="dashboard in rootDashboardsForMain"
                 :key="dashboard.id"
-                class="group rounded-xl border border-border bg-surface-raised p-4 transition cursor-pointer hover:border-border-strong hover:shadow-sm"
+                class="group rounded border border-border bg-surface-raised p-4 transition cursor-pointer hover:border-border-strong hover:shadow-sm"
                 :class="{
                   'opacity-50': draggingDashboardId === dashboard.id,
                   'cursor-grab active:cursor-grabbing': canManageDashboards,
@@ -1185,18 +1185,18 @@ onMounted(() => {
                 <div class="mb-2 flex items-start justify-between gap-2">
                   <h3 class="text-sm font-semibold leading-snug text-text-primary">{{ dashboard.title }}</h3>
                   <div class="flex gap-1 opacity-0 transition group-hover:opacity-100" @click.stop>
-                    <button class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 cursor-pointer" @click="openEditModal(dashboard)" title="Edit">
+                    <button class="inline-flex h-7 w-7 items-center justify-center rounded-sm text-text-muted transition hover:bg-surface-overlay hover:text-text-secondary cursor-pointer" @click="openEditModal(dashboard)" title="Edit">
                       <Pencil :size="16" />
                     </button>
-                    <button class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 cursor-pointer" @click="confirmDelete(dashboard)" title="Delete">
+                    <button class="inline-flex h-7 w-7 items-center justify-center rounded-sm text-text-muted transition hover:bg-rose-50 hover:text-rose-600 cursor-pointer" @click="confirmDelete(dashboard)" title="Delete">
                       <Trash2 :size="16" />
                     </button>
                   </div>
                 </div>
-                <p v-if="dashboard.description" class="mt-1 mb-3 text-xs leading-relaxed text-slate-500 line-clamp-2">
+                <p v-if="dashboard.description" class="mt-1 mb-3 text-xs leading-relaxed text-text-secondary line-clamp-2">
                   {{ dashboard.description }}
                 </p>
-                <div class="mt-3 text-xs text-slate-400">
+                <div class="mt-3 text-xs text-text-muted">
                   <span>Created {{ formatDate(dashboard.created_at) }}</span>
                 </div>
               </div>
@@ -1207,7 +1207,7 @@ onMounted(() => {
           <section
             v-for="section in filteredSections"
             :key="section.id"
-            class="rounded-xl border border-border bg-surface-overlay p-4 transition"
+            class="rounded border border-border bg-surface-overlay p-4 transition"
             :class="{ 'ring-2 ring-accent/50': dropTargetSectionId === normalizeSectionId(section.id) }"
             :data-testid="`folder-section-${section.id}`"
             @dragover.prevent="onSectionDragOver(section.id)"
@@ -1215,16 +1215,16 @@ onMounted(() => {
           >
             <div class="mb-1 flex items-center justify-between gap-2.5">
               <div class="inline-flex items-center gap-2">
-                <FolderIcon :size="18" class="text-slate-400" />
-                <h2 class="text-sm font-bold tracking-wide text-text-primary uppercase">{{ section.name }}</h2>
+                <FolderIcon :size="18" class="text-text-muted" />
+                <h2 class="text-sm font-bold tracking-wide text-text-primary">{{ section.name }}</h2>
               </div>
               <div class="inline-flex items-center gap-2">
-                <span class="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border bg-surface-raised text-xs text-slate-500 font-mono">
+                <span class="inline-flex h-7 min-w-7 items-center justify-center rounded-sm border border-border bg-surface-raised text-xs text-text-secondary font-mono">
                   {{ section.dashboards.length }}
                 </span>
                 <button
                   v-if="isOrgAdmin"
-                  class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
+                  class="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface-raised px-3 py-1.5 text-xs font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
                   :data-testid="`folder-permissions-${section.folder.id}`"
                   @click="openFolderPermissions(section.folder)"
                 >
@@ -1234,7 +1234,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <p v-if="section.dashboards.length === 0" class="mt-2 text-sm text-slate-400">
+            <p v-if="section.dashboards.length === 0" class="mt-2 text-sm text-text-muted">
               No dashboards in this section yet.
             </p>
 
@@ -1242,7 +1242,7 @@ onMounted(() => {
               <div
                 v-for="dashboard in section.dashboards"
                 :key="dashboard.id"
-                class="group rounded-xl border border-border bg-surface-raised p-4 transition cursor-pointer hover:border-border-strong hover:shadow-sm"
+                class="group rounded border border-border bg-surface-raised p-4 transition cursor-pointer hover:border-border-strong hover:shadow-sm"
                 :class="{
                   'opacity-50': draggingDashboardId === dashboard.id,
                   'cursor-grab active:cursor-grabbing': canManageDashboards,
@@ -1260,18 +1260,18 @@ onMounted(() => {
                 <div class="mb-2 flex items-start justify-between gap-2">
                   <h3 class="text-sm font-semibold leading-snug text-text-primary">{{ dashboard.title }}</h3>
                   <div class="flex gap-1 opacity-0 transition group-hover:opacity-100" @click.stop>
-                    <button class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 cursor-pointer" @click="openEditModal(dashboard)" title="Edit">
+                    <button class="inline-flex h-7 w-7 items-center justify-center rounded-sm text-text-muted transition hover:bg-surface-overlay hover:text-text-secondary cursor-pointer" @click="openEditModal(dashboard)" title="Edit">
                       <Pencil :size="16" />
                     </button>
-                    <button class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 cursor-pointer" @click="confirmDelete(dashboard)" title="Delete">
+                    <button class="inline-flex h-7 w-7 items-center justify-center rounded-sm text-text-muted transition hover:bg-rose-50 hover:text-rose-600 cursor-pointer" @click="confirmDelete(dashboard)" title="Delete">
                       <Trash2 :size="16" />
                     </button>
                   </div>
                 </div>
-                <p v-if="dashboard.description" class="mt-1 mb-3 text-xs leading-relaxed text-slate-500 line-clamp-2">
+                <p v-if="dashboard.description" class="mt-1 mb-3 text-xs leading-relaxed text-text-secondary line-clamp-2">
                   {{ dashboard.description }}
                 </p>
-                <div class="mt-3 text-xs text-slate-400">
+                <div class="mt-3 text-xs text-text-muted">
                   <span>Created {{ formatDate(dashboard.created_at) }}</span>
                 </div>
               </div>
@@ -1279,39 +1279,39 @@ onMounted(() => {
           </section>
 
           <!-- No results -->
-          <p v-if="filteredSections.length === 0 && rootDashboardsForMain.length === 0" class="mt-2 text-sm text-slate-400">
+          <p v-if="filteredSections.length === 0 && rootDashboardsForMain.length === 0" class="mt-2 text-sm text-text-muted">
             No folders or dashboards match your search.
           </p>
         </div>
       </section>
 
       <!-- Preview pane (hidden on small screens) -->
-      <aside class="sticky top-4 hidden rounded-xl border border-border bg-surface-raised p-4 shadow-sm xl:block" data-testid="dashboard-preview">
-        <h3 class="mb-3 text-xs font-semibold tracking-widest text-slate-400 uppercase">Dashboard Preview</h3>
-        <div v-if="hoveredDashboard" class="rounded-lg border border-border bg-surface-overlay p-3">
+      <aside class="sticky top-4 hidden rounded border border-border bg-surface-raised p-4 shadow-sm xl:block" data-testid="dashboard-preview">
+        <h3 class="mb-3 text-xs font-semibold tracking-widest text-text-muted uppercase">Dashboard Preview</h3>
+        <div v-if="hoveredDashboard" class="rounded-sm border border-border bg-surface-overlay p-3">
           <div class="mb-2 flex items-center gap-2">
-            <FileText :size="16" class="text-slate-400" />
+            <FileText :size="16" class="text-text-muted" />
             <h4 class="text-sm font-semibold text-text-primary">{{ hoveredDashboard.title }}</h4>
           </div>
-          <p class="mb-3 text-sm leading-relaxed text-slate-500">
+          <p class="mb-3 text-sm leading-relaxed text-text-secondary">
             {{ hoveredDashboard.description || 'No description provided.' }}
           </p>
           <dl class="grid gap-2">
             <div class="flex flex-col gap-0.5">
-              <dt class="text-[11px] font-semibold tracking-widest text-slate-400 uppercase">Folder</dt>
+              <dt class="text-[11px] font-semibold tracking-widest text-text-muted uppercase">Folder</dt>
               <dd class="m-0 text-xs text-text-primary">{{ hoveredDashboardFolderName }}</dd>
             </div>
             <div class="flex flex-col gap-0.5">
-              <dt class="text-[11px] font-semibold tracking-widest text-slate-400 uppercase">Created</dt>
+              <dt class="text-[11px] font-semibold tracking-widest text-text-muted uppercase">Created</dt>
               <dd class="m-0 text-xs text-text-primary">{{ formatDate(hoveredDashboard.created_at) }}</dd>
             </div>
             <div class="flex flex-col gap-0.5">
-              <dt class="text-[11px] font-semibold tracking-widest text-slate-400 uppercase">Updated</dt>
+              <dt class="text-[11px] font-semibold tracking-widest text-text-muted uppercase">Updated</dt>
               <dd class="m-0 text-xs text-text-primary">{{ formatDate(hoveredDashboard.updated_at) }}</dd>
             </div>
           </dl>
         </div>
-        <div v-else class="rounded-lg border border-dashed border-border p-4 text-center text-sm text-slate-400">
+        <div v-else class="rounded-sm border border-dashed border-border p-4 text-center text-sm text-text-muted">
           <p>Hover over a dashboard card to preview details.</p>
         </div>
       </aside>
@@ -1343,22 +1343,22 @@ onMounted(() => {
 
     <!-- Delete confirmation modal -->
     <div v-if="showDeleteConfirm" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="cancelDelete">
-      <div class="w-full max-w-sm rounded-xl border border-border bg-surface-raised p-8 text-center shadow-lg">
-        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+      <div class="w-full max-w-sm rounded border border-border bg-surface-raised p-8 text-center shadow-lg">
+        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-sm bg-rose-50 text-rose-600">
           <Trash2 :size="24" />
         </div>
         <h2 class="mb-1 text-lg font-semibold text-text-primary">Delete Dashboard</h2>
-        <p class="mb-1 text-sm text-slate-500">Are you sure you want to delete "{{ deletingDashboard?.title }}"?</p>
+        <p class="mb-1 text-sm text-text-secondary">Are you sure you want to delete "{{ deletingDashboard?.title }}"?</p>
         <p class="text-sm text-rose-600">This action cannot be undone.</p>
         <div class="mt-5 flex justify-center gap-3">
           <button
-            class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
+            class="inline-flex items-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-primary transition hover:border-border-strong hover:bg-surface-overlay cursor-pointer"
             @click="cancelDelete"
           >
             Cancel
           </button>
           <button
-            class="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 cursor-pointer"
+            class="inline-flex items-center gap-2 rounded-sm bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 cursor-pointer"
             @click="handleDelete"
           >
             Delete
