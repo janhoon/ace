@@ -57,6 +57,42 @@ const messagesContainer = ref<HTMLElement | null>(null)
 const modelSelectorRef = ref<HTMLElement | null>(null)
 const renderedHtml = ref<Record<number, string>>({})
 
+const panelWidth = ref(320)
+const isResizing = ref(false)
+const MIN_WIDTH = 280
+const MAX_WIDTH_RATIO = 0.5
+
+function startResize(e: MouseEvent) {
+  e.preventDefault()
+  isResizing.value = true
+  const startX = e.clientX
+  const startWidth = panelWidth.value
+
+  function onMouseMove(e: MouseEvent) {
+    const delta = startX - e.clientX
+    const newWidth = Math.min(
+      Math.max(startWidth + delta, MIN_WIDTH),
+      window.innerWidth * MAX_WIDTH_RATIO,
+    )
+    panelWidth.value = newWidth
+  }
+
+  function onMouseUp() {
+    isResizing.value = false
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
+
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+defineExpose({ panelWidth })
+
 onMounted(async () => {
   await initMarkdown()
   document.addEventListener('click', handleClickOutside)
@@ -255,7 +291,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-screen w-80 shrink-0 bg-surface-raised border-l border-border sticky top-0">
+  <div
+    class="relative flex flex-col h-screen shrink-0 bg-surface-raised border-l border-border sticky top-0"
+    :style="{ width: panelWidth + 'px' }"
+  >
+    <!-- Resize handle -->
+    <div
+      class="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-accent/30 transition-colors"
+      :class="{ 'bg-accent/30': isResizing }"
+      @mousedown="startResize"
+    />
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
