@@ -139,7 +139,7 @@ async function handleSubmit() {
     >
       <div
         ref="modalRef"
-        class="w-full max-w-md m-4 rounded-xl border border-border bg-surface-raised shadow-lg animate-[slideUp_0.3s_ease-out] max-sm:max-w-none max-sm:m-0 max-sm:h-full max-sm:rounded-none"
+        class="w-full max-w-md m-4 rounded border border-border bg-surface-raised shadow-lg animate-[slideUp_0.3s_ease-out] max-sm:max-w-none max-sm:m-0 max-sm:h-full max-sm:rounded-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-org-modal-title"
@@ -147,7 +147,7 @@ async function handleSubmit() {
         <header class="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 id="create-org-modal-title" class="text-lg font-semibold text-text-primary">Create Organization</h2>
           <button
-            class="flex items-center justify-center h-8 w-8 rounded-lg text-text-muted hover:bg-surface-overlay hover:text-text-secondary transition cursor-pointer"
+            class="flex items-center justify-center h-8 w-8 rounded-sm text-text-muted hover:bg-surface-overlay hover:text-text-secondary transition cursor-pointer"
             @click="closeModal"
           >
             <X :size="20" />
@@ -167,7 +167,7 @@ async function handleSubmit() {
               placeholder="My Organization"
               :disabled="loading"
               autocomplete="off"
-              class="w-full rounded-lg border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-text-muted disabled:cursor-not-allowed"
+              class="w-full rounded-sm border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-text-muted disabled:cursor-not-allowed"
             />
           </div>
 
@@ -175,7 +175,7 @@ async function handleSubmit() {
             <label for="slug" class="block mb-2 text-sm font-medium text-text-primary">
               URL Slug <span class="text-red-500">*</span>
             </label>
-            <div class="flex items-center rounded-lg border border-border bg-surface-overlay transition focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+            <div class="flex items-center rounded-sm border border-border bg-surface-overlay transition focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
               <span class="py-2 pl-3 text-sm text-text-muted select-none">org/</span>
               <input
                 id="slug"
@@ -193,7 +193,7 @@ async function handleSubmit() {
 
           <div
             v-if="error"
-            class="mb-5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
+            class="mb-5 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
           >
             {{ error }}
           </div>
@@ -201,7 +201,7 @@ async function handleSubmit() {
           <div class="flex justify-end gap-3 border-t border-border pt-4">
             <button
               type="button"
-              class="inline-flex items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:text-text-primary transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center justify-center rounded-sm border border-border px-4 py-2 text-sm font-medium text-text-muted hover:text-text-primary transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="loading"
               @click="closeModal"
             >
@@ -209,7 +209,7 @@ async function handleSubmit() {
             </button>
             <button
               type="submit"
-              class="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center justify-center rounded-sm bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="loading"
             >
               {{ loading ? 'Creating...' : 'Create Organization' }}

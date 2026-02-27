@@ -167,16 +167,16 @@ watch(
   <div class="flex flex-col gap-3" data-testid="dashboard-permissions-editor">
     <h3 class="text-sm font-semibold text-text-primary mb-3">Permissions</h3>
 
-    <div v-if="loading" class="px-4 py-3 text-sm text-text-muted border border-dashed border-border rounded-lg">Loading permissions...</div>
-    <div v-else-if="error" class="px-3 py-2 border border-rose-500/25 rounded-lg bg-rose-500/10 text-sm text-rose-500">{{ error }}</div>
+    <div v-if="loading" class="px-4 py-3 text-sm text-text-muted border border-dashed border-border rounded-sm">Loading permissions...</div>
+    <div v-else-if="error" class="px-3 py-2 border border-rose-500/25 rounded-sm bg-rose-500/10 text-sm text-rose-500">{{ error }}</div>
     <div v-else class="flex flex-col gap-3">
-      <div class="flex items-center gap-3 rounded-lg border border-border bg-surface-overlay p-3 mt-4">
+      <div class="flex items-center gap-3 rounded-sm border border-border bg-surface-overlay p-3 mt-4">
         <div class="grid grid-cols-[130px_minmax(0,1fr)_120px] max-md:grid-cols-1 gap-2 flex-1">
-          <select v-model="newPrincipalType" data-testid="principal-type-select" :disabled="saving" class="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
+          <select v-model="newPrincipalType" data-testid="principal-type-select" :disabled="saving" class="rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
             <option value="user">User</option>
             <option value="group">Group</option>
           </select>
-          <select v-model="newPrincipalId" data-testid="principal-select" :disabled="saving || principalOptions.length === 0" class="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
+          <select v-model="newPrincipalId" data-testid="principal-select" :disabled="saving || principalOptions.length === 0" class="rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
             <option value="">Select {{ newPrincipalType }}</option>
             <option
               v-for="option in principalOptions"
@@ -186,22 +186,22 @@ watch(
               {{ option.label }}
             </option>
           </select>
-          <select v-model="newPermission" data-testid="permission-select" :disabled="saving" class="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
+          <select v-model="newPermission" data-testid="permission-select" :disabled="saving" class="rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent">
             <option value="view">View</option>
             <option value="edit">Edit</option>
             <option value="admin">Admin</option>
           </select>
         </div>
-        <button class="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition" data-testid="add-permission-entry" @click="addEntry" :disabled="saving">
+        <button class="rounded-sm bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition" data-testid="add-permission-entry" @click="addEntry" :disabled="saving">
           Add Entry
         </button>
       </div>
 
-      <div v-if="entries.length === 0" class="px-4 py-3 text-sm text-text-muted border border-dashed border-border rounded-lg">
+      <div v-if="entries.length === 0" class="px-4 py-3 text-sm text-text-muted border border-dashed border-border rounded-sm">
         No explicit ACL entries. Organization role defaults apply.
       </div>
-      <div v-else class="rounded-xl border border-border bg-surface-raised overflow-hidden">
-        <div class="bg-slate-900 text-xs font-mono uppercase tracking-[0.07em] text-slate-300 grid grid-cols-[1fr_auto] px-4 py-3">
+      <div v-else class="rounded border border-border bg-surface-raised overflow-hidden">
+        <div class="bg-surface-overlay text-xs font-mono uppercase tracking-[0.07em] text-text-muted grid grid-cols-[1fr_auto] px-4 py-3">
           <span>Principal</span>
           <span>Actions</span>
         </div>
@@ -213,7 +213,7 @@ watch(
         >
           <div class="flex flex-col min-w-0">
             <strong class="text-sm text-text-primary truncate">{{ principalLabel(entry) }}</strong>
-            <span class="mt-1 w-fit px-2 py-0.5 rounded-full bg-accent-muted text-accent text-xs uppercase tracking-wide">{{ entry.principal_type }}</span>
+            <span class="mt-1 w-fit px-2 py-0.5 rounded-sm bg-accent-muted text-accent text-xs uppercase tracking-wide">{{ entry.principal_type }}</span>
           </div>
           <div class="flex items-center gap-2 max-md:flex-col max-md:w-full max-md:items-start">
             <select
@@ -221,7 +221,7 @@ watch(
               :data-testid="`entry-permission-${index}`"
               :disabled="saving"
               @change="updateEntryPermission(index, ($event.target as HTMLSelectElement).value as ResourcePermissionLevel)"
-              class="rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent max-md:w-full"
+              class="rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent max-md:w-full"
             >
               <option value="view">View</option>
               <option value="edit">Edit</option>
@@ -239,11 +239,11 @@ watch(
         </div>
       </div>
 
-      <div v-if="actionError" class="px-3 py-2 border border-rose-500/25 rounded-lg bg-rose-500/10 text-sm text-rose-500">{{ actionError }}</div>
-      <div v-if="successMessage" class="px-3 py-2 border border-accent-border rounded-lg bg-accent-muted text-sm text-accent">{{ successMessage }}</div>
+      <div v-if="actionError" class="px-3 py-2 border border-rose-500/25 rounded-sm bg-rose-500/10 text-sm text-rose-500">{{ actionError }}</div>
+      <div v-if="successMessage" class="px-3 py-2 border border-accent-border rounded-sm bg-accent-muted text-sm text-accent">{{ successMessage }}</div>
 
       <div class="flex justify-end">
-        <button class="inline-flex items-center justify-center gap-1 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-hover cursor-pointer transition disabled:opacity-60 disabled:cursor-not-allowed" data-testid="save-dashboard-permissions" @click="savePermissions" :disabled="saving">
+        <button class="inline-flex items-center justify-center gap-1 rounded-sm bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-hover cursor-pointer transition disabled:opacity-60 disabled:cursor-not-allowed" data-testid="save-dashboard-permissions" @click="savePermissions" :disabled="saving">
           {{ saving ? 'Saving...' : 'Save Permissions' }}
         </button>
       </div>

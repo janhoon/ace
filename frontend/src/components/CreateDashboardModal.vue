@@ -259,20 +259,20 @@ async function handleSubmit() {
 
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="emit('close')">
-    <div class="w-full max-w-lg rounded-xl border border-border bg-surface-raised shadow-lg">
-      <header class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+    <div class="w-full max-w-lg rounded border border-border bg-surface-raised shadow-lg">
+      <header class="flex items-center justify-between border-b border-border px-6 py-4">
         <h2 class="text-lg font-semibold text-text-primary">Create Dashboard</h2>
-        <button class="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition cursor-pointer" @click="emit('close')">
+        <button class="flex items-center justify-center h-8 w-8 rounded-sm text-text-muted hover:bg-surface-overlay hover:text-text-secondary transition cursor-pointer" @click="emit('close')">
           <X :size="20" />
         </button>
       </header>
 
       <form @submit.prevent="handleSubmit" class="px-6 py-4">
-        <div class="flex gap-1 rounded-lg bg-slate-100 p-1 mb-4" role="tablist" aria-label="Creation mode">
+        <div class="flex gap-1 rounded-sm bg-surface-overlay p-1 mb-4" role="tablist" aria-label="Creation mode">
           <button
             type="button"
-            class="rounded-md px-4 py-2 text-sm font-medium transition cursor-pointer"
-            :class="mode === 'create' ? 'bg-surface-raised text-text-primary shadow-sm' : 'text-slate-600'"
+            class="rounded-sm px-4 py-2 text-sm font-medium transition cursor-pointer"
+            :class="mode === 'create' ? 'bg-surface-raised text-text-primary shadow-sm' : 'text-text-secondary'"
             :disabled="loading"
             @click="setMode('create')"
           >
@@ -280,8 +280,8 @@ async function handleSubmit() {
           </button>
           <button
             type="button"
-            class="rounded-md px-4 py-2 text-sm font-medium transition cursor-pointer"
-            :class="mode === 'import' ? 'bg-surface-raised text-text-primary shadow-sm' : 'text-slate-600'"
+            class="rounded-sm px-4 py-2 text-sm font-medium transition cursor-pointer"
+            :class="mode === 'import' ? 'bg-surface-raised text-text-primary shadow-sm' : 'text-text-secondary'"
             :disabled="loading"
             @click="setMode('import')"
           >
@@ -289,8 +289,8 @@ async function handleSubmit() {
           </button>
           <button
             type="button"
-            class="rounded-md px-4 py-2 text-sm font-medium transition cursor-pointer"
-            :class="mode === 'grafana' ? 'bg-surface-raised text-text-primary shadow-sm' : 'text-slate-600'"
+            class="rounded-sm px-4 py-2 text-sm font-medium transition cursor-pointer"
+            :class="mode === 'grafana' ? 'bg-surface-raised text-text-primary shadow-sm' : 'text-text-secondary'"
             :disabled="loading"
             @click="setMode('grafana')"
           >
@@ -300,7 +300,7 @@ async function handleSubmit() {
 
         <div v-if="mode === 'create'">
           <div class="mb-5">
-            <label for="title" class="block mb-2 text-sm font-medium text-slate-700">Title <span class="text-red-500">*</span></label>
+            <label for="title" class="block mb-2 text-sm font-medium text-text-primary">Title <span class="text-red-500">*</span></label>
             <input
               id="title"
               v-model="title"
@@ -308,61 +308,61 @@ async function handleSubmit() {
               placeholder="My Dashboard"
               :disabled="loading"
               autocomplete="off"
-              class="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-slate-400 transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-slate-400 disabled:cursor-not-allowed"
+              class="w-full rounded-sm border border-border bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-text-muted disabled:cursor-not-allowed"
             />
           </div>
 
           <div class="mb-5">
-            <label for="description" class="block mb-2 text-sm font-medium text-slate-700">Description</label>
+            <label for="description" class="block mb-2 text-sm font-medium text-text-primary">Description</label>
             <textarea
               id="description"
               v-model="description"
               placeholder="Dashboard description (optional)"
               rows="3"
               :disabled="loading"
-              class="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-slate-400 transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-slate-400 disabled:cursor-not-allowed resize-vertical min-h-[80px]"
+              class="w-full rounded-sm border border-border bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-text-muted disabled:cursor-not-allowed resize-vertical min-h-[80px]"
             ></textarea>
           </div>
         </div>
 
         <div v-else-if="mode === 'import'">
           <div class="mb-5">
-            <label for="yaml-file" class="block mb-2 text-sm font-medium text-slate-700">YAML file <span class="text-red-500">*</span></label>
+            <label for="yaml-file" class="block mb-2 text-sm font-medium text-text-primary">YAML file <span class="text-red-500">*</span></label>
             <input
               id="yaml-file"
               type="file"
               accept=".yaml,.yml"
               :disabled="loading"
               @change="handleYamlFileChange"
-              class="w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 file:cursor-pointer file:transition"
+              class="w-full text-sm text-text-secondary file:mr-4 file:rounded-sm file:border-0 file:bg-surface-overlay file:px-4 file:py-2 file:text-sm file:font-medium file:text-text-primary hover:file:bg-surface-raised file:cursor-pointer file:transition"
             />
-            <p class="mt-2 text-xs text-slate-400">Upload an exported dashboard YAML to import it into this organization.</p>
+            <p class="mt-2 text-xs text-text-muted">Upload an exported dashboard YAML to import it into this organization.</p>
           </div>
 
-          <div v-if="importPreview" class="mb-5 rounded-lg border border-border bg-surface-overlay p-3" data-testid="yaml-preview">
-            <p class="text-[0.8125rem] text-slate-600"><strong>Preview:</strong> {{ importPreview.title }}</p>
-            <p v-if="importPreview.description" class="mt-1 text-[0.8125rem] text-slate-600">{{ importPreview.description }}</p>
-            <p class="mt-1 text-[0.8125rem] text-slate-600">{{ importPreview.panelCount }} panel{{ importPreview.panelCount === 1 ? '' : 's' }}</p>
-            <p v-if="yamlFileName" class="mt-1 text-[0.8125rem] text-slate-400">File: {{ yamlFileName }}</p>
+          <div v-if="importPreview" class="mb-5 rounded-sm border border-border bg-surface-overlay p-3" data-testid="yaml-preview">
+            <p class="text-[0.8125rem] text-text-secondary"><strong>Preview:</strong> {{ importPreview.title }}</p>
+            <p v-if="importPreview.description" class="mt-1 text-[0.8125rem] text-text-secondary">{{ importPreview.description }}</p>
+            <p class="mt-1 text-[0.8125rem] text-text-secondary">{{ importPreview.panelCount }} panel{{ importPreview.panelCount === 1 ? '' : 's' }}</p>
+            <p v-if="yamlFileName" class="mt-1 text-[0.8125rem] text-text-muted">File: {{ yamlFileName }}</p>
           </div>
         </div>
 
         <div v-else>
           <div class="mb-5">
-            <label for="grafana-file" class="block mb-2 text-sm font-medium text-slate-700">Grafana JSON file</label>
+            <label for="grafana-file" class="block mb-2 text-sm font-medium text-text-primary">Grafana JSON file</label>
             <input
               id="grafana-file"
               type="file"
               accept=".json,application/json"
               :disabled="loading || convertingGrafana"
               @change="handleGrafanaFileChange"
-              class="w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 file:cursor-pointer file:transition"
+              class="w-full text-sm text-text-secondary file:mr-4 file:rounded-sm file:border-0 file:bg-surface-overlay file:px-4 file:py-2 file:text-sm file:font-medium file:text-text-primary hover:file:bg-surface-raised file:cursor-pointer file:transition"
             />
-            <p class="mt-2 text-xs text-slate-400">Upload a Grafana dashboard JSON file or paste JSON below.</p>
+            <p class="mt-2 text-xs text-text-muted">Upload a Grafana dashboard JSON file or paste JSON below.</p>
           </div>
 
           <div class="mb-5">
-            <label for="grafana-source" class="block mb-2 text-sm font-medium text-slate-700">Grafana JSON <span class="text-red-500">*</span></label>
+            <label for="grafana-source" class="block mb-2 text-sm font-medium text-text-primary">Grafana JSON <span class="text-red-500">*</span></label>
             <textarea
               id="grafana-source"
               v-model="grafanaSource"
@@ -370,14 +370,14 @@ async function handleSubmit() {
               :disabled="loading || convertingGrafana"
               placeholder="Paste Grafana dashboard JSON here"
               data-testid="grafana-source"
-              class="w-full rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-slate-400 transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-slate-400 disabled:cursor-not-allowed resize-vertical min-h-[80px]"
+              class="w-full rounded-sm border border-border bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-text-muted disabled:cursor-not-allowed resize-vertical min-h-[80px]"
             ></textarea>
-            <p v-if="grafanaFileName" class="mt-2 text-xs text-slate-400">File: {{ grafanaFileName }}</p>
+            <p v-if="grafanaFileName" class="mt-2 text-xs text-text-muted">File: {{ grafanaFileName }}</p>
           </div>
 
           <button
             type="button"
-            class="mb-3 rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            class="mb-3 rounded-sm border border-border-strong px-5 py-2.5 text-sm font-semibold text-text-primary transition hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             :disabled="!canConvertGrafana"
             data-testid="grafana-convert"
             @click="convertGrafana"
@@ -389,21 +389,21 @@ async function handleSubmit() {
             <li v-for="warning in grafanaWarnings" :key="warning">{{ warning }}</li>
           </ul>
 
-          <div v-if="importPreview" class="mb-5 rounded-lg border border-border bg-surface-overlay p-3" data-testid="yaml-preview">
-            <p class="text-[0.8125rem] text-slate-600"><strong>Preview:</strong> {{ importPreview.title }}</p>
-            <p v-if="importPreview.description" class="mt-1 text-[0.8125rem] text-slate-600">{{ importPreview.description }}</p>
-            <p class="mt-1 text-[0.8125rem] text-slate-600">{{ importPreview.panelCount }} panel{{ importPreview.panelCount === 1 ? '' : 's' }}</p>
-            <p class="mt-1 text-[0.8125rem] text-slate-400">Converted from Grafana JSON</p>
+          <div v-if="importPreview" class="mb-5 rounded-sm border border-border bg-surface-overlay p-3" data-testid="yaml-preview">
+            <p class="text-[0.8125rem] text-text-secondary"><strong>Preview:</strong> {{ importPreview.title }}</p>
+            <p v-if="importPreview.description" class="mt-1 text-[0.8125rem] text-text-secondary">{{ importPreview.description }}</p>
+            <p class="mt-1 text-[0.8125rem] text-text-secondary">{{ importPreview.panelCount }} panel{{ importPreview.panelCount === 1 ? '' : 's' }}</p>
+            <p class="mt-1 text-[0.8125rem] text-text-muted">Converted from Grafana JSON</p>
           </div>
         </div>
 
-        <div v-if="error" class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{{ error }}</div>
+        <div v-if="error" class="mb-5 rounded-sm border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{{ error }}</div>
 
-        <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
-          <button type="button" class="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer" @click="emit('close')" :disabled="loading">
+        <div class="flex justify-end gap-3 border-t border-border pt-4">
+          <button type="button" class="rounded-sm border border-border-strong px-5 py-2.5 text-sm font-semibold text-text-primary transition hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer" @click="emit('close')" :disabled="loading">
             Cancel
           </button>
-          <button type="submit" class="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer" :disabled="loading">
+          <button type="submit" class="rounded-sm bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer" :disabled="loading">
             {{ submitLabel }}
           </button>
         </div>
