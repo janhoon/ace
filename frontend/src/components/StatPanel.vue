@@ -210,7 +210,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-lg p-4"
+    class="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-sm p-4"
     :style="{
       height: typeof height === 'number' ? `${height}px` : height,
       backgroundColor: backgroundColor,
@@ -219,10 +219,10 @@ onUnmounted(() => {
     <div class="z-10 flex flex-col items-center gap-1">
       <div class="text-center text-3xl font-bold leading-tight" :style="{ color: valueColor }">
         {{ formattedValue }}
-        <span v-if="unit" class="ml-1 text-lg font-medium text-slate-400">{{ unit }}</span>
+        <span v-if="unit" class="ml-1 text-lg font-medium text-text-muted">{{ unit }}</span>
       </div>
 
-      <div v-if="label" class="mt-1 max-w-full truncate text-sm text-slate-500">
+      <div v-if="label" class="mt-1 max-w-full truncate text-sm text-text-secondary">
         {{ label }}
       </div>
 
@@ -232,7 +232,7 @@ onUnmounted(() => {
         :class="{
           'text-accent': trend === 'up',
           'text-rose-500': trend === 'down',
-          'text-slate-400': trend === 'neutral',
+          'text-text-muted': trend === 'neutral',
         }"
       >
         <TrendingUp v-if="trend === 'up'" :size="16" />

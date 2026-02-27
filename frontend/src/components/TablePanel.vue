@@ -71,11 +71,11 @@ function getValue(seriesIndex: number, timestamp: number): number | undefined {
 
 <template>
   <div
-    class="h-full overflow-auto rounded-xl border border-border bg-surface-raised"
+    class="h-full overflow-auto rounded border border-border bg-surface-raised"
     :style="{ height: typeof height === 'number' ? `${height}px` : height }"
   >
     <table class="w-full text-left">
-      <thead class="sticky top-0 z-10 bg-slate-900 font-mono text-xs uppercase tracking-[0.07em] text-slate-300">
+      <thead class="sticky top-0 z-10 bg-surface-overlay font-mono text-xs uppercase tracking-[0.07em] text-text-secondary">
         <tr>
           <th class="min-w-[140px] px-4 py-3 font-semibold">Time</th>
           <th

@@ -508,19 +508,19 @@ function handleOpenTrace(traceId: string) {
 </script>
 
 <template>
-  <div class="flex h-full flex-col rounded-xl border border-border bg-surface-raised overflow-hidden">
+  <div class="flex h-full flex-col rounded border border-border bg-surface-raised overflow-hidden">
     <div class="flex items-center justify-between border-b border-border px-4 py-2">
       <h3 class="text-sm font-semibold text-text-primary truncate">{{ panel.title }}</h3>
       <div class="flex gap-1">
         <button
-          class="flex items-center justify-center h-7 w-7 rounded-lg border-0 bg-transparent text-text-muted hover:bg-surface-overlay hover:text-text-secondary transition cursor-pointer"
+          class="flex items-center justify-center h-7 w-7 rounded-sm border-0 bg-transparent text-text-muted hover:bg-surface-overlay hover:text-text-secondary transition cursor-pointer"
           @click="$emit('edit', panel)"
           title="Edit panel"
         >
           <Pencil :size="16" />
         </button>
         <button
-          class="flex items-center justify-center h-7 w-7 rounded-lg border-0 bg-transparent text-text-muted hover:bg-surface-overlay hover:text-text-secondary transition cursor-pointer"
+          class="flex items-center justify-center h-7 w-7 rounded-sm border-0 bg-transparent text-text-muted hover:bg-surface-overlay hover:text-text-secondary transition cursor-pointer"
           @click="$emit('delete', panel)"
           title="Delete panel"
         >
@@ -533,14 +533,14 @@ function handleOpenTrace(traceId: string) {
         <BarChart3 :size="48" class="text-text-muted" />
         <p class="text-sm text-text-muted m-0">No query configured</p>
         <button
-          class="px-4 py-2 bg-accent text-white border-0 rounded-lg text-sm font-medium cursor-pointer hover:-translate-y-px transition"
+          class="px-4 py-2 bg-accent text-white border-0 rounded-sm text-sm font-medium cursor-pointer hover:-translate-y-px transition"
           @click="$emit('edit', panel)"
         >
           Configure Panel
         </button>
       </div>
       <div v-else-if="loading" class="flex-1 flex flex-col items-center justify-center gap-3">
-        <div class="h-8 w-8 rounded-full border-[3px] border-border border-t-accent animate-spin"></div>
+        <div class="h-8 w-8 rounded-sm border-[3px] border-border border-t-accent animate-spin"></div>
         <p class="text-sm text-text-muted m-0">Loading data...</p>
       </div>
       <div v-else-if="error" class="flex-1 flex flex-col items-center justify-center gap-3">
