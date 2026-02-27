@@ -99,37 +99,37 @@ const previewData = computed(() => {
         placeholder="up"
         rows="3"
         :disabled="disabled || loading"
-        class="w-full rounded-lg border border-border bg-surface-raised px-4 py-3 font-mono text-sm text-text-primary resize-y min-h-[80px] transition-colors duration-200 placeholder:text-slate-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-slate-400 disabled:cursor-not-allowed"
+        class="w-full rounded-sm border border-border bg-surface-raised px-4 py-3 font-mono text-sm text-text-primary resize-y min-h-[80px] transition-colors duration-200 placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:bg-surface-overlay disabled:text-text-muted disabled:cursor-not-allowed"
         @keydown.ctrl.enter="runQuery"
       ></textarea>
       <div class="flex items-center gap-4">
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent border border-accent rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 hover:enabled:bg-accent-hover hover:enabled:border-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+          class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent border border-accent rounded-sm text-white text-sm font-medium cursor-pointer transition-all duration-200 hover:enabled:bg-accent-hover hover:enabled:border-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="disabled || loading || !query.trim()"
           @click="runQuery"
         >
           <Play :size="14" />
           <span>{{ loading ? 'Running...' : 'Run Query' }}</span>
         </button>
-        <span class="text-xs text-slate-400">Ctrl+Enter to run</span>
+        <span class="text-xs text-text-muted">Ctrl+Enter to run</span>
       </div>
     </div>
 
-    <div v-if="error" class="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+    <div v-if="error" class="px-4 py-3 bg-red-50 border border-red-200 rounded-sm text-red-600 text-sm">
       {{ error }}
     </div>
 
-    <div v-if="showPreview && result?.status === 'success'" class="border border-border rounded-lg overflow-hidden bg-surface-raised">
+    <div v-if="showPreview && result?.status === 'success'" class="border border-border rounded-sm overflow-hidden bg-surface-raised">
       <div class="flex justify-between items-center px-4 py-3 bg-surface-overlay border-b border-border">
         <h4 class="m-0 text-sm font-semibold text-text-primary">Query Results</h4>
         <span class="text-xs text-text-muted bg-surface-overlay px-2 py-0.5 rounded">{{ result.data?.result?.length || 0 }} series</span>
       </div>
 
       <div v-if="metricLabels.length > 0" class="flex items-center flex-wrap gap-2 px-4 py-3 border-b border-border text-sm">
-        <Tag :size="14" class="text-slate-400" />
+        <Tag :size="14" class="text-text-muted" />
         <span class="text-text-muted font-medium">Labels:</span>
-        <span v-for="label in metricLabels" :key="label" class="rounded-full bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary font-mono">
+        <span v-for="label in metricLabels" :key="label" class="rounded-sm bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary font-mono">
           {{ label }}
         </span>
       </div>
@@ -155,7 +155,7 @@ const previewData = computed(() => {
         </table>
       </div>
 
-      <div v-else class="py-6 text-center text-slate-400 text-sm">
+      <div v-else class="py-6 text-center text-text-muted text-sm">
         No data returned for the selected time range.
       </div>
     </div>

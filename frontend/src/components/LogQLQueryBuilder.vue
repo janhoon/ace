@@ -316,10 +316,10 @@ watch(activeQuery, (newValue) => {
 
 <template>
   <div class="flex flex-col gap-4" :class="{ 'opacity-60 pointer-events-none': props.disabled }">
-    <div class="flex rounded-lg bg-surface-overlay p-1 w-fit">
+    <div class="flex rounded-sm bg-surface-overlay p-1 w-fit">
       <button
         type="button"
-        class="flex items-center gap-1.5 px-3 py-1.5 bg-transparent border-none rounded-md text-xs font-medium text-text-secondary cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-text-primary"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-transparent border-none rounded-sm text-xs font-medium text-text-secondary cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-text-primary"
         :class="{ 'bg-surface-raised text-text-primary shadow-sm': mode === 'builder' }"
         :disabled="props.disabled || !builderAvailable"
         :title="!builderAvailable ? 'Query cannot be edited in builder mode' : ''"
@@ -330,7 +330,7 @@ watch(activeQuery, (newValue) => {
       </button>
       <button
         type="button"
-        class="flex items-center gap-1.5 px-3 py-1.5 bg-transparent border-none rounded-md text-xs font-medium text-text-secondary cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-text-primary"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-transparent border-none rounded-sm text-xs font-medium text-text-secondary cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-text-primary"
         :class="{ 'bg-surface-raised text-text-primary shadow-sm': mode === 'code' }"
         :disabled="props.disabled"
         @click="mode = 'code'"
@@ -346,7 +346,7 @@ watch(activeQuery, (newValue) => {
           <label class="text-sm font-medium text-text-primary">Stream Filters</label>
           <button
             type="button"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-text-secondary cursor-pointer transition-all duration-200 hover:enabled:bg-surface-overlay hover:enabled:text-text-primary"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-border text-xs font-medium text-text-secondary cursor-pointer transition-all duration-200 hover:enabled:bg-surface-overlay hover:enabled:text-text-primary"
             :disabled="props.disabled"
             @click="addLabelFilter"
           >
@@ -355,14 +355,14 @@ watch(activeQuery, (newValue) => {
           </button>
         </div>
 
-        <div v-if="labelFilters.length === 0" class="p-4 text-center text-slate-400 text-sm bg-surface-overlay rounded-lg">
+        <div v-if="labelFilters.length === 0" class="p-4 text-center text-text-muted text-sm bg-surface-overlay rounded-sm">
           No filters yet. Add a field filter to build your selector.
         </div>
 
         <div v-else class="flex flex-col gap-2">
           <div v-for="filter in labelFilters" :key="filter.id" class="flex items-center gap-2">
             <select
-              class="flex-1 min-w-0 rounded-lg border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary cursor-pointer focus:outline-none focus:border-accent"
+              class="flex-1 min-w-0 rounded-sm border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary cursor-pointer focus:outline-none focus:border-accent"
               :value="filter.label"
               :disabled="props.disabled"
               @change="handleLabelChange(filter, ($event.target as HTMLSelectElement).value)"
@@ -374,7 +374,7 @@ watch(activeQuery, (newValue) => {
             </select>
 
             <select
-              class="w-[120px] flex-none rounded-lg border border-border bg-surface-overlay px-3 py-2 text-sm font-mono text-text-secondary cursor-pointer focus:outline-none focus:border-accent"
+              class="w-[120px] flex-none rounded-sm border border-border bg-surface-overlay px-3 py-2 text-sm font-mono text-text-secondary cursor-pointer focus:outline-none focus:border-accent"
               :value="filter.operator"
               :disabled="props.disabled"
               @change="updateLabelFilter(filter.id, { operator: ($event.target as HTMLSelectElement).value })"
@@ -386,7 +386,7 @@ watch(activeQuery, (newValue) => {
 
             <select
               v-if="getLabelValues(filter.label).length > 0"
-              class="flex-1 min-w-0 rounded-lg border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary cursor-pointer focus:outline-none focus:border-accent"
+              class="flex-1 min-w-0 rounded-sm border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary cursor-pointer focus:outline-none focus:border-accent"
               :value="filter.value"
               :disabled="props.disabled || loadingLabelValues === filter.label"
               @change="updateLabelFilter(filter.id, { value: ($event.target as HTMLSelectElement).value })"
@@ -398,7 +398,7 @@ watch(activeQuery, (newValue) => {
             </select>
             <input
               v-else
-              class="flex-1 min-w-0 rounded-lg border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+              class="flex-1 min-w-0 rounded-sm border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
               type="text"
               placeholder="Field value"
               :value="filter.value"
@@ -408,7 +408,7 @@ watch(activeQuery, (newValue) => {
 
             <button
               type="button"
-              class="flex items-center justify-center w-7 h-7 bg-transparent border-none rounded text-slate-400 cursor-pointer transition-all duration-200 hover:enabled:bg-red-50 hover:enabled:text-red-500"
+              class="flex items-center justify-center w-7 h-7 bg-transparent border-none rounded text-text-muted cursor-pointer transition-all duration-200 hover:enabled:bg-red-50 hover:enabled:text-red-500"
               :disabled="props.disabled"
               @click="removeLabelFilter(filter.id)"
             >
@@ -416,7 +416,7 @@ watch(activeQuery, (newValue) => {
             </button>
           </div>
 
-          <span v-if="loadingLabelValues" class="text-xs text-slate-400">Loading indexed values...</span>
+          <span v-if="loadingLabelValues" class="text-xs text-text-muted">Loading indexed values...</span>
         </div>
       </div>
 
@@ -425,7 +425,7 @@ watch(activeQuery, (newValue) => {
         <div class="flex items-center gap-2">
           <select
             v-model="lineFilterOperator"
-            class="w-[120px] flex-none rounded-lg border border-border bg-surface-overlay px-3 py-2 text-sm font-mono text-text-secondary cursor-pointer focus:outline-none focus:border-accent"
+            class="w-[120px] flex-none rounded-sm border border-border bg-surface-overlay px-3 py-2 text-sm font-mono text-text-secondary cursor-pointer focus:outline-none focus:border-accent"
             :disabled="props.disabled"
           >
             <option v-for="operator in textOperators" :key="operator.value" :value="operator.value">
@@ -434,7 +434,7 @@ watch(activeQuery, (newValue) => {
           </select>
           <input
             v-model="lineFilterValue"
-            class="flex-1 min-w-0 rounded-lg border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+            class="flex-1 min-w-0 rounded-sm border border-border bg-surface-overlay px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
             type="text"
             :placeholder="lineFilterPlaceholder"
             :disabled="props.disabled"
@@ -444,9 +444,9 @@ watch(activeQuery, (newValue) => {
 
       <div class="flex flex-col gap-2 mt-2 pt-4 border-t border-border">
         <label class="text-sm font-medium text-text-primary">{{ generatedQueryLabel }}</label>
-        <div class="rounded-lg border border-border bg-surface-overlay px-4 py-3 min-h-[48px]">
+        <div class="rounded-sm border border-border bg-surface-overlay px-4 py-3 min-h-[48px]">
           <code v-if="generatedQuery" class="font-mono text-sm text-accent break-all">{{ generatedQuery }}</code>
-          <span v-else class="text-slate-400 text-sm">Add a field/value filter to generate a query</span>
+          <span v-else class="text-text-muted text-sm">Add a field/value filter to generate a query</span>
         </div>
       </div>
     </div>

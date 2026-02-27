@@ -202,13 +202,13 @@ defineExpose({ focus })
 </script>
 
 <template>
-  <div class="relative rounded-lg border border-border overflow-hidden bg-surface-raised transition-colors duration-200 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20" :class="{ 'opacity-60 pointer-events-none': disabled }">
+  <div class="relative rounded-sm border border-border overflow-hidden bg-surface-raised transition-colors duration-200 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20" :class="{ 'opacity-60 pointer-events-none': disabled }">
     <div
       ref="containerRef"
       class="w-full min-h-[60px]"
       :style="{ height: `${height}px` }"
     ></div>
-    <div v-if="showPlaceholder" class="absolute top-2 left-12 text-slate-400 font-mono text-[13px] pointer-events-none">
+    <div v-if="showPlaceholder" class="absolute top-2 left-12 text-text-muted font-mono text-[13px] pointer-events-none">
       {{ placeholder }}
     </div>
   </div>
@@ -217,32 +217,32 @@ defineExpose({ focus })
 <!-- Monaco editor deep overrides (must stay non-scoped / not Tailwind) -->
 <style>
 .monaco-editor {
-  border-radius: 8px;
+  border-radius: 2px;
 }
 
 .monaco-editor .margin {
-  background: #f8fafc !important;
+  background: var(--color-surface-overlay) !important;
 }
 
 .monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
-  background: #cbd5e1 !important;
-  border-radius: 4px;
+  background: var(--color-border-strong) !important;
+  border-radius: 2px;
 }
 
 .monaco-editor .monaco-scrollable-element > .scrollbar > .slider:hover {
-  background: #94a3b8 !important;
+  background: var(--color-text-muted) !important;
 }
 
 .monaco-editor .suggest-widget {
-  border-radius: 6px !important;
+  border-radius: 2px !important;
 }
 
 .monaco-editor .suggest-widget .monaco-list-row.focused {
-  background-color: #f1f5f9 !important;
+  background-color: var(--color-surface-overlay) !important;
 }
 
 .monaco-editor .monaco-hover {
-  border-radius: 6px !important;
+  border-radius: 2px !important;
 }
 </style>
 
@@ -256,24 +256,24 @@ body > .monaco-aria-container {
 
 /* Style the fixed overflow widgets */
 .overflowingContentWidgets .suggest-widget {
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 6px !important;
+  background: var(--color-surface-raised) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 2px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
 }
 
 .overflowingContentWidgets .suggest-widget .monaco-list-row.focused {
-  background-color: #f1f5f9 !important;
+  background-color: var(--color-surface-overlay) !important;
 }
 
 .overflowingContentWidgets .suggest-widget .monaco-list-row:hover {
-  background-color: #f1f5f9 !important;
+  background-color: var(--color-surface-overlay) !important;
 }
 
 .overflowingContentWidgets .monaco-hover {
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 6px !important;
+  background: var(--color-surface-raised) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 2px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
 }
 
