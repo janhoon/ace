@@ -9,15 +9,12 @@ import {
   History,
   Loader2,
   Play,
-  Sparkles,
   X,
 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { fetchDataSourceLabels, queryDataSource, streamDataSourceLogs } from '../api/datasources'
-import { dataSourceTypeLogos } from '../utils/datasourceLogos'
 import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
 import CloudWatchQueryEditor from '../components/CloudWatchQueryEditor.vue'
-import CopilotPanel from '../components/CopilotPanel.vue'
 import ElasticsearchQueryEditor from '../components/ElasticsearchQueryEditor.vue'
 import LogQLQueryBuilder from '../components/LogQLQueryBuilder.vue'
 import LogViewer from '../components/LogViewer.vue'
@@ -27,6 +24,7 @@ import { useOrganization } from '../composables/useOrganization'
 import { useTimeRange } from '../composables/useTimeRange'
 import type { DataSourceType, LogEntry } from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
+import { dataSourceTypeLogos } from '../utils/datasourceLogos'
 
 const { timeRange, onRefresh, setCustomRange } = useTimeRange()
 const { currentOrg } = useOrganization()
@@ -44,9 +42,6 @@ interface TraceLogsNavigationContext {
 
 const TRACE_LOGS_NAVIGATION_CONTEXT_KEY = 'trace_logs_navigation'
 const TRACE_NAVIGATION_MAX_AGE_MS = 5 * 60 * 1000
-
-// Copilot
-const showCopilot = ref(false)
 
 const selectedDatasourceId = ref('')
 const query = ref('')
@@ -886,15 +881,6 @@ watch(
         <h1 class="text-2xl font-bold text-text-primary m-0">Explore</h1>
         <span class="rounded-sm border border-accent-border bg-accent-muted px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-accent">Logs</span>
       </div>
-      <button
-        class="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface-raised px-3 py-1.5 text-xs font-semibold cursor-pointer transition hover:bg-accent-muted hover:border-accent-border"
-        :class="showCopilot ? 'text-accent border-accent-border bg-accent-muted' : 'text-text-secondary'"
-        @click="showCopilot = !showCopilot"
-        title="Toggle AI assistant"
-      >
-        <Sparkles :size="14" />
-        AI
-      </button>
     </header>
 
     <div class="flex flex-col gap-6 flex-1">
@@ -1160,13 +1146,5 @@ watch(
       </div>
     </div>
     </div>
-
-    <CopilotPanel
-      v-if="showCopilot"
-      :datasource-type="activeDatasource?.type || 'loki'"
-      :datasource-name="activeDatasource?.name || ''"
-      :datasource-id="activeDatasource?.id || ''"
-      @close="showCopilot = false"
-    />
   </div>
 </template>

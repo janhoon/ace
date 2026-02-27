@@ -8,7 +8,6 @@ import {
   HeartPulse,
   Loader2,
   Search,
-  Sparkles,
   Waypoints,
 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -20,9 +19,7 @@ import {
   queryDataSource,
   searchDataSourceTraces,
 } from '../api/datasources'
-import { dataSourceTypeLogos } from '../utils/datasourceLogos'
 import ClickHouseSQLEditor from '../components/ClickHouseSQLEditor.vue'
-import CopilotPanel from '../components/CopilotPanel.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import TraceListPanel from '../components/TraceListPanel.vue'
 import TraceServiceGraph from '../components/TraceServiceGraph.vue'
@@ -39,6 +36,7 @@ import type {
   TraceSummary,
 } from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
+import { dataSourceTypeLogos } from '../utils/datasourceLogos'
 
 interface TraceNavigationContext {
   datasourceId?: string
@@ -75,15 +73,11 @@ const { tracingDatasources, fetchDatasources } = useDatasource()
 
 type DatasourceHealthStatus = 'unknown' | 'checking' | 'healthy' | 'unhealthy'
 
-// Copilot
-const showCopilot = ref(false)
-
 const selectedDatasourceId = ref('')
 const showDatasourceMenu = ref(false)
 const datasourceMenuRef = ref<HTMLElement | null>(null)
 const datasourceHealth = ref<Record<string, DatasourceHealthStatus>>({})
 const datasourceHealthErrors = ref<Record<string, string>>({})
-
 
 const query = ref('')
 const selectedService = ref('')
@@ -773,15 +767,6 @@ onUnmounted(() => {
         <h1 class="text-2xl font-bold text-text-primary m-0">Explore</h1>
         <span class="rounded-sm border border-accent-border bg-accent-muted px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-accent">Tracing</span>
       </div>
-      <button
-        class="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface-raised px-3 py-1.5 text-xs font-semibold cursor-pointer transition hover:bg-accent-muted hover:border-accent-border"
-        :class="showCopilot ? 'text-accent border-accent-border bg-accent-muted' : 'text-text-secondary'"
-        @click="showCopilot = !showCopilot"
-        title="Toggle AI assistant"
-      >
-        <Sparkles :size="14" />
-        AI
-      </button>
     </header>
 
     <div class="flex flex-col gap-6 flex-1">
@@ -1104,13 +1089,5 @@ onUnmounted(() => {
       </div>
     </div>
     </div>
-
-    <CopilotPanel
-      v-if="showCopilot"
-      :datasource-type="activeDatasource?.type || 'tempo'"
-      :datasource-name="activeDatasource?.name || ''"
-      :datasource-id="activeDatasource?.id || ''"
-      @close="showCopilot = false"
-    />
   </div>
 </template>

@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { Sparkles } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import CookieConsentBanner from './components/CookieConsentBanner.vue'
+import CopilotPanel from './components/CopilotPanel.vue'
 import Sidebar from './components/Sidebar.vue'
 import { useAuth } from './composables/useAuth'
+import { useCopilot } from './composables/useCopilot'
+import { useDatasource } from './composables/useDatasource'
+import { useOrganization } from './composables/useOrganization'
 import { useOrgBranding } from './composables/useOrgBranding'
 
 const route = useRoute()
@@ -21,6 +26,25 @@ const mainMargin = computed(() => {
   const width = sidebarRef.value?.isPinned ? 220 : 48
   return { marginLeft: width + 'px' }
 })
+
+const showCopilot = ref(false)
+const { isConnected, hasCopilot } = useCopilot()
+const { currentOrg } = useOrganization()
+const { metricsDatasources, fetchDatasources } = useDatasource()
+
+const copilotDatasource = computed(() => {
+  const sources = metricsDatasources.value
+  if (sources.length === 0) return null
+  return sources.find((ds) => ds.is_default) || sources[0]
+})
+
+watch(
+  () => currentOrg.value?.id,
+  (orgId) => {
+    if (orgId) fetchDatasources(orgId)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -32,6 +56,22 @@ const mainMargin = computed(() => {
     >
       <RouterView />
     </main>
+    <CopilotPanel
+      v-if="showCopilot && showSidebar && isConnected && hasCopilot && copilotDatasource"
+      :datasource-type="copilotDatasource.type"
+      :datasource-name="copilotDatasource.name"
+      :datasource-id="copilotDatasource.id"
+      @close="showCopilot = false"
+    />
+    <button
+      v-if="showSidebar"
+      class="fixed bottom-6 right-6 z-50 flex items-center justify-center h-12 w-12 rounded-full shadow-lg cursor-pointer border-none transition"
+      :class="showCopilot ? 'bg-accent text-white hover:bg-accent-hover' : 'bg-surface-raised text-text-secondary border border-border hover:bg-surface-overlay hover:text-text-primary'"
+      @click="showCopilot = !showCopilot"
+      title="Toggle AI assistant"
+    >
+      <Sparkles :size="20" />
+    </button>
     <CookieConsentBanner />
   </div>
 </template>
