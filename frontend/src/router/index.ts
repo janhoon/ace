@@ -75,6 +75,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/app/alerts',
+    name: 'alerts',
+    component: () => import('../views/AlertsView.vue'),
+    alias: '/alerts',
+    meta: {
+      appLayout: 'app',
+      title: 'Alerts | Ace',
+      description: 'Manage and monitor alert rules and notifications.',
+    },
+  },
+  {
     path: '/app/explore',
     redirect: {
       path: '/app/explore/metrics',
