@@ -221,10 +221,11 @@ func main() {
 
 	// GitHub Copilot routes
 	githubCopilotHandler := handlers.NewGitHubCopilotHandler(pool, jwtManager)
-	mux.HandleFunc("GET /api/auth/github/login", githubCopilotHandler.Login)
-	mux.HandleFunc("GET /api/auth/github/callback", githubCopilotHandler.Callback)
+	mux.HandleFunc("POST /api/auth/github/device", auth.RequireAuth(jwtManager, githubCopilotHandler.StartDeviceFlow))
+	mux.HandleFunc("POST /api/auth/github/device/poll", auth.RequireAuth(jwtManager, githubCopilotHandler.PollDeviceFlow))
 	mux.HandleFunc("GET /api/auth/github/connection", auth.RequireAuth(jwtManager, githubCopilotHandler.GetConnection))
 	mux.HandleFunc("DELETE /api/auth/github/connection", auth.RequireAuth(jwtManager, githubCopilotHandler.Disconnect))
+	mux.HandleFunc("GET /api/copilot/models", auth.RequireAuth(jwtManager, githubCopilotHandler.ListModels))
 	mux.HandleFunc("POST /api/copilot/chat", auth.RequireAuth(jwtManager, githubCopilotHandler.Chat))
 	mux.HandleFunc("POST /api/orgs/{id}/github-app", auth.RequireAuth(jwtManager, githubCopilotHandler.ConfigureGitHubApp))
 	mux.HandleFunc("GET /api/orgs/{id}/github-app", auth.RequireAuth(jwtManager, githubCopilotHandler.GetGitHubApp))

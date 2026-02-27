@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Loader2, Send, Sparkles, Trash2, Unplug, X } from 'lucide-vue-next'
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { Check, ChevronDown, ClipboardCopy, ExternalLink, Loader2, Send, Sparkles, Trash2, Unplug, X } from 'lucide-vue-next'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { type CopilotMessage, useCopilot } from '../composables/useCopilot'
 import { useOrganization } from '../composables/useOrganization'
 
@@ -20,8 +20,15 @@ const {
   hasCopilot,
   isLoading,
   error,
+  models,
+  selectedModel,
+  deviceFlowActive,
+  userCode,
+  verificationUri,
   checkConnection,
+  fetchModels,
   connect,
+  cancelDeviceFlow,
   disconnect,
   sendMessage,
 } = useCopilot()
@@ -31,10 +38,41 @@ const { currentOrgId } = useOrganization()
 const messages = ref<CopilotMessage[]>([])
 const inputText = ref('')
 const messagesContainer = ref<HTMLElement | null>(null)
+const modelSelectorRef = ref<HTMLElement | null>(null)
 
-onMounted(() => {
-  checkConnection()
+onMounted(async () => {
+  document.addEventListener('click', handleClickOutside)
+  await checkConnection()
+  if (isConnected.value && hasCopilot.value) {
+    fetchModels()
+  }
 })
+
+const modelDropdownOpen = ref(false)
+
+function formatMultiplier(multiplier: number): string {
+  if (multiplier === 0) return 'Included'
+  if (multiplier < 1) return `${multiplier}x`
+  return `${multiplier}x`
+}
+
+function multiplierClass(multiplier: number): string {
+  if (multiplier === 0) return 'text-emerald-400 bg-emerald-400/10'
+  if (multiplier <= 0.33) return 'text-emerald-400 bg-emerald-400/10'
+  if (multiplier <= 1) return 'text-amber-400 bg-amber-400/10'
+  if (multiplier <= 3) return 'text-orange-400 bg-orange-400/10'
+  return 'text-rose-400 bg-rose-400/10'
+}
+
+function selectModel(modelId: string) {
+  selectedModel.value = modelId
+  modelDropdownOpen.value = false
+}
+
+function selectedModelName(): string {
+  const model = models.value.find(m => m.id === selectedModel.value)
+  return model?.name || 'Select model'
+}
 
 function scrollToBottom() {
   nextTick(() => {
@@ -45,6 +83,12 @@ function scrollToBottom() {
 }
 
 watch(messages, scrollToBottom, { deep: true })
+
+watch([isConnected, hasCopilot], ([connected, copilot], [prevConnected, prevCopilot]) => {
+  if (connected && copilot && !(prevConnected && prevCopilot)) {
+    fetchModels()
+  }
+})
 
 async function handleSend() {
   const text = inputText.value.trim()
@@ -106,10 +150,37 @@ function formatMessage(content: string): string {
   ).replace(/\n/g, '<br />')
 }
 
+const codeCopied = ref(false)
+
+async function copyCode() {
+  try {
+    await navigator.clipboard.writeText(userCode.value)
+    codeCopied.value = true
+    setTimeout(() => { codeCopied.value = false }, 2000)
+  } catch {
+    // fallback
+  }
+}
+
+function openGitHub() {
+  window.open(verificationUri.value, '_blank')
+}
+
 async function handleDisconnect() {
   await disconnect()
   messages.value = []
+  models.value = []
 }
+
+function handleClickOutside(e: MouseEvent) {
+  if (modelDropdownOpen.value && modelSelectorRef.value && !modelSelectorRef.value.contains(e.target as Node)) {
+    modelDropdownOpen.value = false
+  }
+}
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
@@ -129,8 +200,50 @@ async function handleDisconnect() {
       </button>
     </div>
 
+    <!-- Device flow in progress -->
+    <div v-if="deviceFlowActive" class="flex flex-col items-center justify-center gap-5 p-6 text-center flex-1">
+      <div class="flex flex-col gap-2">
+        <h3 class="text-sm font-semibold text-text-primary m-0">Your device code</h3>
+        <p class="text-xs text-text-secondary m-0">Copy the code below, then open GitHub to authorize.</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="rounded bg-surface-overlay border border-border px-4 py-2 font-mono text-lg font-bold text-text-primary tracking-widest">
+          {{ userCode }}
+        </div>
+        <button
+          class="flex items-center justify-center h-9 w-9 rounded-sm border border-border bg-surface-overlay cursor-pointer text-text-muted transition hover:text-text-primary hover:border-text-muted"
+          title="Copy code"
+          @click="copyCode"
+        >
+          <Check v-if="codeCopied" :size="14" class="text-emerald-500" />
+          <ClipboardCopy v-else :size="14" />
+        </button>
+      </div>
+
+      <button
+        class="inline-flex items-center gap-2 rounded-sm bg-accent px-4 py-2 text-sm font-semibold text-white cursor-pointer border-none transition hover:bg-accent-hover"
+        @click="openGitHub"
+      >
+        <ExternalLink :size="14" />
+        Open GitHub
+      </button>
+
+      <div class="flex items-center gap-2 text-xs text-text-muted">
+        <Loader2 :size="12" class="animate-spin" />
+        Waiting for authorization...
+      </div>
+
+      <button
+        class="inline-flex items-center gap-1 text-xs text-text-muted cursor-pointer border-none bg-transparent hover:text-text-primary"
+        @click="cancelDeviceFlow"
+      >
+        Cancel
+      </button>
+    </div>
+
     <!-- Not connected state -->
-    <div v-if="!isConnected" class="flex flex-col items-center justify-center gap-4 p-6 text-center flex-1">
+    <div v-else-if="!isConnected" class="flex flex-col items-center justify-center gap-4 p-6 text-center flex-1">
       <Sparkles :size="32" class="text-accent" />
       <div class="flex flex-col gap-2">
         <h3 class="text-sm font-semibold text-text-primary m-0">GitHub Copilot</h3>
@@ -238,22 +351,62 @@ async function handleDisconnect() {
           </button>
         </div>
 
-        <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <!-- Model selector -->
+          <div v-if="models.length > 0" ref="modelSelectorRef" class="relative flex-1 min-w-0">
+            <button
+              class="inline-flex items-center gap-1 text-xs text-text-muted cursor-pointer border-none bg-transparent hover:text-text-primary w-full"
+              @click="modelDropdownOpen = !modelDropdownOpen"
+            >
+              <span class="truncate">{{ selectedModelName() }}</span>
+              <span
+                class="rounded px-1 py-0.5 text-[10px] font-semibold leading-none shrink-0"
+                :class="multiplierClass(models.find(m => m.id === selectedModel)?.premium_multiplier ?? 1)"
+              >
+                {{ formatMultiplier(models.find(m => m.id === selectedModel)?.premium_multiplier ?? 1) }}
+              </span>
+              <ChevronDown :size="10" class="shrink-0 transition" :class="{ 'rotate-180': modelDropdownOpen }" />
+            </button>
+
+            <!-- Dropdown (opens upward) -->
+            <div
+              v-if="modelDropdownOpen"
+              class="absolute left-0 bottom-full mb-1 z-10 w-56 rounded-sm bg-surface-raised border border-border shadow-lg max-h-64 overflow-y-auto"
+            >
+              <button
+                v-for="model in models"
+                :key="model.id"
+                class="flex items-center justify-between w-full px-2.5 py-2 text-xs text-left cursor-pointer border-none transition"
+                :class="model.id === selectedModel ? 'bg-accent/10 text-accent' : 'bg-transparent text-text-primary hover:bg-surface-overlay'"
+                @click="selectModel(model.id)"
+              >
+                <div class="flex flex-col gap-0.5 min-w-0">
+                  <span class="truncate font-medium">{{ model.name }}</span>
+                  <span class="text-[10px] text-text-muted">{{ model.vendor }}</span>
+                </div>
+                <span
+                  class="rounded px-1.5 py-0.5 text-[10px] font-semibold shrink-0 ml-2"
+                  :class="multiplierClass(model.premium_multiplier)"
+                >
+                  {{ formatMultiplier(model.premium_multiplier) }}
+                </span>
+              </button>
+            </div>
+          </div>
+          <span v-else class="flex-1" />
+
           <button
             v-if="messages.length > 0"
-            class="inline-flex items-center gap-1 text-xs text-text-muted cursor-pointer border-none bg-transparent hover:text-text-primary"
+            class="inline-flex items-center gap-1 text-xs text-text-muted cursor-pointer border-none bg-transparent hover:text-text-primary shrink-0"
             @click="clearChat"
           >
             <Trash2 :size="12" />
-            Clear chat
           </button>
-          <span v-else />
           <button
-            class="inline-flex items-center gap-1 text-xs text-text-muted cursor-pointer border-none bg-transparent hover:text-text-primary"
+            class="inline-flex items-center gap-1 text-xs text-text-muted cursor-pointer border-none bg-transparent hover:text-text-primary shrink-0"
             @click="handleDisconnect"
           >
             <Unplug :size="12" />
-            Disconnect
           </button>
         </div>
       </div>

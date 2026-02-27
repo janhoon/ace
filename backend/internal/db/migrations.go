@@ -235,6 +235,10 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			ADD COLUMN IF NOT EXISTS trace_id_field VARCHAR(255) DEFAULT 'trace_id',
 			ADD COLUMN IF NOT EXISTS linked_trace_datasource_id UUID REFERENCES datasources(id) ON DELETE SET NULL`,
 		`CREATE INDEX IF NOT EXISTS idx_datasources_linked_trace ON datasources(linked_trace_datasource_id)`,
+		// Widen sso_configs provider constraint to include github_copilot (009_github_copilot_per_org.sql)
+		`ALTER TABLE sso_configs DROP CONSTRAINT IF EXISTS sso_configs_provider_check`,
+		`ALTER TABLE sso_configs ADD CONSTRAINT sso_configs_provider_check
+			CHECK (provider IN ('google', 'microsoft', 'github_copilot'))`,
 	}
 
 	for _, migration := range migrations {

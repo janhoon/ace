@@ -15,12 +15,30 @@ export interface CopilotMessage {
   content: string
 }
 
+export interface CopilotModel {
+  id: string
+  name: string
+  vendor: string
+  category: string
+  preview: boolean
+  premium_multiplier: number
+}
+
 export function useCopilot() {
   const isConnected = ref(false)
   const githubUsername = ref('')
   const hasCopilot = ref(false)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+
+  // Models state
+  const models = ref<CopilotModel[]>([])
+  const selectedModel = ref<string>('')
+
+  // Device flow state
+  const deviceFlowActive = ref(false)
+  const userCode = ref('')
+  const verificationUri = ref('')
 
   async function checkConnection() {
     try {
@@ -44,8 +62,103 @@ export function useCopilot() {
     }
   }
 
-  function connect(orgId: string) {
-    window.location.href = `${API_BASE}/api/auth/github/login?org=${orgId}`
+  let fetchingModels = false
+  async function fetchModels() {
+    if (fetchingModels) return
+    fetchingModels = true
+    try {
+      const response = await fetch(`${API_BASE}/api/copilot/models`, {
+        headers: getAuthHeaders(),
+      })
+      if (!response.ok) return
+      const data = await response.json()
+      models.value = data.models || []
+      // Auto-select first model if none selected or current selection no longer available
+      if (models.value.length > 0 && !models.value.find(m => m.id === selectedModel.value)) {
+        const defaultModel = models.value.find(m => m.id === 'claude-sonnet-4.6')
+        selectedModel.value = defaultModel?.id || models.value[0]!.id
+      }
+    } catch {
+      // ignore fetch errors
+    } finally {
+      fetchingModels = false
+    }
+  }
+
+  async function connect(_orgId: string) {
+    error.value = null
+
+    try {
+      // Start device flow
+      const response = await fetch(`${API_BASE}/api/auth/github/device`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        error.value = data.error || 'Failed to start device flow'
+        return
+      }
+
+      const data = await response.json()
+      userCode.value = data.user_code
+      verificationUri.value = data.verification_uri
+      deviceFlowActive.value = true
+
+      // Poll for completion
+      const interval = (data.interval || 5) * 1000
+      const expiresAt = Date.now() + (data.expires_in || 900) * 1000
+      const deviceCode = data.device_code
+
+      const poll = async () => {
+        while (Date.now() < expiresAt && deviceFlowActive.value) {
+          await new Promise((resolve) => setTimeout(resolve, interval))
+          if (!deviceFlowActive.value) return
+
+          try {
+            const pollResp = await fetch(`${API_BASE}/api/auth/github/device/poll`, {
+              method: 'POST',
+              headers: getAuthHeaders(),
+              body: JSON.stringify({ device_code: deviceCode }),
+            })
+
+            if (!pollResp.ok) {
+              const errData = await pollResp.json().catch(() => ({}))
+              error.value = errData.error || 'Authorization failed'
+              deviceFlowActive.value = false
+              return
+            }
+
+            const result = await pollResp.json()
+            if (result.status === 'connected') {
+              isConnected.value = true
+              githubUsername.value = result.username || ''
+              hasCopilot.value = result.has_copilot
+              deviceFlowActive.value = false
+              return
+            }
+            // status === 'pending' — keep polling
+          } catch {
+            // Network error, keep polling
+          }
+        }
+
+        if (deviceFlowActive.value) {
+          error.value = 'Device flow expired. Please try again.'
+          deviceFlowActive.value = false
+        }
+      }
+
+      poll()
+    } catch {
+      error.value = 'Failed to start GitHub connection'
+    }
+  }
+
+  function cancelDeviceFlow() {
+    deviceFlowActive.value = false
+    userCode.value = ''
+    verificationUri.value = ''
   }
 
   async function disconnect() {
@@ -77,6 +190,7 @@ export function useCopilot() {
         body: JSON.stringify({
           datasource_type: datasourceType,
           datasource_name: datasourceName,
+          model: selectedModel.value || undefined,
           messages,
         }),
       })
@@ -148,8 +262,15 @@ export function useCopilot() {
     hasCopilot,
     isLoading,
     error,
+    models,
+    selectedModel,
+    deviceFlowActive,
+    userCode,
+    verificationUri,
     checkConnection,
+    fetchModels,
     connect,
+    cancelDeviceFlow,
     disconnect,
     sendMessage,
   }
