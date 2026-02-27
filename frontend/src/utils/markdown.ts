@@ -8,7 +8,6 @@ let highlighterPromise: Promise<Highlighter> | null = null
 const PRELOADED_LANGS = [
   'sql', 'javascript', 'typescript', 'json', 'yaml', 'bash',
   'python', 'go', 'html', 'css', 'markdown', 'shell', 'text',
-  'promql',
 ]
 
 const LIGHT_THEME: BuiltinTheme = 'github-light'
@@ -21,6 +20,9 @@ async function getHighlighter(): Promise<Highlighter> {
   highlighterPromise = createHighlighter({
     themes: [LIGHT_THEME, DARK_THEME],
     langs: PRELOADED_LANGS,
+  }).catch((err) => {
+    highlighterPromise = null
+    throw err
   })
 
   highlighterInstance = await highlighterPromise
