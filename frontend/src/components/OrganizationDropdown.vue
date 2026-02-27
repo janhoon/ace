@@ -47,29 +47,29 @@ function handleCreateOrg() {
 </script>
 
 <template>
-  <div class="relative mx-3 my-3" ref="dropdownRef">
+  <div class="relative mx-2 my-2" ref="dropdownRef">
     <button
       @click="toggleDropdown"
       :class="[
-        'flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 w-full cursor-pointer',
-        !expanded && 'mx-auto !w-11 justify-center !px-0'
+        'flex items-center gap-2 rounded-sm border border-[#1f1f2e] bg-[--color-surface-sidebar] px-2.5 py-1.5 text-sm text-[#d1d5db] transition hover:border-[#2a2a3d] hover:bg-[#1a1a24] w-full cursor-pointer',
+        !expanded && 'mx-auto !w-9 justify-center !px-0'
       ]"
     >
-      <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-white">
+      <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-accent text-[0.625rem] font-semibold text-white">
         {{ currentOrg?.name?.charAt(0)?.toUpperCase() || '?' }}
       </div>
       <template v-if="expanded">
-        <span class="flex-1 truncate text-left text-sm font-medium text-slate-300">{{ currentOrg?.name || 'Select Org' }}</span>
+        <span class="flex-1 truncate text-left text-xs font-medium text-[#d1d5db]">{{ currentOrg?.name || 'Select Org' }}</span>
         <ChevronDown
-          :size="16"
-          :class="['shrink-0 text-slate-400 transition-transform duration-200', dropdownOpen && 'rotate-180']"
+          :size="14"
+          :class="['shrink-0 text-[#6b7280] transition-transform duration-200', dropdownOpen && 'rotate-180']"
         />
       </template>
     </button>
 
     <Teleport to="body">
-      <div v-if="dropdownOpen" class="absolute z-[60] w-64 rounded-xl border border-border bg-surface-raised shadow-lg overflow-hidden animate-[fadeIn_0.15s_ease-out]" :style="getDropdownPosition()">
-        <div class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Organizations</div>
+      <div v-if="dropdownOpen" class="absolute z-[60] w-64 rounded border border-border bg-surface-raised shadow-lg overflow-hidden animate-[fadeIn_0.15s_ease-out]" :style="getDropdownPosition()">
+        <div class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-text-muted">Organizations</div>
 
         <div class="max-h-[200px] overflow-y-auto">
           <button
@@ -81,12 +81,12 @@ function handleCreateOrg() {
             ]"
             @click="handleSelectOrg(org.id)"
           >
-            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-overlay text-xs font-semibold text-text-secondary">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-surface-overlay text-xs font-semibold text-text-secondary">
               {{ org.name.charAt(0).toUpperCase() }}
             </div>
             <div class="flex-1 min-w-0 text-left">
               <span class="block truncate text-sm font-medium text-text-primary">{{ org.name }}</span>
-              <span class="rounded-full bg-surface-overlay px-2 py-0.5 font-mono text-xs text-text-muted capitalize">{{ org.role }}</span>
+              <span class="rounded-sm bg-surface-overlay px-2 py-0.5 font-mono text-xs text-text-muted capitalize">{{ org.role }}</span>
             </div>
             <Check v-if="currentOrg?.id === org.id" :size="16" class="shrink-0 text-accent" />
           </button>
@@ -105,7 +105,7 @@ function handleCreateOrg() {
 function getDropdownPosition() {
   return {
     position: 'fixed' as const,
-    left: '8px',
+    left: '48px',
     top: '64px',
     zIndex: 1000,
   }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass, LogOut, ChevronDown, Shield, Moon, Sun, Monitor, PanelLeftOpen } from 'lucide-vue-next'
+import { LayoutDashboard, Settings, Activity, Compass, LogOut, ChevronDown, Shield, Moon, Sun, Monitor, Bell } from 'lucide-vue-next'
 import OrganizationDropdown from './OrganizationDropdown.vue'
 import CreateOrganizationModal from './CreateOrganizationModal.vue'
 import { useOrganization } from '../composables/useOrganization'
@@ -14,12 +14,29 @@ const { fetchOrganizations, clearOrganizations, currentOrg } = useOrganization()
 const { logout, user } = useAuth()
 const { mode, cycle } = useTheme()
 
-const isExpanded = ref(typeof window !== 'undefined' ? window.innerWidth > 1100 : true)
-const isHoverExpanded = ref(false)
+const isExpanded = ref(false)
 const showCreateOrgModal = ref(false)
 
-const isVisuallyExpanded = computed(() => {
-  return isExpanded.value || isHoverExpanded.value
+// Hover flyout logic with delay
+let collapseTimeout: ReturnType<typeof setTimeout> | null = null
+const isHovered = ref(false)
+
+function handleMouseEnter() {
+  if (collapseTimeout) {
+    clearTimeout(collapseTimeout)
+    collapseTimeout = null
+  }
+  isHovered.value = true
+}
+
+function handleMouseLeave() {
+  collapseTimeout = setTimeout(() => {
+    isHovered.value = false
+  }, 200)
+}
+
+onUnmounted(() => {
+  if (collapseTimeout) clearTimeout(collapseTimeout)
 })
 
 interface NavItem {
@@ -37,6 +54,7 @@ interface NavChild {
 
 const navItems: NavItem[] = [
   { id: 'dashboards', icon: LayoutDashboard, label: 'Dashboards', path: '/app/dashboards' },
+  { id: 'alerts', icon: Bell, label: 'Alerts', path: '/app/alerts' },
   {
     id: 'explore',
     icon: Compass,
@@ -109,20 +127,6 @@ function handleNavItemClick(item: NavItem) {
   navigate(item.path)
 }
 
-function toggleSidebar() {
-  isExpanded.value = !isExpanded.value
-}
-
-function handleSidebarMouseEnter() {
-  if (!isExpanded.value) {
-    isHoverExpanded.value = true
-  }
-}
-
-function handleSidebarMouseLeave() {
-  isHoverExpanded.value = false
-}
-
 function handleOrgCreated() {
   showCreateOrgModal.value = false
   fetchOrganizations()
@@ -139,230 +143,238 @@ defineExpose({ isExpanded })
 
 <template>
   <aside
-    :class="[
-      isVisuallyExpanded ? 'w-[232px] max-[900px]:w-[210px]' : 'w-16',
-      'fixed left-0 top-0 bottom-0 z-50 flex flex-col min-h-screen border-r border-slate-700 bg-slate-950 transition-[width] duration-200 ease-out'
-    ]"
-    @mouseenter="handleSidebarMouseEnter"
-    @mouseleave="handleSidebarMouseLeave"
+    class="fixed left-0 top-0 bottom-0 z-50 flex"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
-    <!-- Header -->
-    <div
-      :class="[
-        'h-14 flex items-center border-b border-slate-700 shrink-0',
-        isVisuallyExpanded ? 'justify-between px-3' : 'justify-center px-2'
-      ]"
-    >
-      <div
-        :class="[
-          'flex items-center gap-2.5',
-          isVisuallyExpanded ? 'pl-0.5' : 'pl-0'
-        ]"
-      >
+    <!-- Icon Rail — always visible, 48px -->
+    <div class="relative z-10 flex w-12 shrink-0 flex-col bg-[--color-surface-sidebar] border-r border-[#1f1f2e]">
+      <!-- Logo -->
+      <div class="flex h-12 items-center justify-center shrink-0">
         <img
           v-if="currentOrg?.branding?.logo_data_uri"
           :src="currentOrg.branding.logo_data_uri"
-          class="shrink-0 w-6 h-6 rounded-[10px] object-contain"
+          class="w-5 h-5 rounded object-contain"
           alt="Logo"
         />
         <Activity
           v-else
-          class="text-accent shrink-0 p-1 rounded-[10px] bg-accent-muted"
-          :size="24"
+          class="text-accent"
+          :size="20"
         />
-        <div v-if="isVisuallyExpanded" class="flex flex-col min-w-0">
-          <span class="text-[0.95rem] font-bold tracking-wide uppercase font-mono text-slate-100">{{ currentOrg?.branding?.app_title || 'Ace' }}</span>
-          <span v-if="!currentOrg?.branding?.app_title" class="text-[0.64rem] uppercase tracking-widest text-slate-500 whitespace-nowrap">developer cockpit</span>
-        </div>
       </div>
-      <button
-        v-if="isVisuallyExpanded"
-        class="flex items-center justify-center w-[28px] h-[28px] bg-slate-800/60 border border-slate-700 rounded-lg text-slate-400 cursor-pointer transition-all duration-200 hover:bg-slate-700 hover:text-slate-200 shrink-0"
-        @click="toggleSidebar"
-        title="Collapse sidebar"
-      >
-        <ChevronLeft :size="15" />
-      </button>
-    </div>
 
-    <OrganizationDropdown :expanded="isVisuallyExpanded" @createOrg="showCreateOrgModal = true" />
-
-    <!-- Navigation -->
-    <nav class="flex-1 flex flex-col py-3 overflow-y-auto">
-      <div class="flex flex-col gap-0.5">
-        <div
+      <!-- Main nav icons -->
+      <nav class="flex flex-1 flex-col items-center gap-1 py-2">
+        <button
           v-for="item in navItems"
           :key="item.id"
-          class="flex flex-col"
+          class="group relative flex h-9 w-9 items-center justify-center rounded-sm transition-colors duration-150 cursor-pointer border-none"
+          :class="[
+            isActive(item)
+              ? 'bg-accent-muted text-accent before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-r before:bg-accent'
+              : 'text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#1a1a24]'
+          ]"
+          @click="handleNavItemClick(item)"
         >
+          <component :is="item.icon" :size="20" />
+          <!-- Tooltip (only when flyout is closed) -->
+          <span
+            v-if="!isHovered"
+            class="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1a1a24] border border-[#1f1f2e] rounded text-xs font-medium text-[#d1d5db] whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] transition-opacity duration-100 group-hover:opacity-100 group-hover:visible shadow-lg"
+          >{{ item.label }}</span>
+        </button>
+
+        <!-- Separator -->
+        <div class="my-2 w-5 border-t border-[#1f1f2e]"></div>
+
+        <!-- Bottom icons -->
+        <div class="mt-auto flex flex-col items-center gap-1">
           <button
+            v-if="settingsPath"
+            class="group relative flex h-9 w-9 items-center justify-center rounded-sm transition-colors duration-150 cursor-pointer border-none"
             :class="[
-              'group relative h-[40px] flex items-center gap-3 bg-transparent border border-transparent rounded-[10px] cursor-pointer transition-all duration-200',
-              isVisuallyExpanded
-                ? 'mx-2.5 px-3.5 hover:bg-slate-800 hover:border-slate-600 hover:text-slate-200'
-                : 'w-11 mx-auto p-0 justify-center hover:bg-slate-800 hover:border-slate-600 hover:text-slate-200',
-              isActive(item)
-                ? 'bg-accent-muted border-accent-border text-accent'
-                : 'text-slate-400'
+              isRouteMatch('/settings')
+                ? 'bg-accent-muted text-accent before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-r before:bg-accent'
+                : 'text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#1a1a24]'
             ]"
-            @click="handleNavItemClick(item)"
-            :title="isVisuallyExpanded ? undefined : item.label"
+            @click="navigate(settingsPath)"
           >
-            <component :is="item.icon" :size="19" />
+            <Settings :size="20" />
             <span
-              v-if="isVisuallyExpanded"
-              class="text-[0.82rem] font-medium tracking-[0.01em] whitespace-nowrap overflow-hidden text-ellipsis"
-            >{{ item.label }}</span>
-            <span
-              v-else
-              class="absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-xs font-medium text-slate-200 whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] group-hover:opacity-100 group-hover:visible"
-            >{{ item.label }}</span>
-            <span
-              v-if="isVisuallyExpanded && item.children"
-              class="ml-auto inline-flex items-center justify-center w-5 h-5 text-slate-500 rounded hover:bg-slate-700 hover:text-slate-200"
-              @click.stop="toggleNavGroup(item.id)"
-            >
-              <ChevronDown
-                :size="14"
-                :class="[
-                  'transition-transform duration-200',
-                  isNavGroupOpen(item.id) ? 'rotate-180' : ''
-                ]"
-              />
-            </span>
+              v-if="!isHovered"
+              class="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1a1a24] border border-[#1f1f2e] rounded text-xs font-medium text-[#d1d5db] whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] transition-opacity duration-100 group-hover:opacity-100 group-hover:visible shadow-lg"
+            >Settings</span>
           </button>
 
-          <div
-            v-if="isVisuallyExpanded && item.children && isNavGroupOpen(item.id)"
-            class="flex flex-col gap-px mt-0.5 mb-1 ml-[2.1rem] mr-2.5"
+          <button
+            class="group relative flex h-9 w-9 items-center justify-center rounded-sm transition-colors duration-150 cursor-pointer border-none"
+            :class="[
+              isRouteMatch(privacySettingsPath)
+                ? 'bg-accent-muted text-accent before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-r before:bg-accent'
+                : 'text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#1a1a24]'
+            ]"
+            @click="navigate(privacySettingsPath)"
           >
-            <button
-              v-for="child in item.children"
-              :key="child.path"
-              :class="[
-                'h-[30px] flex items-center px-3 border rounded-lg cursor-pointer transition-all duration-200',
-                isRouteMatch(child.path)
-                  ? 'border-accent-border bg-accent-muted text-accent font-medium'
-                  : 'border-transparent text-slate-500 hover:bg-slate-800 hover:text-slate-200'
-              ]"
-              @click="navigate(child.path)"
-            >
-              <span class="text-[0.76rem] tracking-[0.01em]">{{ child.label }}</span>
-            </button>
-          </div>
+            <Shield :size="20" />
+            <span
+              v-if="!isHovered"
+              class="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1a1a24] border border-[#1f1f2e] rounded text-xs font-medium text-[#d1d5db] whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] transition-opacity duration-100 group-hover:opacity-100 group-hover:visible shadow-lg"
+            >Privacy</span>
+          </button>
+
+          <button
+            class="group relative flex h-9 w-9 items-center justify-center rounded-sm text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#1a1a24] transition-colors duration-150 cursor-pointer border-none"
+            @click="cycle()"
+            :title="`Theme: ${mode}`"
+          >
+            <Moon v-if="mode === 'dark'" :size="20" />
+            <Sun v-if="mode === 'light'" :size="20" />
+            <Monitor v-if="mode === 'system'" :size="20" />
+            <span
+              v-if="!isHovered"
+              class="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1a1a24] border border-[#1f1f2e] rounded text-xs font-medium text-[#d1d5db] whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] transition-opacity duration-100 group-hover:opacity-100 group-hover:visible shadow-lg"
+            >Theme: {{ mode }}</span>
+          </button>
+
+          <button
+            class="group relative flex h-9 w-9 items-center justify-center rounded-sm text-[#6b7280] hover:text-rose-500 hover:bg-rose-500/10 transition-colors duration-150 cursor-pointer border-none mb-2"
+            @click="handleLogout"
+          >
+            <LogOut :size="20" />
+            <span
+              v-if="!isHovered"
+              class="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1a1a24] border border-[#1f1f2e] rounded text-xs font-medium text-[#d1d5db] whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] transition-opacity duration-100 group-hover:opacity-100 group-hover:visible shadow-lg"
+            >Log out</span>
+          </button>
         </div>
-      </div>
-
-      <!-- Bottom section -->
-      <div class="mt-auto flex flex-col gap-0.5 pt-3 mx-2.5 border-t border-slate-800">
-        <button
-          v-if="settingsPath"
-          :class="[
-            'group relative h-[38px] flex items-center gap-3 bg-transparent border border-transparent rounded-[10px] cursor-pointer transition-all duration-200',
-            isVisuallyExpanded
-              ? 'px-3.5 hover:bg-slate-800 hover:border-slate-600 hover:text-slate-200'
-              : 'w-11 mx-auto p-0 justify-center hover:bg-slate-800 hover:border-slate-600 hover:text-slate-200',
-            isRouteMatch('/settings')
-              ? 'bg-accent-muted border-accent-border text-accent'
-              : 'text-slate-400'
-          ]"
-          @click="navigate(settingsPath)"
-          :title="isVisuallyExpanded ? undefined : 'Settings'"
-        >
-          <Settings :size="18" />
-          <span
-            v-if="isVisuallyExpanded"
-            class="text-[0.8rem] font-medium tracking-[0.01em] whitespace-nowrap overflow-hidden text-ellipsis"
-          >Settings</span>
-          <span
-            v-else
-            class="absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-xs font-medium text-slate-200 whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] group-hover:opacity-100 group-hover:visible"
-          >Settings</span>
-        </button>
-        <button
-          :class="[
-            'group relative h-[38px] flex items-center gap-3 bg-transparent border border-transparent rounded-[10px] cursor-pointer transition-all duration-200',
-            isVisuallyExpanded
-              ? 'px-3.5 hover:bg-slate-800 hover:border-slate-600 hover:text-slate-200'
-              : 'w-11 mx-auto p-0 justify-center hover:bg-slate-800 hover:border-slate-600 hover:text-slate-200',
-            isRouteMatch(privacySettingsPath)
-              ? 'bg-accent-muted border-accent-border text-accent'
-              : 'text-slate-400'
-          ]"
-          @click="navigate(privacySettingsPath)"
-          :title="isVisuallyExpanded ? undefined : 'Privacy'"
-        >
-          <Shield :size="18" />
-          <span
-            v-if="isVisuallyExpanded"
-            class="text-[0.8rem] font-medium tracking-[0.01em] whitespace-nowrap overflow-hidden text-ellipsis"
-          >Privacy</span>
-          <span
-            v-else
-            class="absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-xs font-medium text-slate-200 whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] group-hover:opacity-100 group-hover:visible"
-          >Privacy</span>
-        </button>
-        <button
-          :class="[
-            'group relative h-[38px] flex items-center gap-3 bg-transparent border border-transparent rounded-[10px] cursor-pointer transition-all duration-200',
-            isVisuallyExpanded
-              ? 'px-3.5 hover:bg-slate-800 hover:border-slate-600 hover:text-slate-200'
-              : 'w-11 mx-auto p-0 justify-center hover:bg-slate-800 hover:border-slate-600 hover:text-slate-200',
-          ]"
-          @click="cycle()"
-          :title="`Theme: ${mode} (click to cycle)`"
-        >
-          <Moon v-if="mode === 'dark'" :size="18" />
-          <Sun v-if="mode === 'light'" :size="18" />
-          <Monitor v-if="mode === 'system'" :size="18" />
-          <span
-            v-if="isVisuallyExpanded"
-            class="text-[0.8rem] font-medium tracking-[0.01em] whitespace-nowrap overflow-hidden text-ellipsis capitalize"
-          >{{ mode }}</span>
-          <span
-            v-else
-            class="absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-xs font-medium text-slate-200 whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] group-hover:opacity-100 group-hover:visible"
-          >Theme: {{ mode }}</span>
-        </button>
-      </div>
-    </nav>
-
-    <!-- User section -->
-    <div class="shrink-0 border-t border-slate-700">
-      <div v-if="isVisuallyExpanded && user" class="px-4 py-2.5">
-        <span class="text-[0.7rem] font-mono text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap block">{{ user.email }}</span>
-      </div>
-      <button
-        :class="[
-          'group relative h-[40px] flex items-center gap-3 bg-transparent border border-transparent rounded-[10px] text-slate-400 cursor-pointer transition-all duration-200 hover:bg-rose-500/15 hover:border-rose-500/30 hover:text-rose-500',
-          isVisuallyExpanded
-            ? 'mx-2.5 mb-2 px-3.5'
-            : 'w-11 mx-auto mb-2 p-0 justify-center'
-        ]"
-        @click="handleLogout"
-        :title="isVisuallyExpanded ? undefined : 'Log out'"
-      >
-        <LogOut :size="18" />
-        <span
-          v-if="isVisuallyExpanded"
-          class="text-[0.8rem] font-medium tracking-[0.01em] whitespace-nowrap overflow-hidden text-ellipsis"
-        >Log out</span>
-        <span
-          v-else
-          class="absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-xs font-medium text-slate-200 whitespace-nowrap opacity-0 invisible pointer-events-none z-[100] group-hover:opacity-100 group-hover:visible"
-        >Log out</span>
-      </button>
+      </nav>
     </div>
 
-    <!-- Expand button (collapsed state) - floating edge tab -->
-    <button
-      v-if="!isExpanded && !isHoverExpanded"
-      class="absolute -right-3 top-1/2 -translate-y-1/2 z-[60] flex items-center justify-center w-6 h-12 bg-slate-800 border border-slate-600 rounded-r-lg text-slate-400 cursor-pointer transition-all duration-200 hover:bg-accent-muted hover:border-accent-border hover:text-accent hover:w-7 shadow-lg"
-      @click.stop="toggleSidebar"
-      title="Expand sidebar"
+    <!-- Flyout Panel — appears on hover -->
+    <div
+      class="flex flex-col overflow-hidden bg-[--color-surface-sidebar] border-r border-[#1f1f2e] shadow-[4px_0_24px_rgba(0,0,0,0.3)] transition-[width,opacity] duration-150 ease-out"
+      :class="isHovered ? 'w-[172px] opacity-100' : 'w-0 opacity-0'"
     >
-      <PanelLeftOpen :size="14" />
-    </button>
+      <div class="flex w-[172px] flex-col h-full">
+        <!-- Logo text area -->
+        <div class="flex h-12 items-center px-3 shrink-0">
+          <span class="text-sm font-bold tracking-wide uppercase font-mono text-[#d1d5db]">{{ currentOrg?.branding?.app_title || 'Ace' }}</span>
+        </div>
+
+        <!-- Organization Dropdown -->
+        <OrganizationDropdown :expanded="true" @createOrg="showCreateOrgModal = true" />
+
+        <!-- Navigation labels -->
+        <nav class="flex flex-1 flex-col py-2 overflow-y-auto">
+          <div class="flex flex-col gap-0.5">
+            <div
+              v-for="item in navItems"
+              :key="item.id"
+              class="flex flex-col"
+            >
+              <button
+                class="flex h-9 items-center gap-3 px-3 rounded-sm transition-colors duration-150 cursor-pointer border-none mx-1"
+                :class="[
+                  isActive(item)
+                    ? 'text-accent'
+                    : 'text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#1a1a24]'
+                ]"
+                @click="handleNavItemClick(item)"
+              >
+                <component :is="item.icon" :size="20" class="shrink-0" />
+                <span class="text-[0.8125rem] font-medium whitespace-nowrap">{{ item.label }}</span>
+                <span
+                  v-if="item.children"
+                  class="ml-auto inline-flex items-center justify-center w-5 h-5 text-[#6b7280] rounded hover:text-[#d1d5db]"
+                  @click.stop="toggleNavGroup(item.id)"
+                >
+                  <ChevronDown
+                    :size="14"
+                    :class="['transition-transform duration-200', isNavGroupOpen(item.id) ? 'rotate-180' : '']"
+                  />
+                </span>
+              </button>
+
+              <!-- Submenu children -->
+              <div
+                v-if="item.children && isNavGroupOpen(item.id)"
+                class="flex flex-col gap-px mt-0.5 mb-1 ml-9 mr-1"
+              >
+                <button
+                  v-for="child in item.children"
+                  :key="child.path"
+                  class="flex h-7 items-center px-2.5 rounded-sm cursor-pointer transition-colors duration-150 border-none"
+                  :class="[
+                    isRouteMatch(child.path)
+                      ? 'text-accent font-medium'
+                      : 'text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#1a1a24]'
+                  ]"
+                  @click="navigate(child.path)"
+                >
+                  <span class="text-xs">{{ child.label }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Separator -->
+          <div class="mx-3 my-2 border-t border-[#1f1f2e]"></div>
+
+          <!-- Bottom section -->
+          <div class="mt-auto flex flex-col gap-0.5">
+            <button
+              v-if="settingsPath"
+              class="flex h-9 items-center gap-3 px-3 rounded-sm transition-colors duration-150 cursor-pointer border-none mx-1"
+              :class="[
+                isRouteMatch('/settings')
+                  ? 'text-accent'
+                  : 'text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#1a1a24]'
+              ]"
+              @click="navigate(settingsPath)"
+            >
+              <Settings :size="20" class="shrink-0" />
+              <span class="text-[0.8125rem] font-medium whitespace-nowrap">Settings</span>
+            </button>
+
+            <button
+              class="flex h-9 items-center gap-3 px-3 rounded-sm transition-colors duration-150 cursor-pointer border-none mx-1"
+              :class="[
+                isRouteMatch(privacySettingsPath)
+                  ? 'text-accent'
+                  : 'text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#1a1a24]'
+              ]"
+              @click="navigate(privacySettingsPath)"
+            >
+              <Shield :size="20" class="shrink-0" />
+              <span class="text-[0.8125rem] font-medium whitespace-nowrap">Privacy</span>
+            </button>
+
+            <button
+              class="flex h-9 items-center gap-3 px-3 rounded-sm text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#1a1a24] transition-colors duration-150 cursor-pointer border-none mx-1"
+              @click="cycle()"
+            >
+              <Moon v-if="mode === 'dark'" :size="20" class="shrink-0" />
+              <Sun v-if="mode === 'light'" :size="20" class="shrink-0" />
+              <Monitor v-if="mode === 'system'" :size="20" class="shrink-0" />
+              <span class="text-[0.8125rem] font-medium whitespace-nowrap capitalize">{{ mode }}</span>
+            </button>
+          </div>
+        </nav>
+
+        <!-- User section in flyout -->
+        <div class="shrink-0 border-t border-[#1f1f2e] px-3 py-2">
+          <span v-if="user" class="block text-[0.6875rem] font-mono text-[#6b7280] truncate mb-1">{{ user.email }}</span>
+          <button
+            class="flex h-8 w-full items-center gap-2.5 rounded-sm text-[#6b7280] hover:text-rose-500 hover:bg-rose-500/10 transition-colors duration-150 cursor-pointer border-none px-1"
+            @click="handleLogout"
+          >
+            <LogOut :size="18" class="shrink-0" />
+            <span class="text-[0.8125rem] font-medium">Log out</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
     <CreateOrganizationModal
       v-if="showCreateOrgModal"
