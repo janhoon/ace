@@ -39,14 +39,20 @@ function switchMode() {
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-surface-base px-4">
-    <div class="w-full max-w-md rounded border border-border bg-surface-raised p-8">
+  <div class="login-page relative flex min-h-screen items-center justify-center px-4 overflow-hidden">
+    <!-- Atmospheric background -->
+    <div class="absolute inset-0 bg-surface-base" />
+    <div class="absolute inset-0 dark:opacity-100 opacity-0 transition-opacity" style="background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(52,211,153,0.06) 0%, transparent 70%), radial-gradient(ellipse 40% 40% at 20% 80%, rgba(99,102,241,0.04) 0%, transparent 60%), radial-gradient(ellipse 50% 30% at 80% 20%, rgba(52,211,153,0.03) 0%, transparent 50%)" />
+    <!-- Subtle grid pattern -->
+    <div class="absolute inset-0 opacity-[0.015] dark:opacity-[0.03]" style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 64px 64px" />
+
+    <div class="relative z-10 w-full max-w-md rounded border border-border p-8" style="background: var(--color-surface-raised);">
       <div class="mb-8 text-center">
         <div class="mb-6 flex flex-col items-center justify-center">
-          <div class="inline-flex h-10 w-10 items-center justify-center rounded-sm bg-accent font-mono text-sm font-bold text-white">
+          <div class="relative inline-flex h-11 w-11 items-center justify-center rounded-sm font-mono text-sm font-bold text-white" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 0 20px rgba(52,211,153,0.2), 0 2px 8px rgba(0,0,0,0.3)">
             A
           </div>
-          <span class="mt-2 font-mono text-xs uppercase tracking-[0.16em] text-text-muted">Ace</span>
+          <span class="mt-2.5 font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-text-muted">Ace Observability</span>
         </div>
         <h1 class="text-2xl font-bold text-text-primary text-center">{{ mode === 'login' ? 'Welcome back' : 'Create account' }}</h1>
         <p class="text-sm text-text-muted text-center mt-2">
@@ -110,9 +116,14 @@ function switchMode() {
           </p>
         </div>
 
-        <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-sm bg-accent py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed" :disabled="loading">
+        <button
+          type="submit"
+          class="flex w-full items-center justify-center gap-2 rounded-sm py-2.5 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 1px 3px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)"
+          :disabled="loading"
+        >
           <template v-if="loading">
-            <span class="animate-spin h-4 w-4 rounded-sm border-2 border-white/30 border-t-white"></span>
+            <span class="animate-spin h-4 w-4 rounded-full border-2 border-white/30 border-t-white"></span>
             {{ mode === 'login' ? 'Signing in...' : 'Creating account...' }}
           </template>
           <template v-else>
@@ -126,7 +137,7 @@ function switchMode() {
       <div class="mt-6 text-center">
         <p class="text-sm text-text-muted">
           {{ mode === 'login' ? "Don't have an account?" : 'Already have an account?' }}
-          <button type="button" class="ml-1 text-sm text-accent hover:text-accent cursor-pointer bg-transparent border-none p-0 font-medium" @click="switchMode">
+          <button type="button" class="ml-1 text-sm text-accent hover:underline cursor-pointer bg-transparent border-none p-0 font-medium" @click="switchMode">
             {{ mode === 'login' ? 'Create one' : 'Sign in' }}
           </button>
         </p>

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap");
 
 @variant dark (&:where(.dark, .dark *));
 
@@ -60,35 +60,35 @@
 }
 
 .dark {
-  /* Surface */
-  --color-surface-base:    #0a0a0f;   /* premium near-black */
-  --color-surface-raised:  #111118;   /* raised surface */
-  --color-surface-overlay: #1a1a24;   /* overlay surface */
-  --color-surface-input:   #0f0f17;
-  --color-surface-sidebar: #08080d;
+  /* Surface — rich near-blacks with subtle violet undertone for depth */
+  --color-surface-base:    #08080e;   /* deep near-black */
+  --color-surface-raised:  #0f0f1a;   /* raised — violet tint gives life */
+  --color-surface-overlay: #171728;   /* overlay — perceptible warmth */
+  --color-surface-input:   #0c0c16;
+  --color-surface-sidebar: #060610;
 
-  /* Text */
-  --color-text-primary:    #f3f4f6;   /* gray-100 */
-  --color-text-secondary:  #9ca3af;   /* gray-400 */
-  --color-text-muted:      #4b5563;   /* gray-600 */
+  /* Text — warm whites, not clinical gray */
+  --color-text-primary:    #eaeaf0;   /* warm off-white */
+  --color-text-secondary:  #8b8fa2;   /* with blue undertone */
+  --color-text-muted:      #484c5e;   /* rich muted */
   --color-text-inverse:    #111827;
 
-  /* Border */
-  --color-border:          #1f1f2e;   /* subtle border */
-  --color-border-strong:   #2a2a3d;   /* strong border */
+  /* Border — luminous edges, not dead lines */
+  --color-border:          #1a1a30;   /* violet-tinted border */
+  --color-border-strong:   #262644;   /* luminous strong border */
 
-  /* Accents unchanged in dark */
-  --color-accent:          #10b981;
-  --color-accent-muted:    rgba(16,185,129,0.15);
-  --color-accent-border:   rgba(16,185,129,0.25);
-  --color-accent-hover:    color-mix(in srgb, var(--color-accent) 85%, black);
-  --color-amber:           #f59e0b;
-  --color-amber-muted:     rgba(245,158,11,0.15);
-  --color-info:            #3b82f6;
-  --color-info-muted:      rgba(59, 130, 246, 0.15);
-  --color-danger:          #f43f5e;
-  --color-warning:         #f59e0b;
-  --color-success:         #10b981;
+  /* Accents — slightly brighter in dark for pop */
+  --color-accent:          #34d399;   /* emerald-400, brighter in dark */
+  --color-accent-muted:    rgba(52,211,153,0.10);
+  --color-accent-border:   rgba(52,211,153,0.18);
+  --color-accent-hover:    #10b981;   /* drops to emerald-500 on hover */
+  --color-amber:           #fbbf24;   /* amber-400 */
+  --color-amber-muted:     rgba(251,191,36,0.12);
+  --color-info:            #60a5fa;   /* blue-400 */
+  --color-info-muted:      rgba(96, 165, 250, 0.12);
+  --color-danger:          #fb7185;   /* rose-400 */
+  --color-warning:         #fbbf24;
+  --color-success:         #34d399;
 
   /* Aliases — dark overrides */
   --border-primary:        var(--color-border);
@@ -96,19 +96,19 @@
   --text-primary:          var(--color-text-primary);
   --text-secondary:        var(--color-text-secondary);
   --text-tertiary:         var(--color-text-muted);
-  --accent-primary:        #10b981;
-  --accent-primary-hover:  #059669;
+  --accent-primary:        #34d399;
+  --accent-primary-hover:  #10b981;
   --accent-danger:         var(--color-danger);
   --accent-success:        var(--color-success);
   --accent-warning:        var(--color-warning);
   --surface-1:             var(--color-surface-raised);
   --surface-2:             var(--color-surface-overlay);
-  --bg-hover:              #1e293b;   /* slate-800 */
-  --bg-secondary:          #1e293b;   /* slate-800 */
+  --bg-hover:              #161628;   /* violet-tinted hover */
+  --bg-secondary:          #111120;   /* subtle secondary */
 }
 
 @theme {
-  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Mono", monospace;
 
   --color-surface-base: var(--color-surface-base);
@@ -159,6 +159,14 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Dark mode atmospheric background — subtle accent glow from top */
+  .dark body {
+    background:
+      radial-gradient(ellipse 80% 40% at 50% -10%, rgba(52,211,153,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 30% at 80% 100%, rgba(99,102,241,0.03) 0%, transparent 60%),
+      var(--color-surface-base);
   }
 
   #app {
@@ -226,11 +234,11 @@
 
   /* Scrollbar — light theme */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
@@ -238,6 +246,17 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+  }
+
+  /* Scrollbar — dark theme */
+  .dark ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: #1a1a30;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #262644;
   }
 }
 
@@ -289,5 +308,14 @@
   }
   100% {
     background: transparent;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
   }
 }

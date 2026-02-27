@@ -3,8 +3,9 @@ import { Check, ChevronDown, Plus } from 'lucide-vue-next'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useOrganization } from '../composables/useOrganization'
 
-defineProps<{
+const props = defineProps<{
   expanded: boolean
+  sidebarWidth?: number
 }>()
 
 const emit = defineEmits<{
@@ -51,7 +52,7 @@ function handleCreateOrg() {
     <button
       @click="toggleDropdown"
       :class="[
-        'flex items-center gap-2 rounded-sm border border-[#1f1f2e] bg-[--color-surface-sidebar] px-2.5 py-1.5 text-sm text-[#d1d5db] transition hover:border-[#2a2a3d] hover:bg-[#1a1a24] w-full cursor-pointer',
+        'flex items-center gap-2 rounded-sm border border-[#1a1a30] bg-[--color-surface-sidebar] px-2.5 py-1.5 text-sm text-[#c8cad4] transition hover:border-[#262644] hover:bg-[#14142a] w-full cursor-pointer',
         !expanded && 'mx-auto !w-9 justify-center !px-0'
       ]"
     >
@@ -59,16 +60,16 @@ function handleCreateOrg() {
         {{ currentOrg?.name?.charAt(0)?.toUpperCase() || '?' }}
       </div>
       <template v-if="expanded">
-        <span class="flex-1 truncate text-left text-xs font-medium text-[#d1d5db]">{{ currentOrg?.name || 'Select Org' }}</span>
+        <span class="flex-1 truncate text-left text-xs font-medium text-[#c8cad4]">{{ currentOrg?.name || 'Select Org' }}</span>
         <ChevronDown
           :size="14"
-          :class="['shrink-0 text-[#6b7280] transition-transform duration-200', dropdownOpen && 'rotate-180']"
+          :class="['shrink-0 text-[#555a6e] transition-transform duration-200', dropdownOpen && 'rotate-180']"
         />
       </template>
     </button>
 
     <Teleport to="body">
-      <div v-if="dropdownOpen" class="absolute z-[60] w-64 rounded border border-border bg-surface-raised shadow-lg overflow-hidden animate-[fadeIn_0.15s_ease-out]" :style="getDropdownPosition()">
+      <div v-if="dropdownOpen" class="absolute z-[60] w-64 rounded border border-border bg-surface-raised shadow-lg overflow-hidden animate-[fadeIn_0.15s_ease-out]" :style="{ position: 'fixed', left: (props.sidebarWidth ?? 220) + 'px', top: '64px', zIndex: 1000 }">
         <div class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-text-muted">Organizations</div>
 
         <div class="max-h-[200px] overflow-y-auto">
@@ -101,13 +102,3 @@ function handleCreateOrg() {
   </div>
 </template>
 
-<script lang="ts">
-function getDropdownPosition() {
-  return {
-    position: 'fixed' as const,
-    left: '48px',
-    top: '64px',
-    zIndex: 1000,
-  }
-}
-</script>
