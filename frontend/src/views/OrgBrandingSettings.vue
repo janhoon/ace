@@ -120,7 +120,7 @@ async function handleSave() {
 
   <div v-else class="flex flex-col gap-6">
     <!-- App Title -->
-    <section class="rounded-xl border border-border bg-surface-raised p-6">
+    <section class="rounded border border-border bg-surface-raised p-6">
       <h2 class="m-0 mb-4 text-base font-semibold text-text-primary">App Title</h2>
       <p class="m-0 mb-3 text-sm text-text-muted">Custom title replaces "Ace" in the sidebar header.</p>
       <input
@@ -129,12 +129,12 @@ async function handleSave() {
         maxlength="100"
         placeholder="Ace"
         :disabled="!isAdmin"
-        class="w-full max-w-sm rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+        class="w-full max-w-sm rounded-sm border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
       />
     </section>
 
     <!-- Primary Accent Color -->
-    <section class="rounded-xl border border-border bg-surface-raised p-6">
+    <section class="rounded border border-border bg-surface-raised p-6">
       <h2 class="m-0 mb-4 text-base font-semibold text-text-primary">Primary Accent Color</h2>
       <p class="m-0 mb-3 text-sm text-text-muted">Replaces the default emerald accent across the app for your organisation.</p>
       <div class="flex items-center gap-3">
@@ -150,16 +150,16 @@ async function handleSave() {
           maxlength="7"
           placeholder="#10b981"
           :disabled="!isAdmin"
-          class="w-32 rounded-lg border border-border bg-surface-raised px-3 py-2 font-mono text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+          class="w-32 rounded-sm border border-border bg-surface-raised px-3 py-2 font-mono text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
         />
       </div>
 
       <!-- Color Preview -->
-      <div class="mt-4 rounded-lg border border-border p-4">
+      <div class="mt-4 rounded-sm border border-border p-4">
         <p class="m-0 mb-3 text-xs text-text-muted">Preview</p>
         <div class="flex items-center gap-3 flex-wrap">
           <button
-            class="rounded-md px-3 py-1.5 text-sm font-medium text-white cursor-default"
+            class="rounded-sm px-3 py-1.5 text-sm font-medium text-white cursor-default"
             :style="{ backgroundColor: previewColor }"
           >Primary button</button>
           <span
@@ -175,15 +175,15 @@ async function handleSave() {
     </section>
 
     <!-- Organisation Logo -->
-    <section class="rounded-xl border border-border bg-surface-raised p-6">
+    <section class="rounded border border-border bg-surface-raised p-6">
       <h2 class="m-0 mb-4 text-base font-semibold text-text-primary">Organisation Logo</h2>
       <p class="m-0 mb-3 text-sm text-text-muted">Upload a logo (PNG, JPEG, SVG, GIF, or WebP, max 500KB). Replaces the default "A" icon in the sidebar.</p>
 
       <div v-if="logoDataURI" class="mb-4 flex items-center gap-4">
-        <img :src="logoDataURI" alt="Logo preview" class="h-14 w-14 rounded-lg border border-border object-contain bg-surface-overlay p-1" />
+        <img :src="logoDataURI" alt="Logo preview" class="h-14 w-14 rounded-sm border border-border object-contain bg-surface-overlay p-1" />
         <button
           v-if="isAdmin"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/25 bg-surface-raised px-3 py-1.5 text-sm font-medium text-rose-500 transition hover:bg-rose-500/10 cursor-pointer"
+          class="inline-flex items-center gap-1.5 rounded-sm border border-rose-500/25 bg-surface-raised px-3 py-1.5 text-sm font-medium text-rose-500 transition hover:bg-rose-500/10 cursor-pointer"
           @click="removeLogo"
         >Remove logo</button>
       </div>
@@ -192,45 +192,45 @@ async function handleSave() {
         type="file"
         accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp"
         :disabled="!isAdmin"
-        class="block w-full max-w-sm text-sm text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-accent-muted file:px-4 file:py-2 file:text-sm file:font-semibold file:text-accent file:cursor-pointer hover:file:bg-accent-muted disabled:opacity-50"
+        class="block w-full max-w-sm text-sm text-text-muted file:mr-3 file:rounded-sm file:border-0 file:bg-accent-muted file:px-4 file:py-2 file:text-sm file:font-semibold file:text-accent file:cursor-pointer hover:file:bg-accent-muted disabled:opacity-50"
         @change="handleLogoUpload"
       />
 
-      <div v-if="logoError" class="mt-2 rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">{{ logoError }}</div>
+      <div v-if="logoError" class="mt-2 rounded-sm border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">{{ logoError }}</div>
     </section>
 
     <!-- Live Preview -->
-    <section class="rounded-xl border border-border bg-surface-raised p-6">
+    <section class="rounded border border-border bg-surface-raised p-6">
       <h2 class="m-0 mb-4 text-base font-semibold text-text-primary">Sidebar Preview</h2>
-      <div class="w-56 rounded-xl border border-slate-700 bg-slate-950 p-4">
+      <div class="w-56 rounded border border-border bg-surface-base p-4">
         <div class="flex items-center gap-2.5">
           <img
             v-if="logoDataURI"
             :src="logoDataURI"
             :alt="appTitle || 'Ace'"
-            class="h-8 w-8 rounded-lg object-contain"
+            class="h-8 w-8 rounded-sm object-contain"
           />
           <span
             v-else
-            class="inline-flex h-8 w-8 items-center justify-center rounded-lg font-mono text-xs font-bold text-white"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-sm font-mono text-xs font-bold text-white"
             :style="{ backgroundColor: previewColor }"
           >A</span>
-          <span class="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-slate-200">{{ appTitle || 'Ace' }}</span>
+          <span class="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-text-primary">{{ appTitle || 'Ace' }}</span>
         </div>
         <div class="mt-3 flex flex-col gap-1">
-          <div class="flex h-8 items-center gap-2 rounded-lg px-2 text-xs text-slate-400">
-            <div class="h-4 w-4 rounded bg-slate-700"></div>
+          <div class="flex h-8 items-center gap-2 rounded-sm px-2 text-xs text-text-muted">
+            <div class="h-4 w-4 rounded bg-surface-overlay"></div>
             <span>Dashboards</span>
           </div>
           <div
-            class="flex h-8 items-center gap-2 rounded-lg px-2 text-xs text-slate-100"
+            class="flex h-8 items-center gap-2 rounded-sm px-2 text-xs text-text-primary"
             :style="{ backgroundColor: previewColorMuted, borderLeft: `2px solid ${previewColor}` }"
           >
             <div class="h-4 w-4 rounded" :style="{ backgroundColor: previewColor, opacity: 0.6 }"></div>
             <span>Explore</span>
           </div>
-          <div class="flex h-8 items-center gap-2 rounded-lg px-2 text-xs text-slate-400">
-            <div class="h-4 w-4 rounded bg-slate-700"></div>
+          <div class="flex h-8 items-center gap-2 rounded-sm px-2 text-xs text-text-muted">
+            <div class="h-4 w-4 rounded bg-surface-overlay"></div>
             <span>Alerts</span>
           </div>
         </div>
@@ -241,14 +241,14 @@ async function handleSave() {
     <div class="flex items-center gap-3">
       <button
         v-if="isAdmin"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        class="inline-flex items-center gap-1.5 rounded-sm bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="saving"
         @click="handleSave"
       >{{ saving ? 'Saving...' : 'Save Branding' }}</button>
       <p v-if="!isAdmin" class="m-0 text-sm text-text-muted">Only admins can change branding settings.</p>
     </div>
 
-    <div v-if="error" class="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-500">{{ error }}</div>
-    <div v-if="success" class="rounded-lg border border-accent-border bg-accent-muted px-3 py-2.5 text-sm text-accent">{{ success }}</div>
+    <div v-if="error" class="rounded-sm border border-rose-500/25 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-500">{{ error }}</div>
+    <div v-if="success" class="rounded-sm border border-accent-border bg-accent-muted px-3 py-2.5 text-sm text-accent">{{ success }}</div>
   </div>
 </template>

@@ -762,15 +762,15 @@ function goBack() {
 
 <template>
   <div class="px-4 py-5 max-w-[980px] mx-auto md:px-6">
-    <header class="flex items-center gap-4 mb-5 p-4 border border-border rounded-xl bg-surface-raised">
+    <header class="flex items-center gap-4 mb-5 p-4 border border-border rounded bg-surface-raised">
       <button
-        class="flex items-center justify-center w-10 h-10 bg-surface-overlay border border-border rounded-[10px] text-text-secondary cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:text-text-primary"
+        class="flex items-center justify-center w-10 h-10 bg-surface-overlay border border-border rounded text-text-secondary cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:text-text-primary"
         @click="goBack"
       >
         <ArrowLeft :size="20" />
       </button>
       <div>
-        <h1 class="m-0 mb-1 text-base font-bold font-mono uppercase tracking-wide text-text-primary">Organization Settings</h1>
+        <h1 class="m-0 mb-1 text-base font-bold font-mono tracking-wide text-text-primary">Organization Settings</h1>
         <p v-if="org" class="m-0 text-sm text-text-secondary">{{ org.name }}</p>
       </div>
     </header>
@@ -797,12 +797,12 @@ function goBack() {
 
       <div class="flex flex-col gap-4">
       <!-- General Settings -->
-      <section v-if="activeSection === 'general'" class="bg-surface-raised border border-border rounded-xl p-6">
+      <section v-if="activeSection === 'general'" class="bg-surface-raised border border-border rounded p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="flex items-center gap-2 m-0 text-base font-semibold text-text-primary">General</h2>
           <button
             v-if="isAdmin && !editMode"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-lg text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
             @click="startEdit"
           >
             <Edit2 :size="16" />
@@ -810,13 +810,13 @@ function goBack() {
           </button>
         </div>
 
-        <div v-if="editMode" class="p-4 bg-surface-overlay rounded-[10px] border border-border mb-4">
+        <div v-if="editMode" class="p-4 bg-surface-overlay rounded border border-border mb-4">
           <div class="mb-4">
             <label class="block mb-1.5 text-sm font-medium text-text-primary">Organization Name</label>
             <input
               v-model="editName"
               type="text"
-              class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+              class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
               :disabled="editLoading"
             />
           </div>
@@ -825,19 +825,19 @@ function goBack() {
             <input
               v-model="editSlug"
               type="text"
-              class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+              class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
               :disabled="editLoading"
             />
           </div>
-          <div v-if="editError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3">{{ editError }}</div>
+          <div v-if="editError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3">{{ editError }}</div>
           <div class="flex justify-end gap-3 mt-4">
             <button
-              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-md text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
               @click="cancelEdit"
               :disabled="editLoading"
             >Cancel</button>
             <button
-              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-sm text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
               @click="saveEdit"
               :disabled="editLoading"
             >
@@ -873,12 +873,12 @@ function goBack() {
       </section>
 
       <!-- Members Section -->
-      <section v-if="activeSection === 'members'" class="bg-surface-raised border border-border rounded-xl p-6">
+      <section v-if="activeSection === 'members'" class="bg-surface-raised border border-border rounded p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="flex items-center gap-2 m-0 text-base font-semibold text-text-primary"><Users :size="20" /> Members ({{ members.length }})</h2>
           <button
             v-if="isAdmin"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white border-none rounded-md text-[0.8125rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white border-none rounded-sm text-[0.8125rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
             @click="showInviteForm = !showInviteForm"
           >
             <UserPlus :size="16" />
@@ -887,18 +887,18 @@ function goBack() {
         </div>
 
         <!-- Invite Form -->
-        <div v-if="showInviteForm && isAdmin" class="p-4 bg-surface-overlay rounded-[10px] border border-border mb-4">
+        <div v-if="showInviteForm && isAdmin" class="p-4 bg-surface-overlay rounded border border-border mb-4">
           <div class="flex flex-col md:flex-row gap-3">
             <input
               v-model="inviteEmail"
               type="email"
               placeholder="Email address"
-              class="flex-1 px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+              class="flex-1 px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
               :disabled="inviteLoading"
             />
             <select
               v-model="inviteRole"
-              class="w-full md:w-[120px] px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary cursor-pointer outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+              class="w-full md:w-[120px] px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary cursor-pointer outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
               :disabled="inviteLoading"
             >
               <option value="viewer">Viewer</option>
@@ -906,21 +906,21 @@ function goBack() {
               <option value="admin">Admin</option>
             </select>
             <button
-              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-sm text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
               @click="handleInvite"
               :disabled="inviteLoading"
             >
               {{ inviteLoading ? 'Sending...' : 'Send Invite' }}
             </button>
           </div>
-          <div v-if="inviteError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3">{{ inviteError }}</div>
-          <div v-if="inviteSuccess" class="px-3.5 py-2.5 bg-accent-muted border border-accent-border rounded-md text-accent text-sm mt-3 break-all">{{ inviteSuccess }}</div>
+          <div v-if="inviteError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3">{{ inviteError }}</div>
+          <div v-if="inviteSuccess" class="px-3.5 py-2.5 bg-accent-muted border border-accent-border rounded-sm text-accent text-sm mt-3 break-all">{{ inviteSuccess }}</div>
         </div>
 
         <!-- Members List -->
         <div class="flex flex-col gap-2">
-          <div v-for="member in members" :key="member.id" class="flex items-center gap-3 p-3 bg-surface-overlay rounded-[10px] border border-border">
-            <div class="w-9 h-9 flex items-center justify-center bg-accent rounded-full text-sm font-semibold text-white shrink-0">
+          <div v-for="member in members" :key="member.id" class="flex items-center gap-3 p-3 bg-surface-overlay rounded border border-border">
+            <div class="w-9 h-9 flex items-center justify-center bg-accent rounded-sm text-sm font-semibold text-white shrink-0">
               {{ (member.name || member.email).charAt(0).toUpperCase() }}
             </div>
             <div class="flex-1 min-w-0">
@@ -932,7 +932,7 @@ function goBack() {
                 v-if="isAdmin"
                 :value="member.role"
                 @change="handleRoleChange(member, ($event.target as HTMLSelectElement).value as MembershipRole)"
-                class="w-auto px-2 py-1.5 text-xs bg-surface-overlay border border-border rounded-md text-text-primary cursor-pointer outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
+                class="w-auto px-2 py-1.5 text-xs bg-surface-overlay border border-border rounded-sm text-text-primary cursor-pointer outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent"
               >
                 <option value="viewer">Viewer</option>
                 <option value="editor">Editor</option>
@@ -949,7 +949,7 @@ function goBack() {
               >{{ member.role }}</span>
               <button
                 v-if="isAdmin"
-                class="flex items-center justify-center w-8 h-8 bg-transparent border-none rounded-md text-text-secondary cursor-pointer transition-all duration-200 hover:bg-rose-500/15 hover:text-rose-500"
+                class="flex items-center justify-center w-8 h-8 bg-transparent border-none rounded-sm text-text-secondary cursor-pointer transition-all duration-200 hover:bg-rose-500/15 hover:text-rose-500"
                 @click="handleRemoveMember(member)"
                 title="Remove member"
               >
@@ -961,12 +961,12 @@ function goBack() {
       </section>
 
       <!-- Groups Section -->
-      <section v-if="activeSection === 'groups'" class="bg-surface-raised border border-border rounded-xl p-6">
+      <section v-if="activeSection === 'groups'" class="bg-surface-raised border border-border rounded p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="flex items-center gap-2 m-0 text-base font-semibold text-text-primary"><Users :size="20" /> Groups ({{ groups.length }})</h2>
           <button
             v-if="isAdmin && !showCreateGroupForm"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white border-none rounded-md text-[0.8125rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white border-none rounded-sm text-[0.8125rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="new-group-button"
             @click="startCreateGroup"
           >
@@ -974,17 +974,17 @@ function goBack() {
           </button>
         </div>
 
-        <div v-if="groupMessage" class="px-3.5 py-2.5 bg-accent-muted border border-accent-border rounded-md text-accent text-sm mt-3 break-all">{{ groupMessage }}</div>
-        <div v-if="groupActionError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3">{{ groupActionError }}</div>
+        <div v-if="groupMessage" class="px-3.5 py-2.5 bg-accent-muted border border-accent-border rounded-sm text-accent text-sm mt-3 break-all">{{ groupMessage }}</div>
+        <div v-if="groupActionError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3">{{ groupActionError }}</div>
 
-        <div v-if="showCreateGroupForm && isAdmin" class="p-4 bg-surface-overlay rounded-[10px] border border-border mb-4">
+        <div v-if="showCreateGroupForm && isAdmin" class="p-4 bg-surface-overlay rounded border border-border mb-4">
           <div class="mb-4">
             <label class="block mb-1.5 text-sm font-medium text-text-primary">Group Name</label>
             <input
               v-model="createGroupName"
               type="text"
               data-testid="create-group-name"
-              class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+              class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
               :disabled="createGroupLoading"
             />
           </div>
@@ -994,20 +994,20 @@ function goBack() {
               v-model="createGroupDescription"
               type="text"
               data-testid="create-group-description"
-              class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+              class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
               :disabled="createGroupLoading"
             />
           </div>
           <div class="flex justify-end gap-3 mt-4">
             <button
-              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-md text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
               @click="cancelCreateGroup"
               :disabled="createGroupLoading"
             >
               Cancel
             </button>
             <button
-              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-sm text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="create-group-submit"
               @click="handleCreateGroup"
               :disabled="createGroupLoading"
@@ -1017,13 +1017,13 @@ function goBack() {
           </div>
         </div>
 
-        <div v-if="groupsLoading" class="p-3.5 border border-dashed border-border rounded-lg text-text-secondary text-[0.8125rem]">Loading groups...</div>
-        <div v-else-if="groupsError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3">{{ groupsError }}</div>
-        <div v-else-if="groups.length === 0" class="p-3.5 border border-dashed border-border rounded-lg text-text-secondary text-[0.8125rem]">
+        <div v-if="groupsLoading" class="p-3.5 border border-dashed border-border rounded-sm text-text-secondary text-[0.8125rem]">Loading groups...</div>
+        <div v-else-if="groupsError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3">{{ groupsError }}</div>
+        <div v-else-if="groups.length === 0" class="p-3.5 border border-dashed border-border rounded-sm text-text-secondary text-[0.8125rem]">
           No groups yet. {{ isAdmin ? 'Create one to organize access.' : '' }}
         </div>
         <div v-else class="flex flex-col gap-3">
-          <article v-for="group in groups" :key="group.id" class="border border-border rounded-[10px] bg-surface-overlay p-3.5" :data-testid="`group-card-${group.id}`">
+          <article v-for="group in groups" :key="group.id" class="border border-border rounded bg-surface-overlay p-3.5" :data-testid="`group-card-${group.id}`">
             <div class="flex flex-col md:flex-row justify-between gap-3 items-start">
               <div class="min-w-0">
                 <h3 class="m-0 text-[0.95rem] text-text-primary">{{ group.name }}</h3>
@@ -1033,7 +1033,7 @@ function goBack() {
               </div>
               <div class="flex gap-2 flex-wrap justify-start md:justify-end">
                 <button
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-md text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
                   :data-testid="`toggle-group-members-${group.id}`"
                   @click="toggleGroupMembers(group.id)"
                 >
@@ -1041,14 +1041,14 @@ function goBack() {
                 </button>
                 <template v-if="isAdmin && editingGroupId !== group.id">
                   <button
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-md text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
                     :data-testid="`rename-group-${group.id}`"
                     @click="startEditGroup(group)"
                   >
                     Rename
                   </button>
                   <button
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 text-white border-none rounded-md text-[0.8125rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 text-white border-none rounded-sm text-[0.8125rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     :data-testid="`delete-group-${group.id}`"
                     @click="handleDeleteGroup(group)"
                     :disabled="groupMemberActionLoading[group.id]"
@@ -1059,14 +1059,14 @@ function goBack() {
               </div>
             </div>
 
-            <div v-if="isAdmin && editingGroupId === group.id" class="p-4 bg-surface-overlay rounded-[10px] border border-border mt-3">
+            <div v-if="isAdmin && editingGroupId === group.id" class="p-4 bg-surface-overlay rounded border border-border mt-3">
               <div class="mb-4">
                 <label class="block mb-1.5 text-sm font-medium text-text-primary">Group Name</label>
                 <input
                   v-model="editGroupName"
                   type="text"
                   data-testid="edit-group-name"
-                  class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+                  class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
                   :disabled="groupUpdateLoading"
                 />
               </div>
@@ -1076,20 +1076,20 @@ function goBack() {
                   v-model="editGroupDescription"
                   type="text"
                   data-testid="edit-group-description"
-                  class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+                  class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
                   :disabled="groupUpdateLoading"
                 />
               </div>
               <div class="flex justify-end gap-3 mt-4">
                 <button
-                  class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-md text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
                   @click="cancelEditGroup"
                   :disabled="groupUpdateLoading"
                 >
                   Cancel
                 </button>
                 <button
-                  class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-sm text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
                   :data-testid="`save-group-${group.id}`"
                   @click="handleUpdateGroup(group)"
                   :disabled="groupUpdateLoading"
@@ -1100,8 +1100,8 @@ function goBack() {
             </div>
 
             <div v-if="isGroupExpanded(group.id)" class="mt-3 border-t border-border pt-3">
-              <div v-if="groupMembersLoading[group.id]" class="p-3.5 border border-dashed border-border rounded-lg text-text-secondary text-[0.8125rem]">Loading group members...</div>
-              <div v-else-if="groupMembersError[group.id]" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3">
+              <div v-if="groupMembersLoading[group.id]" class="p-3.5 border border-dashed border-border rounded-sm text-text-secondary text-[0.8125rem]">Loading group members...</div>
+              <div v-else-if="groupMembersError[group.id]" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3">
                 {{ groupMembersError[group.id] }}
               </div>
               <template v-else>
@@ -1109,7 +1109,7 @@ function goBack() {
                   <select
                     v-model="addMemberUserId[group.id]"
                     :data-testid="`add-member-select-${group.id}`"
-                    class="flex-1 px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary cursor-pointer outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+                    class="flex-1 px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary cursor-pointer outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
                     :disabled="groupMemberActionLoading[group.id]"
                   >
                     <option value="">Select member</option>
@@ -1122,7 +1122,7 @@ function goBack() {
                     </option>
                   </select>
                   <button
-                    class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-sm text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
                     :data-testid="`add-member-button-${group.id}`"
                     @click="handleAddGroupMember(group.id)"
                     :disabled="groupMemberActionLoading[group.id] || availableMembersForGroup(group.id).length === 0"
@@ -1131,14 +1131,14 @@ function goBack() {
                   </button>
                 </div>
 
-                <div v-if="(groupMembersById[group.id] || []).length === 0" class="p-3.5 border border-dashed border-border rounded-lg text-text-secondary text-[0.8125rem]">
+                <div v-if="(groupMembersById[group.id] || []).length === 0" class="p-3.5 border border-dashed border-border rounded-sm text-text-secondary text-[0.8125rem]">
                   No members in this group.
                 </div>
                 <div v-else class="flex flex-col gap-2">
                   <div
                     v-for="membership in groupMembersById[group.id]"
                     :key="membership.id"
-                    class="flex flex-col md:flex-row justify-between gap-3 items-start md:items-center border border-border rounded-lg px-3 py-2.5 bg-surface-overlay"
+                    class="flex flex-col md:flex-row justify-between gap-3 items-start md:items-center border border-border rounded-sm px-3 py-2.5 bg-surface-overlay"
                   >
                     <div class="flex flex-col min-w-0">
                       <strong class="text-[0.85rem] text-text-primary">{{ membership.name || membership.email }}</strong>
@@ -1146,7 +1146,7 @@ function goBack() {
                     </div>
                     <button
                       v-if="isAdmin"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-md text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
                       :data-testid="`remove-member-${group.id}-${membership.user_id}`"
                       @click="handleRemoveGroupMember(group.id, membership)"
                       :disabled="groupMemberActionLoading[group.id]"
@@ -1162,7 +1162,7 @@ function goBack() {
       </section>
 
       <!-- Data Sources Section -->
-      <section v-if="activeSection === 'datasources'" class="bg-surface-raised border border-border rounded-xl p-6">
+      <section v-if="activeSection === 'datasources'" class="bg-surface-raised border border-border rounded p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="flex items-center gap-2 m-0 text-base font-semibold text-text-primary">Data Sources</h2>
           <p class="m-0 mb-3 text-sm text-text-secondary">Configure connections to Prometheus, Loki, Tempo, VictoriaMetrics, and other data sources for this organisation.</p>
@@ -1177,12 +1177,12 @@ function goBack() {
       <GitHubAppSettings v-if="activeSection === 'ai'" :org-id="orgId" :is-admin="isAdmin" />
 
       <!-- SSO Section -->
-      <section v-if="activeSection === 'general'" class="bg-surface-raised border border-border rounded-xl p-6">
+      <section v-if="activeSection === 'general'" class="bg-surface-raised border border-border rounded p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="flex items-center gap-2 m-0 text-base font-semibold text-text-primary"><Shield :size="20" /> Single Sign-On</h2>
           <div v-if="isAdmin" class="flex gap-2 items-center">
             <button
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white border-none rounded-md text-[0.8125rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white border-none rounded-sm text-[0.8125rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="add-authentication"
               @click="handleAddSso"
             >
@@ -1192,25 +1192,25 @@ function goBack() {
         </div>
         <p class="m-0 mb-3 text-sm text-text-secondary">Manage identity provider connections for this organization.</p>
 
-        <div v-if="!isAdmin" class="p-3.5 border border-dashed border-border rounded-lg text-text-secondary text-[0.8125rem]">Only organization admins can update SSO settings.</div>
+        <div v-if="!isAdmin" class="p-3.5 border border-dashed border-border rounded-sm text-text-secondary text-[0.8125rem]">Only organization admins can update SSO settings.</div>
 
-        <div v-if="ssoLoading" class="p-3.5 border border-dashed border-border rounded-lg text-text-secondary text-[0.8125rem]">Loading SSO settings...</div>
+        <div v-if="ssoLoading" class="p-3.5 border border-dashed border-border rounded-sm text-text-secondary text-[0.8125rem]">Loading SSO settings...</div>
         <div v-else class="flex flex-col gap-3">
           <div class="flex flex-col gap-2">
-            <article class="border border-border rounded-[10px] bg-surface-overlay p-3.5 flex flex-col gap-2.5" data-testid="sso-provider-password">
+            <article class="border border-border rounded bg-surface-overlay p-3.5 flex flex-col gap-2.5" data-testid="sso-provider-password">
               <div>
                 <h3 class="m-0 text-[0.95rem] text-text-primary">Email/Password</h3>
                 <p class="mt-1 mb-0 text-sm text-text-secondary">Built-in authentication method available for all organizations.</p>
               </div>
               <div class="flex items-center justify-between gap-3 flex-wrap">
-                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-accent-muted text-accent border border-accent-border">Enabled</span>
+                <span class="inline-flex px-2 py-0.5 rounded-sm text-xs font-medium bg-accent-muted text-accent border border-accent-border">Enabled</span>
               </div>
             </article>
 
             <article
               v-for="provider in configuredSsoProviders"
               :key="provider.key"
-              class="border border-border rounded-[10px] bg-surface-overlay p-3.5 flex flex-col gap-2.5"
+              class="border border-border rounded bg-surface-overlay p-3.5 flex flex-col gap-2.5"
               :data-testid="`sso-provider-${provider.key}`"
             >
               <div>
@@ -1222,7 +1222,7 @@ function goBack() {
               <div class="flex items-center justify-between gap-3 flex-wrap">
                 <span
                   :class="[
-                    'inline-flex px-2 py-0.5 rounded-full text-xs font-medium border',
+                    'inline-flex px-2 py-0.5 rounded-sm text-xs font-medium border',
                     provider.enabled ? 'bg-accent-muted text-accent border-accent-border' : '',
                     provider.configured && !provider.enabled ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' : '',
                     !provider.configured && !provider.enabled ? 'text-text-secondary border-border' : ''
@@ -1232,7 +1232,7 @@ function goBack() {
                 </span>
                 <button
                   v-if="isAdmin"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-md text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
                   :data-testid="`edit-sso-${provider.key}`"
                   @click="openSsoProvider(provider.key)"
                 >
@@ -1242,49 +1242,49 @@ function goBack() {
               </div>
               <div
                 v-if="provider.key === 'google' && googleError && activeSsoProvider !== 'google'"
-                class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3"
+                class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3"
               >
                 {{ googleError }}
               </div>
               <div
                 v-if="provider.key === 'microsoft' && microsoftError && activeSsoProvider !== 'microsoft'"
-                class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3"
+                class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3"
               >
                 {{ microsoftError }}
               </div>
             </article>
 
-            <div v-if="configuredSsoProviders.length === 0" class="p-3.5 border border-dashed border-border rounded-lg text-text-secondary text-[0.8125rem]">
+            <div v-if="configuredSsoProviders.length === 0" class="p-3.5 border border-dashed border-border rounded-sm text-text-secondary text-[0.8125rem]">
               No external authentication methods configured yet.
             </div>
 
-            <div v-if="googleError && activeSsoProvider !== 'google'" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3">
+            <div v-if="googleError && activeSsoProvider !== 'google'" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3">
               {{ googleError }}
             </div>
 
-            <div v-if="microsoftError && activeSsoProvider !== 'microsoft'" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3">
+            <div v-if="microsoftError && activeSsoProvider !== 'microsoft'" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3">
               {{ microsoftError }}
             </div>
           </div>
 
         </div>
 
-        <div v-if="ssoNotice" class="px-3.5 py-2.5 bg-accent-muted border border-accent-border rounded-md text-accent text-sm mt-3 break-all">{{ ssoNotice }}</div>
+        <div v-if="ssoNotice" class="px-3.5 py-2.5 bg-accent-muted border border-accent-border rounded-sm text-accent text-sm mt-3 break-all">{{ ssoNotice }}</div>
       </section>
 
       <!-- Danger Zone -->
-      <section v-if="activeSection === 'general' && isAdmin" class="bg-surface-raised border border-rose-500 rounded-xl p-6">
+      <section v-if="activeSection === 'general' && isAdmin" class="bg-surface-raised border border-rose-500 rounded p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="flex items-center gap-2 m-0 text-base font-semibold text-rose-500"><Shield :size="20" /> Danger Zone</h2>
         </div>
-        <div class="p-4 bg-rose-500/10 rounded-lg">
+        <div class="p-4 bg-rose-500/10 rounded-sm">
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <strong class="block text-sm text-text-primary mb-1">Delete Organization</strong>
               <p class="m-0 text-xs text-text-secondary">Permanently delete this organization and all its data. This action cannot be undone.</p>
             </div>
             <button
-              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-rose-500 text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-rose-500 text-white border-none rounded-sm text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed"
               @click="showDeleteConfirm = true"
             >Delete Organization</button>
           </div>
@@ -1294,8 +1294,8 @@ function goBack() {
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteConfirm" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center z-[1000]" @click.self="showDeleteConfirm = false">
-      <div class="bg-surface-raised border border-border rounded-xl p-6 max-w-[400px]">
+    <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000]" @click.self="showDeleteConfirm = false">
+      <div class="bg-surface-raised border border-border rounded p-6 max-w-[400px]">
         <h3 class="m-0 mb-3 text-lg font-semibold text-text-primary">Delete Organization?</h3>
         <p class="m-0 mb-6 text-sm text-text-secondary">
           This will permanently delete <strong>{{ org?.name }}</strong> and all its dashboards, panels, and
@@ -1303,14 +1303,14 @@ function goBack() {
         </p>
         <div class="flex justify-end gap-3">
           <button
-            class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-md text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
             @click="showDeleteConfirm = false"
             :disabled="deleteLoading"
           >
             Cancel
           </button>
           <button
-            class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-rose-500 text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-rose-500 text-white border-none rounded-sm text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed"
             @click="handleDelete"
             :disabled="deleteLoading"
           >
@@ -1320,8 +1320,8 @@ function goBack() {
       </div>
     </div>
 
-    <div v-if="ssoDialogOpen" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center z-[1000]" data-testid="sso-config-modal" @click.self="closeSsoDialog">
-      <div class="bg-surface-raised border border-border rounded-xl p-6 w-[min(640px,calc(100vw-2rem))] max-w-[640px]">
+    <div v-if="ssoDialogOpen" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000]" data-testid="sso-config-modal" @click.self="closeSsoDialog">
+      <div class="bg-surface-raised border border-border rounded p-6 w-[min(640px,calc(100vw-2rem))] max-w-[640px]">
         <div class="flex justify-between items-start gap-4 mb-3">
           <div>
             <h3 v-if="ssoStep === 'picker'" class="m-0 mb-1 text-base text-text-primary" data-testid="sso-provider-picker-title">Choose SSO provider</h3>
@@ -1332,7 +1332,7 @@ function goBack() {
             <p v-else class="m-0 mb-3 text-sm text-text-secondary">Update credentials and enable status for this provider.</p>
           </div>
           <button
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-md text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-[0.8125rem] font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="close-sso-config"
             @click="closeSsoDialog"
           >
@@ -1345,14 +1345,14 @@ function goBack() {
             v-for="provider in selectableSsoProviders"
             :key="provider.key"
             type="button"
-            class="flex justify-between items-center gap-3 w-full border border-border rounded-[10px] bg-surface-overlay text-text-primary px-3.5 py-3 cursor-pointer transition-all duration-200 hover:border-accent-border hover:bg-surface-overlay"
+            class="flex justify-between items-center gap-3 w-full border border-border rounded bg-surface-overlay text-text-primary px-3.5 py-3 cursor-pointer transition-all duration-200 hover:border-accent-border hover:bg-surface-overlay"
             :data-testid="`sso-provider-option-${provider.key}`"
             @click="chooseSsoProvider(provider.key)"
           >
             <span class="text-[0.9rem] font-semibold">{{ provider.name }}</span>
             <span
               :class="[
-                'inline-flex px-2 py-0.5 rounded-full text-xs font-medium border',
+                'inline-flex px-2 py-0.5 rounded-sm text-xs font-medium border',
                 provider.enabled ? 'bg-accent-muted text-accent border-accent-border' : '',
                 provider.configured && !provider.enabled ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' : '',
                 !provider.configured && !provider.enabled ? 'text-text-secondary border-border' : ''
@@ -1363,7 +1363,7 @@ function goBack() {
           </button>
         </div>
 
-        <div v-else class="border border-border rounded-xl bg-surface-overlay p-4" data-testid="sso-config-panel">
+        <div v-else class="border border-border rounded bg-surface-overlay p-4" data-testid="sso-config-panel">
           <div v-if="activeSsoProvider === 'google'" data-testid="google-sso-card">
             <div class="mb-4">
               <label class="block mb-1.5 text-sm font-medium text-text-primary">Client ID</label>
@@ -1371,7 +1371,7 @@ function goBack() {
                 v-model="googleClientId"
                 type="text"
                 data-testid="google-client-id"
-                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
                 :disabled="!isAdmin || googleSaving"
               />
             </div>
@@ -1382,7 +1382,7 @@ function goBack() {
                 type="password"
                 data-testid="google-client-secret"
                 placeholder="Enter to update"
-                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
                 :disabled="!isAdmin || googleSaving"
               />
             </div>
@@ -1399,18 +1399,18 @@ function goBack() {
               </label>
             </div>
 
-            <div v-if="googleError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3">{{ googleError }}</div>
+            <div v-if="googleError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3">{{ googleError }}</div>
 
             <div v-if="isAdmin" class="flex justify-end gap-3 mt-3">
               <button
-                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-md text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="back-sso-provider-picker"
                 @click="ssoStep = 'picker'"
               >
                 Back
               </button>
               <button
-                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-sm text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="save-google-sso"
                 :disabled="googleSaving"
                 @click="handleSaveGoogleSSO"
@@ -1427,7 +1427,7 @@ function goBack() {
                 v-model="microsoftTenantId"
                 type="text"
                 data-testid="microsoft-tenant-id"
-                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
                 :disabled="!isAdmin || microsoftSaving"
               />
             </div>
@@ -1437,7 +1437,7 @@ function goBack() {
                 v-model="microsoftClientId"
                 type="text"
                 data-testid="microsoft-client-id"
-                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
                 :disabled="!isAdmin || microsoftSaving"
               />
             </div>
@@ -1448,7 +1448,7 @@ function goBack() {
                 type="password"
                 data-testid="microsoft-client-secret"
                 placeholder="Enter to update"
-                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-md text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
+                class="w-full px-3 py-2.5 bg-surface-overlay border border-border rounded-sm text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
                 :disabled="!isAdmin || microsoftSaving"
               />
             </div>
@@ -1465,18 +1465,18 @@ function goBack() {
               </label>
             </div>
 
-            <div v-if="microsoftError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-md text-rose-500 text-sm mt-3">{{ microsoftError }}</div>
+            <div v-if="microsoftError" class="px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-500 text-sm mt-3">{{ microsoftError }}</div>
 
             <div v-if="isAdmin" class="flex justify-end gap-3 mt-3">
               <button
-                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-md text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
+                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-surface-overlay text-text-primary border border-border rounded-sm text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-surface-overlay hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="back-sso-provider-picker"
                 @click="ssoStep = 'picker'"
               >
                 Back
               </button>
               <button
-                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-md text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-accent text-white border-none rounded-sm text-sm font-semibold cursor-pointer transition-all duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="save-microsoft-sso"
                 :disabled="microsoftSaving"
                 @click="handleSaveMicrosoftSSO"
