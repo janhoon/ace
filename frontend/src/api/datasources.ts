@@ -485,7 +485,10 @@ interface LabelsResponse {
   error?: string
 }
 
-export async function fetchTraceDatasources(orgId: string, datasourceId: string): Promise<TraceDatasource[]> {
+export async function fetchTraceDatasources(
+  orgId: string,
+  datasourceId: string,
+): Promise<TraceDatasource[]> {
   const response = await fetch(
     `${API_BASE}/api/orgs/${orgId}/datasources/${datasourceId}/trace-datasources`,
     {
@@ -500,8 +503,12 @@ export async function fetchTraceDatasources(orgId: string, datasourceId: string)
   return response.json()
 }
 
-export async function fetchDataSourceLabels(id: string): Promise<string[]> {
-  const response = await fetch(`${API_BASE}/api/datasources/${id}/labels`, {
+export async function fetchDataSourceLabels(id: string, metric?: string): Promise<string[]> {
+  const params = new URLSearchParams()
+  if (metric) params.set('metric', metric)
+  const qs = params.toString()
+
+  const response = await fetch(`${API_BASE}/api/datasources/${id}/labels${qs ? `?${qs}` : ''}`, {
     headers: getAuthHeaders(),
   })
 
@@ -518,12 +525,18 @@ export async function fetchDataSourceLabels(id: string): Promise<string[]> {
   return body.data || []
 }
 
-export async function fetchDataSourceLabelValues(id: string, labelName: string): Promise<string[]> {
+export async function fetchDataSourceLabelValues(
+  id: string,
+  labelName: string,
+  metric?: string,
+): Promise<string[]> {
+  const params = new URLSearchParams()
+  if (metric) params.set('metric', metric)
+  const qs = params.toString()
+
   const response = await fetch(
-    `${API_BASE}/api/datasources/${id}/labels/${encodeURIComponent(labelName)}/values`,
-    {
-      headers: getAuthHeaders(),
-    },
+    `${API_BASE}/api/datasources/${id}/labels/${encodeURIComponent(labelName)}/values${qs ? `?${qs}` : ''}`,
+    { headers: getAuthHeaders() },
   )
 
   if (!response.ok) {
@@ -534,6 +547,29 @@ export async function fetchDataSourceLabelValues(id: string, labelName: string):
   const body = (await response.json()) as LabelsResponse
   if (body.status === 'error') {
     throw new Error(body.error || 'Failed to fetch label values')
+  }
+
+  return body.data || []
+}
+
+export async function fetchDataSourceMetricNames(id: string, search?: string): Promise<string[]> {
+  const params = new URLSearchParams()
+  if (search) params.set('search', search)
+  const qs = params.toString()
+
+  const response = await fetch(
+    `${API_BASE}/api/datasources/${id}/metric-names${qs ? `?${qs}` : ''}`,
+    { headers: getAuthHeaders() },
+  )
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to fetch metric names')
+  }
+
+  const body = (await response.json()) as LabelsResponse
+  if (body.status === 'error') {
+    throw new Error(body.error || 'Failed to fetch metric names')
   }
 
   return body.data || []
