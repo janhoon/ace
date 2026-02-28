@@ -6,7 +6,6 @@ import CookieConsentBanner from './components/CookieConsentBanner.vue'
 import CopilotPanel from './components/CopilotPanel.vue'
 import Sidebar from './components/Sidebar.vue'
 import { useAuth } from './composables/useAuth'
-import { useCopilot } from './composables/useCopilot'
 import { useDatasource } from './composables/useDatasource'
 import { useOrganization } from './composables/useOrganization'
 import { useOrgBranding } from './composables/useOrgBranding'
@@ -28,7 +27,6 @@ const mainMargin = computed(() => {
 })
 
 const showCopilot = ref(false)
-const { isConnected, hasCopilot, checkConnection } = useCopilot()
 const { currentOrg } = useOrganization()
 const { metricsDatasources, fetchDatasources } = useDatasource()
 
@@ -46,13 +44,6 @@ watch(
   { immediate: true },
 )
 
-watch(
-  isAuthenticated,
-  (authed) => {
-    if (authed) checkConnection()
-  },
-  { immediate: true },
-)
 </script>
 
 <template>
@@ -65,7 +56,7 @@ watch(
       <RouterView />
     </main>
     <CopilotPanel
-      v-if="showCopilot && showSidebar && isConnected && hasCopilot && copilotDatasource"
+      v-if="showCopilot && showSidebar && copilotDatasource"
       :datasource-type="copilotDatasource.type"
       :datasource-name="copilotDatasource.name"
       :datasource-id="copilotDatasource.id"
