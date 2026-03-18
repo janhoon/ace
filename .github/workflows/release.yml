@@ -172,7 +172,7 @@ jobs:
         working-directory: backend
 
       - name: Upload backend package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: backend-package-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
@@ -215,7 +215,7 @@ jobs:
           tar -czf "dist-release/dash-frontend_${version}.tar.gz" -C frontend dist
 
       - name: Upload frontend package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-package
           path: dist-release/*.tar.gz
@@ -239,10 +239,10 @@ jobs:
         uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -274,7 +274,7 @@ jobs:
 
       - name: Build and push backend image
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: backend/Dockerfile
@@ -296,7 +296,7 @@ jobs:
         run: cosign sign "${{ steps.vars.outputs.image_repo }}@${{ steps.build.outputs.digest }}"
 
       - name: Attest backend image provenance
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ steps.vars.outputs.image_repo }}
           subject-digest: ${{ steps.build.outputs.digest }}
@@ -311,7 +311,7 @@ jobs:
             -o spdx-json=sbom-backend-image-${RELEASE_TAG#v}.spdx.json
 
       - name: Upload backend image SBOM
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-backend-image
           path: sbom-backend-image-*.spdx.json
@@ -335,10 +335,10 @@ jobs:
         uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -370,7 +370,7 @@ jobs:
 
       - name: Build and push frontend image
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: frontend/Dockerfile
@@ -392,7 +392,7 @@ jobs:
         run: cosign sign "${{ steps.vars.outputs.image_repo }}@${{ steps.build.outputs.digest }}"
 
       - name: Attest frontend image provenance
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ steps.vars.outputs.image_repo }}
           subject-digest: ${{ steps.build.outputs.digest }}
@@ -407,7 +407,7 @@ jobs:
             -o spdx-json=sbom-frontend-image-${RELEASE_TAG#v}.spdx.json
 
       - name: Upload frontend image SBOM
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-frontend-image
           path: sbom-frontend-image-*.spdx.json
@@ -420,14 +420,14 @@ jobs:
       - build-frontend-artifact
     steps:
       - name: Download backend packages
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: backend-package-*
           merge-multiple: true
           path: release-assets/backend
 
       - name: Download frontend package
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: frontend-package
           path: release-assets/frontend
@@ -438,7 +438,7 @@ jobs:
           sha256sum release-assets/backend/* release-assets/frontend/* > release-assets/checksums.txt
 
       - name: Upload checksums file
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-checksums
           path: release-assets/checksums.txt
@@ -454,32 +454,32 @@ jobs:
       - checksums
     steps:
       - name: Download backend packages
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: backend-package-*
           merge-multiple: true
           path: release-assets/backend
 
       - name: Download frontend package
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: frontend-package
           path: release-assets/frontend
 
       - name: Download checksums
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-checksums
           path: release-assets
 
       - name: Download backend image SBOM
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: sbom-backend-image
           path: release-assets/sbom
 
       - name: Download frontend image SBOM
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: sbom-frontend-image
           path: release-assets/sbom
