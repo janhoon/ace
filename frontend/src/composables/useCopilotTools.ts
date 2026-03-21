@@ -95,6 +95,63 @@ export function getVictoriaMetricsTools(): ToolDefinition[] {
         },
       },
     },
+    {
+      type: 'function',
+      function: {
+        name: 'generate_dashboard',
+        description:
+          'Generate a complete dashboard from the discovered metrics. Call this after using get_metrics, get_labels, and get_label_values to understand the available data. The dashboard will be previewed for the user before saving.',
+        parameters: {
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              description: 'Dashboard title',
+            },
+            description: {
+              type: 'string',
+              description: 'Brief dashboard description',
+            },
+            panels: {
+              type: 'array',
+              description: 'Array of panel specifications',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', description: 'Panel title' },
+                  type: {
+                    type: 'string',
+                    enum: ['line_chart', 'bar_chart', 'gauge', 'stat', 'table', 'pie'],
+                    description: 'Visualization type',
+                  },
+                  grid_pos: {
+                    type: 'object',
+                    properties: {
+                      x: { type: 'number', description: 'Column position (0-11)' },
+                      y: { type: 'number', description: 'Row position' },
+                      w: { type: 'number', description: 'Width in columns (1-12)' },
+                      h: { type: 'number', description: 'Height in rows' },
+                    },
+                    required: ['x', 'y', 'w', 'h'],
+                  },
+                  query: {
+                    type: 'object',
+                    description: 'Query configuration for this panel',
+                    properties: {
+                      expr: { type: 'string', description: 'PromQL/MetricsQL query expression' },
+                      legend_format: { type: 'string', description: 'Optional legend format string' },
+                    },
+                    required: ['expr'],
+                  },
+                },
+                required: ['title', 'type', 'grid_pos', 'query'],
+              },
+            },
+          },
+          required: ['title', 'panels'],
+        },
+      },
+    },
   ]
 }
 
