@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.1](https://github.com/aceobservability/ace/compare/v0.4.0...v0.4.1) (2026-03-21)
+
+
+### Bug Fixes
+
+* move gitleaks secret check from job-level to step-level if ([ff06cd5](https://github.com/aceobservability/ace/commit/ff06cd508e79c29a02680d34dbc17e2103ff721e))
+* resolve security vulnerabilities and add frontend test IDs ([#119](https://github.com/aceobservability/ace/issues/119)) ([1cf2097](https://github.com/aceobservability/ace/commit/1cf2097ca92031ae19f08b2550d42271f061960a))
+* sync frontend package-lock with package.json ([#117](https://github.com/aceobservability/ace/issues/117)) ([f7c39ae](https://github.com/aceobservability/ace/commit/f7c39aeacc4f3b070270b03c9de9703fc34537d3))
+
 ## [0.4.0](https://github.com/aceobservability/ace/compare/v0.3.0...v0.4.0) (2026-03-18)
 
 
