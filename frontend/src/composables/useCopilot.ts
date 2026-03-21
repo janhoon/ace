@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import type { DashboardSpec } from '../utils/dashboardSpec'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -13,6 +14,7 @@ function getAuthHeaders(): HeadersInit {
 export interface CopilotMessage {
   role: 'user' | 'assistant'
   content: string
+  dashboardSpec?: DashboardSpec
 }
 
 interface CopilotModel {
