@@ -370,16 +370,20 @@ The following current files/patterns are replaced entirely:
 - **Plus Jakarta Sans font** — replaced by Space Grotesk + Inter
 - **Emerald accent** (`#10b981`) — replaced by indigo (`#a3a6ff` / `#6063F1`)
 - **Current sidebar** (`Sidebar.vue`) — icon rail pattern replaced by full collapsible sidebar
-- **Current CopilotPanel** — floating panel replaced by Cmd+K modal + inline AI
+- **Current CopilotPanel** (`CopilotPanel.vue`) — floating panel replaced by Cmd+K modal + inline AI
 - **Separate Explore views** (`Explore.vue`, `ExploreLogs.vue`, `ExploreTraces.vue`) — unified into single view with sub-nav tabs
 - **Separate DataSourceSettings route** — absorbed into Settings
 - **Border-based card/component styling** — replaced by tonal layering
 - **`useTheme` composable** — no light/dark toggle needed (dark-only)
+- **`OrgBrandingSettings.vue`** — absorbed into Settings > General section
+- **`PrivacySettingsView.vue`** — absorbed into Settings
+- **`UserSettingsView.vue`** — absorbed into Settings
 
 ## 8. What Gets Preserved
 
 - **Backend API layer** — all `api/*.ts` files, no backend changes needed
-- **Composables** — `useAuth`, `useOrganization`, `useProm`, `useTimeRange`, `useQueryBuilder`, `useDatasource`, `useAlertManager`, `useVMAlert`
+- **Composables** — `useAuth`, `useOrganization`, `useProm`, `useTimeRange`, `useQueryBuilder`, `useDatasource`, `useAlertManager`, `useVMAlert`, `useAnalytics`, `useOrgBranding`
+- **Copilot composables** — `useCopilot`, `useCopilotTools` — reused by the new Cmd+K modal (adapted from panel-scoped to global-scoped, context pill provides current view info instead of component props)
 - **Chart library** — ECharts + Vue ECharts (rethemed, not replaced)
 - **Grid layout** — `vue3-grid-layout-next` for dashboard panels
 - **Monaco Editor** — for query editing (rethemed)
@@ -387,3 +391,18 @@ The following current files/patterns are replaced entirely:
 - **Router structure** — updated routes but same Vue Router setup
 - **Test infrastructure** — Vitest + Vue Test Utils
 - **Analytics** — PostHog integration
+
+## 9. Views Not Listed Above
+
+These existing views are reskinned but structurally unchanged:
+
+- **`LoginView.vue`** — reskinned with new design tokens (dark surface, Space Grotesk headings, indigo primary buttons). Same auth flow, SSO support.
+- **`DashboardSettingsView.vue`** (`/app/dashboards/:id/settings/:section`) — reskinned. Tabs for general, YAML, permissions remain. Underline tab style, tonal forms.
+- **`DataSourceCreateView.vue`** (`/app/datasources/new` and `/app/datasources/:id/edit`) — reskinned. Accessed from Settings > Data Sources.
+- **Grafana Converter** (`/convert/grafana`) — reskinned with new tokens, low priority.
+
+## 10. Scoping Notes
+
+- **Inline AI surfaces** (anomaly badges, health predictions, root cause suggestions) are scaffolded as UI components with mocked/placeholder data. They do not require new AI backend integration — they reuse the existing copilot composables where applicable.
+- **Explore route migration**: Old routes (`/app/explore/metrics`, `/app/explore/logs`, `/app/explore/traces`) should redirect to new parameterized route (`/app/explore/:type`) to preserve bookmarks.
+- **Services view** is scaffolded without backend wiring — mock data only.
