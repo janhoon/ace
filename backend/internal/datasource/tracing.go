@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -1105,8 +1106,8 @@ func parseTempoSpanSetCount(rawSpanSet interface{}) (int, bool) {
 		return 0, false
 	}
 
-	if matched, ok := anyToInt64(spanSetMap["matched"]); ok {
-		return max(int(matched), 0), true
+	if matched, ok := anyToNonNegativeInt(spanSetMap["matched"]); ok {
+		return matched, true
 	}
 
 	rawSpanList, ok := spanSetMap["spans"].([]interface{})
@@ -1130,8 +1131,11 @@ func parseTempoTraceSearchServiceStats(traceMap map[string]interface{}) (int, in
 			continue
 		}
 
-		if errors, ok := anyToInt64(firstNonNil(statsMap["errorCount"], statsMap["errorSpanCount"], statsMap["errors"])); ok {
-			errorSpanCount += max(int(errors), 0)
+		if errCount, ok := anyToNonNegativeInt(firstNonNil(statsMap["errorCount"], statsMap["errorSpanCount"], statsMap["errors"])); ok {
+			errorSpanCount += errCount
+			if errorSpanCount < 0 {
+				errorSpanCount = math.MaxInt
+			}
 		}
 	}
 
@@ -1294,6 +1298,64 @@ func firstNonNil(values ...interface{}) interface{} {
 	}
 
 	return nil
+}
+
+// anyToNonNegativeInt extracts a non-negative int from an interface value.
+// Unlike anyToInt64, this uses strconv.Atoi for strings (returns int directly)
+// so there is no int64→int narrowing conversion from strconv.ParseInt.
+func anyToNonNegativeInt(value interface{}) (int, bool) {
+	switch typed := value.(type) {
+	case nil:
+		return 0, false
+	case int:
+		return max(typed, 0), true
+	case int64:
+		if typed < 0 {
+			return 0, true
+		}
+		if typed > int64(math.MaxInt) {
+			return math.MaxInt, true
+		}
+		return int(typed), true
+	case float64:
+		if typed < 0 {
+			return 0, true
+		}
+		if typed > float64(math.MaxInt) {
+			return math.MaxInt, true
+		}
+		return int(typed), true
+	case json.Number:
+		if intVal, err := strconv.Atoi(typed.String()); err == nil {
+			return max(intVal, 0), true
+		}
+		if floatVal, err := typed.Float64(); err == nil {
+			if floatVal < 0 {
+				return 0, true
+			}
+			if floatVal > float64(math.MaxInt) {
+				return math.MaxInt, true
+			}
+			return int(floatVal), true
+		}
+	case string:
+		if typed == "" {
+			return 0, false
+		}
+		if intVal, err := strconv.Atoi(typed); err == nil {
+			return max(intVal, 0), true
+		}
+		if floatVal, err := strconv.ParseFloat(typed, 64); err == nil {
+			if floatVal < 0 {
+				return 0, true
+			}
+			if floatVal > float64(math.MaxInt) {
+				return math.MaxInt, true
+			}
+			return int(floatVal), true
+		}
+	}
+	return 0, false
 }
 
 func anyToString(value interface{}) string {
