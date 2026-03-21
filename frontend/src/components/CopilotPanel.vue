@@ -12,10 +12,13 @@ import {
   X,
 } from 'lucide-vue-next'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { type CopilotMessage, useCopilot } from '../composables/useCopilot'
 import { getVictoriaMetricsTools, useCopilotToolExecutor } from '../composables/useCopilotTools'
 import { useOrganization } from '../composables/useOrganization'
+import type { DashboardSpec } from '../utils/dashboardSpec'
 import { initMarkdown, renderMarkdown } from '../utils/markdown'
+import DashboardSpecPreview from './DashboardSpecPreview.vue'
 
 const props = defineProps<{
   datasourceType: string
@@ -50,6 +53,8 @@ const {
 const { executeTool } = useCopilotToolExecutor(() => props.datasourceId)
 
 const { currentOrgId } = useOrganization()
+
+const router = useRouter()
 
 const messages = ref<CopilotMessage[]>([])
 const inputText = ref('')
@@ -217,6 +222,21 @@ async function handleSend() {
       })
 
       for (const toolCall of result.toolCalls) {
+        // Intercept generate_dashboard before executeTool
+        if (toolCall.function.name === 'generate_dashboard') {
+          try {
+            const spec = JSON.parse(toolCall.function.arguments) as DashboardSpec
+            // Inject the current datasource_id into all panels
+            for (const panel of spec.panels) {
+              panel.query.datasource_id = props.datasourceId
+            }
+            assistantMsg.dashboardSpec = spec
+          } catch {
+            assistantMsg.content = 'Dashboard generation failed — try rephrasing your request.'
+          }
+          return // exit handleSend entirely — finally block resets isLoading
+        }
+
         const tcEntry = { name: toolCall.function.name, status: 'running' as const }
         const existing = messageToolCalls.value[assistantIndex] || []
         messageToolCalls.value = { ...messageToolCalls.value, [assistantIndex]: [...existing, tcEntry] }
@@ -257,6 +277,21 @@ function clearChat() {
   messages.value = []
   renderedHtml.value = {}
   messageToolCalls.value = {}
+}
+
+function handleDashboardSaved(dashboardId: string) {
+  router.push(`/app/dashboards/${dashboardId}`)
+}
+
+const promptSuggestions = [
+  'Show me p99 latency for my API endpoints',
+  'Create an overview dashboard for my services',
+  'What\'s my error rate?',
+]
+
+function sendSuggestion(text: string) {
+  inputText.value = text
+  handleSend()
 }
 
 watch(
@@ -431,9 +466,19 @@ onBeforeUnmount(() => {
     <template v-else>
       <!-- Messages -->
       <div ref="messagesContainer" class="flex flex-col gap-3 flex-1 overflow-y-auto p-4">
-        <div v-if="messages.length === 0" class="flex flex-col items-center justify-center gap-2 text-center py-8 flex-1">
+        <div v-if="messages.length === 0" class="flex flex-col items-center justify-center gap-3 text-center py-8 flex-1">
           <Sparkles :size="24" class="text-accent/50" />
           <p class="text-xs text-text-muted m-0">Ask Copilot to help write {{ datasourceType }} queries</p>
+          <div v-if="datasourceType === 'victoriametrics'" class="flex flex-col gap-1.5 w-full px-2">
+            <button
+              v-for="suggestion in promptSuggestions"
+              :key="suggestion"
+              class="text-left text-xs text-text-muted bg-surface-overlay rounded-lg px-3 py-2 cursor-pointer border border-border hover:border-accent/30 hover:text-text-primary transition"
+              @click="sendSuggestion(suggestion)"
+            >
+              {{ suggestion }}
+            </button>
+          </div>
         </div>
 
         <div v-for="(msg, index) in messages" :key="index" class="flex flex-col gap-1">
@@ -450,6 +495,13 @@ onBeforeUnmount(() => {
               <div v-if="renderedHtml[index]" v-html="renderedHtml[index]" />
               <span v-else>{{ msg.content }}</span>
             </div>
+            <!-- Dashboard spec preview -->
+            <DashboardSpecPreview
+              v-if="msg.dashboardSpec"
+              :spec="msg.dashboardSpec"
+              @saved="handleDashboardSaved"
+              class="mt-2"
+            />
             <!-- Tool call indicators -->
             <div v-if="messageToolCalls[index]?.length" class="flex flex-wrap gap-1.5" :class="{ 'mt-1.5': msg.content }">
               <div v-for="(tc, ti) in messageToolCalls[index]" :key="ti" class="tool-chip">
