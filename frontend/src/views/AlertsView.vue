@@ -578,6 +578,7 @@ onUnmounted(() => {
           title="AI Root Cause Analysis"
           :description="`${firingAlerts.length} alert${firingAlerts.length > 1 ? 's' : ''} firing. Possible root cause: elevated resource consumption detected across affected services. Check recent deployments and scaling events.`"
           :timestamp="formattedLastRefreshed || 'just now'"
+          type="anomaly"
           class="mb-4"
         />
 
