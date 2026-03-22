@@ -75,7 +75,6 @@ const saveButtonText = computed(() =>
 const isClickHouseType = computed(() => formType.value === 'clickhouse')
 const isCloudWatchType = computed(() => formType.value === 'cloudwatch')
 const isElasticsearchType = computed(() => formType.value === 'elasticsearch')
-const isVMAlertType = computed(() => formType.value === 'vmalert')
 const showLogCorrelation = computed(() => isLogsType(formType.value) && !isClickHouseType.value)
 const showAuthSettings = computed(
   () =>

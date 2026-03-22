@@ -129,7 +129,7 @@ const activeDatasourceHealthError = computed(() => {
   return datasourceHealthErrors.value[activeDatasource.value.id] || ''
 })
 
-function getTypeLogo(type_: DataSourceType): string {
+function getTypeLogo(type_: DataSourceType): string | undefined {
   return dataSourceTypeLogos[type_]
 }
 
@@ -1085,5 +1085,4 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-  </div>
 </template>

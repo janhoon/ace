@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { EChartsOption } from 'echarts'
 import { BarChart as EChartsBarChart } from 'echarts/charts'
 import {
   GridComponent,
@@ -89,7 +88,7 @@ function formatFullDateTime(timestamp: number): string {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
-const chartOption = computed<EChartsOption>(() => {
+const chartOption = computed(() => {
   const seriesData = props.series.map((s, index) => ({
     name: s.name,
     type: 'bar' as const,

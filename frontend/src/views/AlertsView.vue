@@ -167,15 +167,6 @@ function truncateId(id: string): string {
   return id.length > 8 ? `${id.substring(0, 8)}...` : id
 }
 
-function formatMatchersText(matchers: AMMatcher[]): string {
-  return matchers
-    .map((m) => {
-      const op = m.isEqual ? (m.isRegex ? '=~' : '=') : m.isRegex ? '!~' : '!='
-      return `${m.name}${op}"${m.value}"`
-    })
-    .join(', ')
-}
-
 function formatDateShort(dateStr: string): string {
   if (!dateStr) return '--'
   const d = new Date(dateStr)

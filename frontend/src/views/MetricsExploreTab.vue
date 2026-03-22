@@ -22,7 +22,7 @@ import QueryBuilder from '../components/QueryBuilder.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import { useDatasource } from '../composables/useDatasource'
 import { useOrganization } from '../composables/useOrganization'
-import { type PrometheusQueryResult, transformToChartData } from '../composables/useProm'
+import { type PrometheusQueryData, type PrometheusQueryResult, transformToChartData } from '../composables/useProm'
 import { useQueryEditor } from '../composables/useQueryEditor'
 import { useTimeRange } from '../composables/useTimeRange'
 import type { DataSourceType } from '../types/datasource'
@@ -311,7 +311,7 @@ async function runQuery() {
     } else {
       const metricsResponse: PrometheusQueryResult = {
         status: response.status,
-        data: response.data,
+        data: response.data as PrometheusQueryData | undefined,
         error: response.error,
       }
 
@@ -391,14 +391,7 @@ const activeDatasourceHealthLabel = computed(() => {
   if (activeDatasourceHealth.value === 'checking') return 'Checking...'
   return 'Unknown'
 })
-const activeDatasourceHealthError = computed(() => {
-  if (!activeDatasource.value) {
-    return ''
-  }
-  return datasourceHealthErrors.value[activeDatasource.value.id] || ''
-})
-
-function getTypeLogo(type_: DataSourceType): string {
+function getTypeLogo(type_: DataSourceType): string | undefined {
   return dataSourceTypeLogos[type_]
 }
 

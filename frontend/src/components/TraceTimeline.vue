@@ -351,7 +351,7 @@ function rowBgFill(rowIndex: number): string {
 
     <div class="flex flex-wrap gap-2">
       <span
-        v-for="(color, serviceName) in serviceColorMap"
+        v-for="[serviceName, color] in serviceColorMap"
         :key="serviceName"
         class="inline-flex items-center gap-1.5 rounded-sm bg-[var(--color-surface-container-high)] px-2.5 py-1 text-xs text-[var(--color-outline)]"
       >

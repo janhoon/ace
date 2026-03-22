@@ -4,7 +4,7 @@ import { LineChart } from 'echarts/charts'
 import { GridComponent } from 'echarts/components'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { Minus, TrendingDown, TrendingUp } from 'lucide-vue-next'
+import { TrendingDown, TrendingUp } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import VChart from 'vue-echarts'
 
@@ -232,12 +232,10 @@ onUnmounted(() => {
         :class="{
           'text-[var(--color-secondary)]': trend === 'up',
           'text-[var(--color-error)]': trend === 'down',
-          'text-[var(--color-outline)]': trend === 'neutral',
         }"
       >
         <TrendingUp v-if="trend === 'up'" :size="16" />
         <TrendingDown v-if="trend === 'down'" :size="16" />
-        <Minus v-if="trend === 'neutral'" :size="16" />
         <span v-if="trendPercentage" class="tabular-nums">
           {{ trend === 'up' ? '+' : '' }}{{ trendPercentage }}%
         </span>

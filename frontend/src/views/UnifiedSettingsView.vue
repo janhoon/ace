@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { UserPlus, Trash2, Shield, Edit2, Users, Database, Palette, Bot, Lock } from 'lucide-vue-next'
+import { UserPlus, Trash2, Shield, Edit2, Users, Database, Bot, Lock } from 'lucide-vue-next'
 import type { Organization, Member, MembershipRole } from '../types/organization'
 import type { UserGroup, UserGroupMembership } from '../types/rbac'
 import {
@@ -16,11 +16,8 @@ import {
 import {
   listGroups,
   createGroup,
-  updateGroup,
   deleteGroup,
   listGroupMembers,
-  addGroupMember,
-  removeGroupMember,
 } from '../api/groups'
 import {
   getGoogleSSOConfig,
@@ -78,13 +75,11 @@ const createGroupLoading = ref(false)
 const editingGroupId = ref<string | null>(null)
 const editGroupName = ref('')
 const editGroupDescription = ref('')
-const groupUpdateLoading = ref(false)
 
 const expandedGroupIds = ref<string[]>([])
 const groupMembersById = ref<Record<string, UserGroupMembership[]>>({})
 const groupMembersLoading = ref<Record<string, boolean>>({})
 const groupMembersError = ref<Record<string, string | null>>({})
-const addMemberUserId = ref<Record<string, string>>({})
 const groupMemberActionLoading = ref<Record<string, boolean>>({})
 
 // SSO settings
@@ -110,7 +105,6 @@ type SsoProviderKey = 'google' | 'microsoft'
 
 const activeSsoProvider = ref<SsoProviderKey | null>(null)
 const ssoDialogOpen = ref(false)
-const ssoSelectionMode = ref<'configure' | 'add'>('configure')
 const ssoStep = ref<'picker' | 'form'>('picker')
 const ssoProviders = computed(() => [
   { key: 'google' as const, name: 'Google', configured: googleConfigured.value, enabled: googleEnabled.value },
@@ -318,24 +312,6 @@ async function handleCreateGroup() {
 }
 
 function startEditGroup(group: UserGroup) { editingGroupId.value = group.id; editGroupName.value = group.name; editGroupDescription.value = group.description || ''; resetGroupMessages() }
-function cancelEditGroup() { editingGroupId.value = null; editGroupName.value = ''; editGroupDescription.value = ''; resetGroupMessages() }
-
-async function handleUpdateGroup(group: UserGroup) {
-  const name = editGroupName.value.trim()
-  if (!name) { groupActionError.value = 'Group name is required'; return }
-  groupUpdateLoading.value = true
-  resetGroupMessages()
-  try {
-    await updateGroup(orgId.value, group.id, { name, description: editGroupDescription.value.trim() || undefined })
-    groupMessage.value = 'Group updated'
-    editingGroupId.value = null; editGroupName.value = ''; editGroupDescription.value = ''
-    await loadGroups()
-  } catch (e) {
-    groupActionError.value = e instanceof Error ? e.message : 'Failed to update group'
-  } finally {
-    groupUpdateLoading.value = false
-  }
-}
 
 async function handleDeleteGroup(group: UserGroup) {
   if (!confirm(`Delete group "${group.name}"?`)) return
@@ -355,11 +331,6 @@ async function handleDeleteGroup(group: UserGroup) {
 
 function isGroupExpanded(groupId: string) { return expandedGroupIds.value.includes(groupId) }
 function groupMemberCount(groupId: string) { return groupMembersById.value[groupId]?.length || 0 }
-function availableMembersForGroup(groupId: string) {
-  const existing = new Set((groupMembersById.value[groupId] || []).map((m) => m.user_id))
-  return members.value.filter((m) => !existing.has(m.user_id))
-}
-
 async function loadGroupMembers(groupId: string) {
   groupMembersLoading.value = { ...groupMembersLoading.value, [groupId]: true }
   groupMembersError.value = { ...groupMembersError.value, [groupId]: null }
@@ -376,40 +347,6 @@ async function toggleGroupMembers(groupId: string) {
   if (isGroupExpanded(groupId)) { expandedGroupIds.value = expandedGroupIds.value.filter((id) => id !== groupId); return }
   expandedGroupIds.value = [...expandedGroupIds.value, groupId]
   if (!groupMembersById.value[groupId] && !groupMembersLoading.value[groupId]) { await loadGroupMembers(groupId) }
-}
-
-async function handleAddGroupMember(groupId: string) {
-  const userId = addMemberUserId.value[groupId]
-  if (!userId) { groupMembersError.value = { ...groupMembersError.value, [groupId]: 'Select a member to add' }; return }
-  groupMemberActionLoading.value = { ...groupMemberActionLoading.value, [groupId]: true }
-  groupMembersError.value = { ...groupMembersError.value, [groupId]: null }
-  resetGroupMessages()
-  try {
-    await addGroupMember(orgId.value, groupId, { user_id: userId })
-    addMemberUserId.value = { ...addMemberUserId.value, [groupId]: '' }
-    groupMessage.value = 'Group member added'
-    await loadGroupMembers(groupId)
-  } catch (e) {
-    groupMembersError.value = { ...groupMembersError.value, [groupId]: e instanceof Error ? e.message : 'Failed to add member' }
-  } finally {
-    groupMemberActionLoading.value = { ...groupMemberActionLoading.value, [groupId]: false }
-  }
-}
-
-async function handleRemoveGroupMember(groupId: string, membership: UserGroupMembership) {
-  if (!confirm(`Remove ${membership.email} from this group?`)) return
-  groupMemberActionLoading.value = { ...groupMemberActionLoading.value, [groupId]: true }
-  groupMembersError.value = { ...groupMembersError.value, [groupId]: null }
-  resetGroupMessages()
-  try {
-    await removeGroupMember(orgId.value, groupId, membership.user_id)
-    groupMessage.value = 'Group member removed'
-    await loadGroupMembers(groupId)
-  } catch (e) {
-    groupMembersError.value = { ...groupMembersError.value, [groupId]: e instanceof Error ? e.message : 'Failed to remove member' }
-  } finally {
-    groupMemberActionLoading.value = { ...groupMemberActionLoading.value, [groupId]: false }
-  }
 }
 
 // --- SSO ---

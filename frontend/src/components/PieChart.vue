@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { EChartsOption } from 'echarts'
 import { PieChart as EChartsPieChart } from 'echarts/charts'
 import { LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import { use } from 'echarts/core'
@@ -71,7 +70,7 @@ function getPercentage(value: number): string {
   return `${((value / total.value) * 100).toFixed(1)}%`
 }
 
-const chartOption = computed<EChartsOption>(() => {
+const chartOption = computed(() => {
   const radius = props.displayAs === 'donut' ? ['40%', '70%'] : [0, '70%']
 
   return {
