@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import App from './App.vue'
 
-// Mock composables — useSidebar no longer exports isOpen/open/close/toggle
+const mockPinnedSection = ref<string | null>(null)
 vi.mock('./composables/useSidebar', () => ({
   useSidebar: () => ({
     hoveredSection: ref(null),
-    pinnedSection: ref(null),
+    pinnedSection: mockPinnedSection,
     isPeeking: ref(false),
     activeFlyoutSection: ref(null),
     currentRouteSection: ref('dashboards'),
@@ -140,7 +140,8 @@ describe('App', () => {
     expect(wrapper.findComponent({ name: 'CmdKModal' }).exists()).toBe(true)
   })
 
-  it('applies 52px left margin when sidebar is shown', () => {
+  it('applies 52px left margin when sidebar is shown and flyout is not pinned', () => {
+    mockPinnedSection.value = null
     const wrapper = mount(App, {
       global: {
         stubs: {
@@ -155,5 +156,23 @@ describe('App', () => {
     })
     const main = wrapper.find('main')
     expect(main.element.style.marginLeft).toBe('52px')
+  })
+
+  it('applies 292px left margin when flyout is pinned', () => {
+    mockPinnedSection.value = 'explore'
+    const wrapper = mount(App, {
+      global: {
+        stubs: {
+          RouterView: true,
+          AppSidebar: true,
+          CmdKModal: true,
+          ShortcutsOverlay: true,
+          ToastNotification: true,
+          CookieConsentBanner: true,
+        },
+      },
+    })
+    const main = wrapper.find('main')
+    expect(main.element.style.marginLeft).toBe('292px')
   })
 })

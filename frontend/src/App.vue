@@ -11,10 +11,12 @@ import { useDatasource } from './composables/useDatasource'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 import { useOrgBranding } from './composables/useOrgBranding'
 import { useOrganization } from './composables/useOrganization'
+import { useSidebar } from './composables/useSidebar'
 
 const route = useRoute()
 const router = useRouter()
 const { isAuthenticated } = useAuth()
+const { pinnedSection } = useSidebar()
 const { register } = useKeyboardShortcuts()
 const { currentOrg, fetchOrganizations } = useOrganization()
 const { fetchDatasources } = useDatasource()
@@ -26,6 +28,7 @@ const showSidebar = computed(() => {
 
 const mainMargin = computed(() => {
   if (!showSidebar.value) return {}
+  if (pinnedSection.value) return { marginLeft: '292px' }
   return { marginLeft: '52px' }
 })
 
