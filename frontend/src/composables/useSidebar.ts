@@ -129,21 +129,31 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
-window.addEventListener('keydown', handleKeydown)
+let listenerRegistered = false
 
 function _reset() {
   clearTimers()
   clearAutoCloseTimer()
   hoveredSection.value = null
   pinnedSection.value = null
+  cachedRoutePath = null
+  router = null
 }
 
 export function useSidebar() {
   const route = useRoute()
   const routerInstance = useRouter()
 
-  cachedRoutePath = { get value() { return route.path } }
-  router = routerInstance
+  // Initialise router/route cache once — prevents silent overwrite from multiple callers
+  if (!cachedRoutePath) {
+    cachedRoutePath = { get value() { return route.path } }
+    router = routerInstance
+  }
+
+  if (!listenerRegistered) {
+    window.addEventListener('keydown', handleKeydown)
+    listenerRegistered = true
+  }
 
   const currentRouteSection = computed(() => routeToSection(route.path))
 

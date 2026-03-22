@@ -2,6 +2,7 @@
 import { Check, Keyboard, LogOut } from 'lucide-vue-next'
 import { onMounted, onUnmounted } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { useOrganization } from '../composables/useOrganization'
 
 const props = defineProps<{
@@ -13,6 +14,7 @@ const emit = defineEmits<{
 }>()
 
 const { user, logout } = useAuth()
+const { showHelp } = useKeyboardShortcuts()
 const { organizations, currentOrg, selectOrganization } = useOrganization()
 
 function handleSelectOrg(orgId: string) {
@@ -22,6 +24,11 @@ function handleSelectOrg(orgId: string) {
 
 function handleLogout() {
   logout()
+  emit('close')
+}
+
+function handleShowShortcuts() {
+  showHelp.value = true
   emit('close')
 }
 
@@ -101,6 +108,7 @@ onUnmounted(() => {
         data-testid="user-menu-shortcuts"
         class="flex w-full items-center gap-2 px-4 py-2 text-sm cursor-pointer border-none bg-transparent"
         :style="{ color: 'var(--color-on-surface-variant)' }"
+        @click="handleShowShortcuts"
       >
         <Keyboard :size="14" />
         <span>Keyboard shortcuts</span>

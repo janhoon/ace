@@ -73,7 +73,7 @@ const sectionConfigs: Record<string, SectionConfig> = {
 const config = computed(() => sectionConfigs[props.section] ?? null)
 
 function isSubNavActive(item: SubNavItem): boolean {
-  return route.path.startsWith(item.path)
+  return route.path === item.path || route.path.startsWith(`${item.path}/`)
 }
 
 const searchPlaceholder = computed(() => {
@@ -149,7 +149,7 @@ const searchPlaceholder = computed(() => {
           fontSize: '13px',
           fontWeight: isSubNavActive(item) ? '500' : '400',
           color: isSubNavActive(item) ? 'var(--color-primary)' : 'var(--color-on-surface-variant)',
-          backgroundColor: isSubNavActive(item) ? 'rgba(229,160,13,0.10)' : 'transparent',
+          backgroundColor: isSubNavActive(item) ? 'var(--color-primary-muted)' : 'transparent',
           borderLeft: isSubNavActive(item) ? '2px solid var(--color-primary)' : '2px solid transparent',
         }"
         @click="emit('navigate', item.path)"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSidebar } from '../composables/useSidebar'
 import SidebarFlyout from './SidebarFlyout.vue'
@@ -48,10 +48,9 @@ function closeUserMenu() {
   userMenuOpen.value = false
 }
 
-// The rail shows the active section based on pinned state or current route
-function railActiveSection(): string | null {
-  return pinnedSection.value || currentRouteSection.value
-}
+const railActiveSection = computed<string | null>(
+  () => pinnedSection.value || currentRouteSection.value,
+)
 </script>
 
 <template>
@@ -66,7 +65,7 @@ function railActiveSection(): string | null {
     />
 
     <SidebarRail
-      :active-section="railActiveSection()"
+      :active-section="railActiveSection"
       @hover="handleMouseEnter"
       @hover-end="handleMouseLeave"
       @select="handleRailSelect"
