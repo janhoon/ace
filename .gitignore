@@ -60,3 +60,4 @@ agent/**
 # Local progress tracker
 /progress.txt
 .gstack/
+.superpowers/
