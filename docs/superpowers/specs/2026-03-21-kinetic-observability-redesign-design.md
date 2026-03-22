@@ -314,6 +314,8 @@ Guided AI dashboard creation:
 
 Also accessible via Cmd+K ("create a dashboard for API latency").
 
+**Error handling:** If the AI returns a malformed or invalid spec, show an inline error in the preview step: "Couldn't generate a valid dashboard — try rephrasing your request" with a "Try Again" button. Do not silently fail or show a broken preview.
+
 ### 5.4 Services Overview
 
 **Route:** `/app/services`
