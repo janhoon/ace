@@ -423,30 +423,7 @@ async function handleSaveMicrosoftSSO() {
 
 <template>
   <div class="flex flex-1 min-h-0" :style="{ color: 'var(--color-on-surface)' }">
-    <!-- Vertical tab navigation -->
-    <nav
-      class="flex flex-col w-[200px] shrink-0 py-6 px-3 gap-1"
-      :style="{ backgroundColor: 'var(--color-surface-container-low)' }"
-      data-testid="settings-nav"
-    >
-      <h2 class="text-xs font-semibold uppercase tracking-wider px-3 mb-3" :style="{ color: 'var(--color-outline)' }">Settings</h2>
-      <button
-        v-for="section in settingsSections"
-        :key="section.key"
-        class="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition bg-transparent border-none text-left"
-        :style="{
-          backgroundColor: activeSection === section.key ? 'var(--color-surface-container-high)' : 'transparent',
-          color: activeSection === section.key ? 'var(--color-primary)' : 'var(--color-on-surface-variant)',
-        }"
-        :data-testid="`settings-nav-${section.key}`"
-        @click="navigateToSection(section.key)"
-      >
-        <component :is="section.icon" :size="16" />
-        {{ section.label }}
-      </button>
-    </nav>
-
-    <!-- Content area -->
+    <!-- Content area (section nav is now in the sidebar flyout) -->
     <div class="flex-1 overflow-y-auto px-8 py-6">
       <!-- Loading -->
       <div v-if="loading" class="text-center py-8" :style="{ color: 'var(--color-outline)' }">Loading...</div>
