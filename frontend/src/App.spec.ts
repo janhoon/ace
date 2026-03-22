@@ -25,6 +25,15 @@ vi.mock('./composables/useOrganization', () => ({
   useOrganization: () => ({
     currentOrg: ref({ id: 'org-1', name: 'Test' }),
     currentOrgId: ref('org-1'),
+    fetchOrganizations: vi.fn().mockResolvedValue(undefined),
+  }),
+}))
+
+vi.mock('./composables/useDatasource', () => ({
+  useDatasource: () => ({
+    fetchDatasources: vi.fn().mockResolvedValue(undefined),
+    metricsDatasources: ref([]),
+    alertingDatasources: ref([]),
   }),
 }))
 
