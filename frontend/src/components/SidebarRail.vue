@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {
-  Activity,
-  AlertTriangle,
-  LayoutGrid,
-  Search,
-  Settings,
-  Sparkles,
-} from 'lucide-vue-next'
+import { Activity, AlertTriangle, LayoutGrid, Search, Settings, Sparkles } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useOrganization } from '../composables/useOrganization'

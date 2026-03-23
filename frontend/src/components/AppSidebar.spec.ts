@@ -231,7 +231,7 @@ describe('AppSidebar', () => {
     })
 
     it('shows ? when no org is selected', async () => {
-      mockCurrentOrg.value = null as any
+      mockCurrentOrg.value = null as unknown as typeof mockCurrentOrg.value
       wrapper = createWrapper()
       const orgBtn = wrapper.find('[data-testid="rail-org-selector"]')
       expect(orgBtn.text()).toBe('?')
