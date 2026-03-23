@@ -82,7 +82,7 @@ const chartOption = computed(() => {
           <span style="display: inline-block; width: 10px; height: 10px; background: ${params.color || chartPalette[0]}; border-radius: 50%;"></span>
           <span style="color: ${chartColors.label};">${params.name}</span>
         </div>
-        <div style="margin-top: 4px; font-weight: 600; font-family: ${chartColors.fontMono}; color: #fdfbfe;">
+        <div style="margin-top: 4px; font-weight: 600; font-family: ${chartColors.fontMono}; color: #F3F1EA;">
           ${params.value.toLocaleString()} (${percent})
         </div>`
       },
@@ -135,7 +135,7 @@ const chartOption = computed(() => {
             show: true,
             fontSize: 12,
             fontWeight: 600,
-            color: '#fdfbfe',
+            color: '#F3F1EA',
           },
         },
         data: props.data.map((item, index) => ({

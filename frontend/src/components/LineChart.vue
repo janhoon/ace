@@ -133,7 +133,7 @@ const chartOption = computed(() => {
           result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
             <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%;"></span>
             <span style="color: ${chartColors.label}; font-size: 12px;">${param.seriesName}:</span>
-            <span style="font-weight: 600; font-family: JetBrains Mono, monospace; color: #fdfbfe;">${value}</span>
+            <span style="font-weight: 600; font-family: JetBrains Mono, monospace; color: #F3F1EA;">${value}</span>
           </div>`
         }
         return result
