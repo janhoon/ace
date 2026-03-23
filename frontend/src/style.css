@@ -57,6 +57,18 @@
   --overlay-press: rgba(255,255,255,0.08);
   --overlay-focus: rgba(201,150,15,0.16);
   --selected-fill: rgba(201,150,15,0.14);
+
+  /* Data visualization palette */
+  --color-viz-0: #4D8BBD;
+  --color-viz-1: #C65D3A;
+  --color-viz-2: #7A9E46;
+  --color-viz-3: #8B6FB3;
+  --color-viz-4: #D4A11E;
+  --color-viz-5: #3FA7A3;
+  --color-viz-6: #CB6F8A;
+  --color-viz-7: #A7B0BA;
+  --color-viz-8: #6C7C94;
+  --color-viz-9: #E07B39;
 }
 
 @theme {
@@ -107,6 +119,18 @@
   --overlay-press: var(--overlay-press);
   --overlay-focus: var(--overlay-focus);
   --selected-fill: var(--selected-fill);
+
+  /* Data visualization palette */
+  --color-viz-0: var(--color-viz-0);
+  --color-viz-1: var(--color-viz-1);
+  --color-viz-2: var(--color-viz-2);
+  --color-viz-3: var(--color-viz-3);
+  --color-viz-4: var(--color-viz-4);
+  --color-viz-5: var(--color-viz-5);
+  --color-viz-6: var(--color-viz-6);
+  --color-viz-7: var(--color-viz-7);
+  --color-viz-8: var(--color-viz-8);
+  --color-viz-9: var(--color-viz-9);
 }
 
 /* ─── Base styles ─── */
