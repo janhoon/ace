@@ -60,7 +60,7 @@ function isActive(id: string): boolean {
     data-testid="sidebar-rail"
     class="fixed left-0 top-0 bottom-0 z-50 flex flex-col items-center py-3 gap-1"
     :style="{
-      width: '52px',
+      width: 'var(--sidebar-rail-width)',
       backgroundColor: 'var(--color-surface)',
     }"
   >
@@ -73,7 +73,7 @@ function isActive(id: string): boolean {
         height: '32px',
         background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))',
         borderRadius: '8px',
-        color: '#0C0D0F',
+        color: '#0B0D0F',
         fontWeight: '700',
         fontSize: '14px',
         fontFamily: 'var(--font-display)',
