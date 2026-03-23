@@ -117,15 +117,15 @@ const railActiveSection = computed<string | null>(
       @close="closeUserMenu"
     />
 
-    <!-- Org switcher popup -->
+    <!-- Org switcher popup — positioned relative to rail (52px wide) + logo area -->
     <div
       v-if="orgMenuOpen"
       ref="orgMenuRef"
       data-testid="org-switcher-popup"
       class="fixed z-[60] overflow-hidden animate-fade-in"
       :style="{
-        left: '56px',
-        top: '48px',
+        left: 'calc(52px + 4px)',
+        top: 'calc(12px + 32px + 4px)',
         width: '220px',
         backgroundColor: 'var(--color-surface-bright)',
         borderRadius: '8px',

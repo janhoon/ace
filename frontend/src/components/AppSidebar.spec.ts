@@ -91,6 +91,7 @@ describe('AppSidebar', () => {
     mockIsPeeking.value = false
     mockActiveFlyoutSection.value = null
     mockCurrentRouteSection.value = 'dashboards'
+    mockCurrentOrg.value = { id: 'org-1', name: 'Test Org', role: 'admin' }
     mockRoutePath.value = '/app/dashboards'
     mockUser.value = { email: 'jane@example.com', name: 'Jane Doe' }
   })

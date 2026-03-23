@@ -91,7 +91,7 @@ function isActive(id: string): boolean {
     <!-- Org selector -->
     <button
       data-testid="rail-org-selector"
-      class="flex items-center justify-center shrink-0 cursor-pointer border-none mb-2 transition-colors duration-150"
+      class="flex items-center justify-center shrink-0 cursor-pointer mb-2 transition-colors duration-150"
       :style="{
         width: '32px',
         height: '32px',
