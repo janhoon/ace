@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.7.0] - 2026-03-23
+
+### Added
+
+* Per-user GitHub Copilot device flow authentication in Settings > AI Configuration — any user can connect their own Copilot subscription without admin-configured OAuth credentials
+* Cmd+K command palette with dashboard search — filter dashboards by title/description with keyboard navigation
+* AI chat mode in Cmd+K powered by GitHub Copilot — multi-turn tool-calling loop with metric exploration and dashboard generation via DashboardSpecPreview
+* Model selector dropdown in Cmd+K chat for choosing between available Copilot models
+* Datasource context awareness — Cmd+K chat uses the current view's datasource type and ID
+
+### Changed
+
+* Refactored `useCopilot` composable to shared module-level state so connection status is consistent across Settings and Cmd+K
+* Renamed `getVictoriaMetricsTools` to `getMetricsTools` with generic tool descriptions to support both VictoriaMetrics and Prometheus datasources
+* Added `datasourceType` and `datasourceName` fields to `CommandContext` interface
+
+### Removed
+
+* Admin-only GitHub OAuth App configuration form (`GitHubAppSettings.vue`) — replaced by per-user device flow
+* Unused `getGitHubAppConfig` and `configureGitHubApp` API functions and their types
+
 ## [0.6.1] - 2026-03-23
 
 ### Fixed
