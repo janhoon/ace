@@ -9,6 +9,7 @@ import {
 } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import { useOrganization } from '../composables/useOrganization'
 
 const props = defineProps<{
   activeSection: string | null
@@ -19,9 +20,16 @@ const emit = defineEmits<{
   hoverEnd: []
   select: [sectionId: string]
   avatarClick: []
+  orgClick: []
 }>()
 
 const { user } = useAuth()
+const { currentOrg } = useOrganization()
+
+const orgInitial = computed(() => {
+  if (!currentOrg.value?.name) return '?'
+  return currentOrg.value.name.charAt(0).toUpperCase()
+})
 
 interface RailItem {
   id: string
@@ -79,6 +87,25 @@ function isActive(id: string): boolean {
         fontFamily: 'var(--font-display)',
       }"
     >A</div>
+
+    <!-- Org selector -->
+    <button
+      data-testid="rail-org-selector"
+      class="flex items-center justify-center shrink-0 cursor-pointer border-none mb-2 transition-colors duration-150"
+      :style="{
+        width: '32px',
+        height: '32px',
+        borderRadius: '6px',
+        backgroundColor: 'var(--color-surface-container-high)',
+        border: '1px solid var(--color-outline-variant)',
+        color: 'var(--color-on-surface-variant)',
+        fontSize: '12px',
+        fontWeight: '600',
+        fontFamily: 'var(--font-display)',
+      }"
+      :title="currentOrg?.name || 'Select organization'"
+      @click="emit('orgClick')"
+    >{{ orgInitial }}</button>
 
     <!-- Nav icons -->
     <button
