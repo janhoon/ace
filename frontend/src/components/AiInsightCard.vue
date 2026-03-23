@@ -1,67 +1,53 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   title: string
   description: string
   timestamp: string
+  type: 'anomaly' | 'optimization' | 'forecast'
 }>()
+
+const colorMap = {
+  anomaly: { border: '#E5A00D', bg: 'rgba(229,160,13,0.05)' },
+  optimization: { border: '#60A5FA', bg: 'rgba(96,165,250,0.05)' },
+  forecast: { border: '#F97316', bg: 'rgba(249,115,22,0.05)' },
+}
+
+const cardStyle = computed(() => {
+  const colors = colorMap[props.type]
+  return {
+    borderLeft: `2px solid ${colors.border}`,
+    backgroundColor: colors.bg,
+    borderRadius: '0 8px 8px 0',
+    padding: '10px 12px',
+  }
+})
 </script>
 
 <template>
   <div
     data-testid="ai-insight-card"
-    class="rounded-lg p-4"
-    :style="{
-      backgroundColor: 'color-mix(in srgb, var(--color-surface-container-highest) 80%, transparent)',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-      borderTop: '2px solid transparent',
-      borderImage: 'linear-gradient(to right, var(--color-primary), var(--color-primary-dim)) 1',
-      borderImageSlice: '1',
-      position: 'relative',
-      overflow: 'hidden',
-    }"
+    :style="cardStyle"
   >
-    <!-- Background tint -->
-    <div
-      class="absolute inset-0 pointer-events-none"
-      :style="{
-        backgroundColor: 'var(--color-primary)',
-        opacity: 0.05,
-        borderRadius: '0.5rem',
-      }"
-    />
-
-    <div class="relative">
-      <div class="flex items-center gap-2">
-        <!-- AI gradient icon -->
-        <span
-          class="inline-block shrink-0"
-          :style="{
-            width: '16px',
-            height: '16px',
-            borderRadius: '3px',
-            background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))',
-          }"
-        />
-        <h4
-          class="font-display text-sm font-semibold"
-          :style="{ color: 'var(--color-on-surface)' }"
-        >
-          {{ title }}
-        </h4>
-      </div>
-      <p
-        class="mt-2 text-sm"
-        :style="{ color: 'var(--color-on-surface-variant)' }"
-      >
-        {{ description }}
-      </p>
-      <time
-        class="mt-2 block text-xs"
-        :style="{ color: 'var(--color-outline)' }"
-      >
-        {{ timestamp }}
-      </time>
-    </div>
+    <h4
+      class="text-sm font-semibold"
+      :style="{ color: 'var(--color-on-surface)' }"
+    >
+      {{ title }}
+    </h4>
+    <p
+      class="mt-1 text-sm"
+      :style="{ color: 'var(--color-on-surface-variant)' }"
+    >
+      {{ description }}
+    </p>
+    <time
+      class="mt-1 block text-xs"
+      :style="{ color: 'var(--color-outline)' }"
+      :datetime="timestamp"
+    >
+      {{ timestamp }}
+    </time>
   </div>
 </template>

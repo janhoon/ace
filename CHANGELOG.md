@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.6.0] - 2026-03-22
+
+### Added
+
+* Kinetic design system — warm amber palette, Satoshi/DM Sans typography, industrial-utilitarian aesthetic replacing the previous Deep Space theme
+* Home page "Hero + Panels" redesign — cinematic AI search hero with ambient amber glow, two-column health/insights panels with tinted problem rows and type-coded insight cards
+* Icon rail + flyout sidebar — replaces hamburger menu with a 52px icon strip and hoverable/pinnable flyout navigation
+* StatusDot automatic glow pulse — critical and warning service indicators now breathe with a box-shadow glow animation
+* AiInsightCard type system — anomaly (amber), optimization (blue), and forecast (orange) color-coded left-border accents
+* Unified Settings and Explore views — tabbed layouts consolidating previously separate pages
+* Services Overview, Dashboard AI Generation, and Cmd+K command palette
+
+### Changed
+
+* All chart components rethemed with transparent backgrounds and monospace metrics
+* Dashboard detail view updated with AI anomaly badges and refresh indicator
+* Alert Explorer redesigned with dense table layout and expandable rows
+
 ## [0.5.0](https://github.com/aceobservability/ace/compare/v0.4.1...v0.5.0) (2026-03-21)
 
 

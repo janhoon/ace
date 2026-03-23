@@ -98,7 +98,7 @@ describe('HomeView', () => {
           }),
           AiInsightCard: defineComponent({
             name: 'AiInsightCard',
-            props: ['title', 'description', 'timestamp'],
+            props: ['title', 'description', 'timestamp', 'type'],
             setup(props) {
               return () =>
                 h('div', { 'data-testid': 'ai-insight-card' }, props.title)
@@ -149,10 +149,10 @@ describe('HomeView', () => {
   })
 
   // --- 3. Recent AI Insights ---
-  it('renders the "Recent AI Insights" section with AiInsightCard components', () => {
+  it('renders the "AI Insights" section with AiInsightCard components', () => {
     wrapper = createWrapper()
 
-    expect(wrapper.text()).toContain('Recent AI Insights')
+    expect(wrapper.text()).toContain('AI Insights')
     const insightCards = wrapper.findAll('[data-testid="ai-insight-card"]')
     expect(insightCards.length).toBeGreaterThanOrEqual(1)
   })
@@ -266,12 +266,12 @@ describe('HomeView', () => {
     expect(firstCard.text()).toBeTruthy()
   })
 
-  it('AI command input section has glassmorphic styling with backdrop-blur', () => {
+  it('AI command input section has gradient background styling', () => {
     wrapper = createWrapper()
 
     const inputSection = wrapper.find('[data-testid="ai-command-input"]')
     expect(inputSection.exists()).toBe(true)
     const style = inputSection.attributes('style') || ''
-    expect(style).toContain('backdrop-filter')
+    expect(style).toContain('linear-gradient')
   })
 })

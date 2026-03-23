@@ -14,7 +14,7 @@ const { favorites, recentDashboards } = useFavorites()
 // Data source flag — in a real app this would come from an API/store.
 // For now, check localStorage for a mock flag.
 const hasDataSources = computed(() => {
-  return localStorage.getItem('ace-has-datasources') !== 'false'
+  return localStorage.getItem('ace-has-datasources') === 'true'
 })
 
 // Onboarding banner visibility — check if user dismissed it
@@ -38,16 +38,19 @@ const aiInsights = [
     title: 'Anomaly Detected',
     description: 'CPU usage on API Gateway spiked 40% above baseline at 14:32 UTC.',
     timestamp: '2 minutes ago',
+    type: 'anomaly' as const,
   },
   {
     title: 'Optimization Suggestion',
     description: 'Database query latency can be reduced by 30% with index on users.email.',
     timestamp: '15 minutes ago',
+    type: 'optimization' as const,
   },
   {
     title: 'Capacity Forecast',
     description: 'Message Queue will reach 80% capacity in approximately 3 days at current growth rate.',
     timestamp: '1 hour ago',
+    type: 'forecast' as const,
   },
 ]
 
@@ -77,33 +80,65 @@ onUnmounted(() => {
   </div>
 
   <!-- Normal state -->
-  <div v-else class="px-6 py-8 max-w-[1600px] mx-auto space-y-8">
-    <!-- 1. AI Command Input -->
+  <div v-else class="px-6 py-8 max-w-[1600px] mx-auto space-y-8 relative overflow-hidden">
+    <!-- Ambient radial glow -->
+    <div
+      class="absolute pointer-events-none"
+      :style="{
+        top: '-60px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '600px',
+        height: '300px',
+        background: 'radial-gradient(ellipse 60% 50%, rgba(229,160,13,0.10), rgba(229,160,13,0.03) 50%, transparent 80%)',
+        zIndex: 0,
+      }"
+    />
+
+    <!-- 1. Hero AI Command Input -->
     <div
       data-testid="ai-command-input"
-      class="rounded-2xl p-8 text-center"
+      class="rounded-2xl p-8 text-center relative overflow-hidden animate-fade-in"
       :style="{
-        backgroundColor: 'color-mix(in srgb, var(--color-surface-container-highest) 80%, transparent)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid var(--color-outline-variant)',
+        background: 'linear-gradient(180deg, var(--color-surface-container-low) 0%, var(--color-surface) 100%)',
+        border: '1px solid rgba(229,160,13,0.12)',
+        zIndex: 1,
       }"
     >
+      <!-- Amber glow line -->
+      <div
+        class="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-[200px]"
+        :style="{
+          background: 'linear-gradient(90deg, transparent, var(--color-primary), transparent)',
+        }"
+      />
+
       <h1
-        class="font-display text-2xl font-semibold mb-4"
-        :style="{ color: 'var(--color-on-surface)' }"
+        class="font-display font-bold mb-4"
+        :style="{
+          color: 'var(--color-on-surface)',
+          fontSize: '32px',
+          letterSpacing: '-0.04em',
+        }"
       >
         Ask Ace anything
       </h1>
       <div
-        class="mx-auto max-w-xl rounded-xl px-5 py-3 text-left text-sm cursor-pointer transition-colors"
+        class="mx-auto max-w-[480px] rounded-xl px-4 py-3 text-left text-sm cursor-pointer transition-colors flex items-center justify-between"
         :style="{
-          backgroundColor: 'var(--color-surface-container-low)',
+          backgroundColor: 'var(--color-surface-container-high)',
           color: 'var(--color-on-surface-variant)',
           border: '1px solid var(--color-outline-variant)',
         }"
       >
         <span class="opacity-60">Search services, query data, generate dashboards...</span>
+        <kbd
+          class="text-[9px] shrink-0 ml-3 px-1.5 py-0.5 rounded"
+          :style="{
+            border: '1px solid var(--color-outline-variant)',
+            color: 'var(--color-outline)',
+          }"
+        >&#8984;K</kbd>
       </div>
     </div>
 
@@ -162,69 +197,127 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <!-- 5. System Health Grid -->
-    <section data-testid="system-health-grid">
-      <h2
-        class="font-display text-lg font-semibold mb-4"
-        :style="{ color: 'var(--color-on-surface)' }"
+    <!-- 5. Two-Column Panels -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Left Panel: System Health -->
+      <section
+        data-testid="system-health-grid"
+        class="rounded-xl p-5 animate-fade-in"
+        :style="{
+          backgroundColor: 'var(--color-surface-container-low)',
+          border: '1px solid var(--color-outline-variant)',
+        }"
       >
-        System Health
-      </h2>
-      <div class="grid grid-cols-2 2xl:grid-cols-3 gap-4">
-        <div
-          v-for="service in healthServices"
-          :key="service.name"
-          data-testid="health-card"
-          class="rounded-lg p-4"
-          :style="{
-            backgroundColor: 'var(--color-surface-container-low)',
-            border: '1px solid var(--color-outline-variant)',
-          }"
-        >
-          <div class="flex items-center gap-2 mb-2">
-            <StatusDot :status="service.status" :size="8" />
+        <div class="flex items-center justify-between mb-4">
+          <span
+            class="text-[11px] uppercase tracking-widest font-semibold"
+            :style="{ color: 'var(--color-secondary)' }"
+          >
+            System Health
+          </span>
+          <span
+            class="text-[11px]"
+            :style="{ color: 'var(--color-on-surface-variant)' }"
+          >
+            {{ healthServices.length }} services
+          </span>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <div
+            v-for="service in healthServices"
+            :key="service.name"
+            data-testid="health-card"
+            class="flex items-center gap-3 rounded-lg px-3 py-2"
+            :style="{
+              backgroundColor:
+                service.status === 'critical'
+                  ? 'rgba(239,68,68,0.08)'
+                  : service.status === 'warning'
+                    ? 'rgba(249,115,22,0.08)'
+                    : 'var(--color-surface-container-high)',
+              border:
+                service.status === 'critical'
+                  ? '1px solid rgba(239,68,68,0.12)'
+                  : service.status === 'warning'
+                    ? '1px solid rgba(249,115,22,0.12)'
+                    : '1px solid transparent',
+            }"
+          >
+            <StatusDot :status="service.status" :size="6" />
             <span
-              class="font-display text-sm font-semibold"
+              class="text-sm flex-1"
               :style="{ color: 'var(--color-on-surface)' }"
             >
               {{ service.name }}
             </span>
-          </div>
-          <div class="flex items-center gap-4 text-xs">
-            <span :style="{ color: 'var(--color-on-surface-variant)' }">
-              Uptime:
-              <span class="font-mono" :style="{ color: 'var(--color-on-surface)' }">
-                {{ service.uptime }}
-              </span>
+            <span
+              class="font-mono text-[13px]"
+              :style="{ color: 'var(--color-on-surface-variant)' }"
+            >
+              {{ service.latency }}
             </span>
-            <span :style="{ color: 'var(--color-on-surface-variant)' }">
-              Latency:
-              <span class="font-mono" :style="{ color: 'var(--color-on-surface)' }">
-                {{ service.latency }}
-              </span>
+            <span
+              class="font-mono text-[13px]"
+              :style="{
+                color:
+                  service.status === 'critical'
+                    ? 'var(--color-error)'
+                    : service.status === 'warning'
+                      ? 'var(--color-tertiary)'
+                      : 'var(--color-secondary)',
+              }"
+            >
+              {{ service.uptime }}
             </span>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- 6. Recent AI Insights -->
-    <section>
-      <h2
-        class="font-display text-lg font-semibold mb-4"
-        :style="{ color: 'var(--color-on-surface)' }"
+      <!-- Right Panel: AI Insights -->
+      <section
+        class="rounded-xl p-5 animate-fade-in"
+        :style="{
+          backgroundColor: 'var(--color-surface-container-low)',
+          border: '1px solid rgba(229,160,13,0.08)',
+          animationDelay: '50ms',
+        }"
       >
-        Recent AI Insights
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <AiInsightCard
-          v-for="(insight, index) in aiInsights"
-          :key="index"
-          :title="insight.title"
-          :description="insight.description"
-          :timestamp="insight.timestamp"
-        />
-      </div>
-    </section>
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span
+              class="inline-block shrink-0"
+              :style="{
+                width: '10px',
+                height: '10px',
+                borderRadius: '3px',
+                background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))',
+              }"
+            />
+            <span
+              class="text-[11px] uppercase tracking-widest font-semibold"
+              :style="{ color: 'var(--color-primary)' }"
+            >
+              AI Insights
+            </span>
+          </div>
+          <span
+            class="text-[11px]"
+            :style="{ color: 'var(--color-outline)' }"
+          >
+            {{ aiInsights.length }} insights
+          </span>
+        </div>
+        <div class="flex flex-col gap-2">
+          <AiInsightCard
+            v-for="(insight, index) in aiInsights"
+            :key="index"
+            :title="insight.title"
+            :description="insight.description"
+            :timestamp="insight.timestamp"
+            :type="insight.type"
+          />
+        </div>
+      </section>
+    </div>
   </div>
 </template>
