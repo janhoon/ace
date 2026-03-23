@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.6.0](https://github.com/aceobservability/ace/compare/v0.5.0...v0.6.0) (2026-03-23)
+
+
+### Features
+
+* chat-to-dashboard — AI-generated dashboard specs from copilot ([#123](https://github.com/aceobservability/ace/issues/123)) ([96fb6fa](https://github.com/aceobservability/ace/commit/96fb6faf849abb07ca16f03525a464d0fcab3602))
+* Kinetic Observability Redesign — full UI replacement ([#125](https://github.com/aceobservability/ace/issues/125)) ([3111b77](https://github.com/aceobservability/ace/commit/3111b7740f58a27888988ee76478151072026b96))
+* Kinetic redesign — new design system, sidebar, and home page ([#127](https://github.com/aceobservability/ace/issues/127)) ([bbdb6ad](https://github.com/aceobservability/ace/commit/bbdb6adab7a132ab3b0efee7fa15ac4e18a46b56))
+* sidebar redesign — icon rail + flyout with Kinetic palette ([#126](https://github.com/aceobservability/ace/issues/126)) ([ace7334](https://github.com/aceobservability/ace/commit/ace73340f58e73b07e1555baad8046b57d9f2533))
+
+
+### Bug Fixes
+
+* redirect to /app home screen after login instead of /dashboards ([7e4b29e](https://github.com/aceobservability/ace/commit/7e4b29ecb742d8d46cf74c0575a3a8dfc8ec8902))
+* use real datasource store for home screen empty state ([ca5d477](https://github.com/aceobservability/ace/commit/ca5d4773657e58d37e08c1c0aa71201d978bd7e1))
+
+
+### Documentation
+
+* add Kinetic Observability Redesign implementation plan ([c0b3fc2](https://github.com/aceobservability/ace/commit/c0b3fc2e29f69cf23705d47e65afaf2dd4bb81d9))
+
 ## [0.6.0] - 2026-03-22
 
 ### Added
