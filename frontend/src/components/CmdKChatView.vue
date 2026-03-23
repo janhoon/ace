@@ -59,6 +59,8 @@ async function handleSend(userMessage: string) {
   chatMessages.value.push({ role: 'user', content: userMessage })
   const requestMessages = buildChatRequestMessages()
   const tools = getMetricsTools()
+  toolStatuses.value = []
+  dashboardSpec.value = null
 
   isLoading.value = true
   error.value = null
@@ -87,6 +89,11 @@ async function handleSend(userMessage: string) {
               if (p.query) p.query.datasource_id = props.datasourceId
             })
             dashboardSpec.value = spec
+            chatMessages.value.push({
+              role: 'assistant',
+              content: 'Dashboard generated. See the preview below.',
+              dashboardSpec: spec,
+            })
           } catch {
             chatMessages.value.push({
               role: 'assistant',

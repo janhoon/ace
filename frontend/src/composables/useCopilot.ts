@@ -64,6 +64,7 @@ const error = ref<string | null>(null)
 const models = ref<CopilotModel[]>([])
 const selectedModel = ref<string>('')
 const chatMessages = ref<CopilotMessage[]>([])
+let fetchingModels = false
 
 export function useCopilot() {
   // Device flow state — per-call, only one component uses it at a time
@@ -93,7 +94,6 @@ export function useCopilot() {
     }
   }
 
-  let fetchingModels = false
   async function fetchModels() {
     if (fetchingModels) return
     fetchingModels = true
