@@ -28,7 +28,7 @@ CREATE TABLE ai_providers (
     models_override JSONB,              -- e.g. [{"id":"gpt-4o","name":"GPT-4o"}], null for auto-discover
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(organization_id, provider_type, base_url)
+    UNIQUE(organization_id, display_name)
 );
 ```
 
@@ -167,7 +167,17 @@ Copilot-specific auth state: `isConnected`, `hasCopilot`, `githubUsername`, devi
 - **`CmdKChatView.vue`** — model selector grouped by provider. Uses `useAIProvider` instead of `useCopilot`
 - **`CopilotConnectionPanel.vue`** — shown only when no org providers configured. Unchanged internally.
 - **`UnifiedSettingsView.vue`** — new "AI Providers" admin section: add/edit/delete providers, test connection, see discovered models. Copilot connection moves under "Personal Fallback" subsection.
-- **`useCopilotTools.ts`** — unchanged. Tools are datasource-specific, passed to whichever provider handles chat.
+- **`useCopilotTools.ts`** — unchanged. Tools are datasource-specific, passed to whichever provider handles chat. Note: tool calling (function calling) requires provider support. See "Tool Compatibility" below.
+
+## Org Switch State Reset
+
+The `useAIProvider` composable watches `currentOrgId` from `useOrganization()`. When the org changes, all provider state resets (providers list, models list, selected provider/model) and re-fetches from the new org's endpoints. This prevents stale providers/models from a previous org leaking into the current session.
+
+## Tool Compatibility
+
+Tool calling (OpenAI function-calling for dashboard generation, write_query, run_query, etc.) requires provider support. Not all "OpenAI-compatible" providers implement function calling reliably (especially Ollama, vLLM, and some gateways).
+
+Graceful degradation: if the provider returns an error indicating no tool support (or returns a malformed tool_calls response), the backend retries the request without tools. The frontend shows a note: "Dashboard generation is not available with this provider." Streaming chat continues to work — only tool-based features are disabled.
 
 ## Error Handling
 
@@ -182,6 +192,17 @@ Copilot-specific auth state: `isConnected`, `hasCopilot`, `githubUsername`, devi
 
 - **Rate limiting / usage tracking**: When an admin configures an API key for the org, all members share it. Per-user rate limiting and usage tracking are deferred to a future iteration. For now, the assumption is that org admins manage their API key quotas externally.
 - **Anthropic native API**: Anthropic's `/v1/messages` API is not OpenAI-compatible. Supporting it natively would require a separate provider implementation. Deferred — use OpenRouter or any OpenAI-compatible gateway for Anthropic models.
+
+## Eng Review Decisions
+
+1. **Shared RequireOrgMember middleware** — extracts org_id from URL, verifies membership, injects into context. Reused by all `/api/orgs/{id}/ai/*` endpoints. Admin checks layered on top per-handler.
+2. **Backend prepends system prompt** — providers are dumb pipes. Orchestration layer prepends the datasource-specific system prompt before calling `provider.Chat()`.
+3. **Extract encrypt/decrypt to `internal/crypto`** — shared by Copilot auth (GitHub tokens) and AI providers (API keys). Single source of truth.
+4. **Copilot token caching** — `sync.Map` keyed by userID, TTL = `expires_at - 60s`. Eliminates per-request GitHub API round-trip.
+5. **Full test coverage** — all new backend code + backfill Copilot auth endpoints (device flow, connection, disconnect).
+6. **Watch `currentOrgId` for state reset** — prevents stale provider/model state leaking across org switches.
+7. **Graceful tool degradation** — if provider doesn't support function calling, retry without tools. Tool-based features (dashboard generation) disabled with user-visible note.
+8. **UNIQUE(organization_id, display_name)** — allows multiple configs for the same provider/URL with different API keys.
 
 ## Route Registration
 
