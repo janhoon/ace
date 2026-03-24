@@ -17,6 +17,12 @@ func GetOrgID(ctx context.Context) (uuid.UUID, bool) {
 	return id, ok
 }
 
+// WithOrgID returns a new context with the given organization ID injected.
+// This is primarily useful for testing handlers that expect an org ID in context.
+func WithOrgID(ctx context.Context, orgID uuid.UUID) context.Context {
+	return context.WithValue(ctx, orgIDContextKey{}, orgID)
+}
+
 // RequireOrgMember is middleware that:
 //  1. Parses the org UUID from the URL path parameter "id".
 //  2. Verifies the authenticated user (from context) is a member of that org.
