@@ -43,20 +43,54 @@ func validateBaseURL(raw string) error {
 		return fmt.Errorf("base_url must not contain a fragment (#)")
 	}
 
-	// Resolve hostname to check for cloud metadata IPs
+	// Resolve hostname to check for dangerous IPs
 	hostname := u.Hostname()
+
+	// Allow localhost and 127.0.0.1 explicitly (needed for local providers like Ollama)
+	if hostname == "localhost" || hostname == "127.0.0.1" {
+		return nil
+	}
+
+	// Check literal hostname if it's an IP address
+	if ip := net.ParseIP(hostname); ip != nil {
+		if err := checkDangerousIP(ip); err != nil {
+			return err
+		}
+	}
+
+	// Resolve hostname and check all resolved IPs
 	ips, err := net.LookupHost(hostname)
 	if err == nil {
-		for _, ip := range ips {
-			if ip == "169.254.169.254" {
-				return fmt.Errorf("base_url must not resolve to cloud metadata IP")
+		for _, ipStr := range ips {
+			ip := net.ParseIP(ipStr)
+			if ip == nil {
+				continue
+			}
+			if err := checkDangerousIP(ip); err != nil {
+				return err
 			}
 		}
 	}
-	// If DNS fails (e.g. private hostname not resolvable from this host),
-	// also check the literal hostname in case it's an IP address.
-	if hostname == "169.254.169.254" {
-		return fmt.Errorf("base_url must not point to cloud metadata IP")
+
+	return nil
+}
+
+// checkDangerousIP returns an error if the given IP is a cloud metadata address,
+// loopback (other than 127.0.0.1 which is allowed for Ollama), or private RFC 1918 range.
+func checkDangerousIP(ip net.IP) error {
+	// Block link-local / cloud metadata (169.254.x.x)
+	if ip.Equal(net.ParseIP("169.254.169.254")) {
+		return fmt.Errorf("base_url must not resolve to cloud metadata IP")
+	}
+
+	// Block loopback range (127.x.x.x) except 127.0.0.1 which is allowed above
+	if ip.IsLoopback() {
+		return fmt.Errorf("base_url must not resolve to loopback address")
+	}
+
+	// Block RFC 1918 private ranges: 10.x.x.x, 172.16-31.x.x, 192.168.x.x
+	if ip.IsPrivate() {
+		return fmt.Errorf("base_url must not resolve to private network address")
 	}
 
 	return nil

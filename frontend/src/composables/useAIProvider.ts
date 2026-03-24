@@ -12,7 +12,7 @@ function getAuthHeaders(): HeadersInit {
   }
 }
 
-export interface AIProviderInfo {
+interface AIProviderInfo {
   id: string
   provider_type: string
   display_name: string
@@ -20,7 +20,7 @@ export interface AIProviderInfo {
   enabled: boolean
 }
 
-export interface AIModel {
+interface AIModel {
   id: string
   name: string
   vendor: string
@@ -29,7 +29,7 @@ export interface AIModel {
   provider_name: string
 }
 
-export interface AIMessage {
+interface AIMessage {
   role: 'user' | 'assistant'
   content: string
   dashboardSpec?: DashboardSpec
@@ -104,7 +104,7 @@ async function fetchProviders() {
     }
 
     const data = await response.json()
-    providers.value = data.providers || []
+    providers.value = Array.isArray(data) ? data : data.providers || []
 
     // Auto-select first provider if none selected or current selection no longer available
     if (
@@ -176,6 +176,7 @@ async function* sendMessage(
         datasource_type: datasourceType,
         datasource_name: datasourceName,
         messages,
+        stream: true,
       }),
     })
 

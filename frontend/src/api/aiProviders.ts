@@ -8,6 +8,15 @@ function getAuthHeaders(): HeadersInit {
   }
 }
 
+async function extractErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const data = await response.json()
+    return data?.error || fallback
+  } catch {
+    return fallback
+  }
+}
+
 export interface AIProviderInfo {
   id: string
   provider_type: string
@@ -64,7 +73,7 @@ export async function createAIProvider(
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    throw new Error('Failed to create AI provider')
+    throw new Error(await extractErrorMessage(response, 'Failed to create AI provider'))
   }
   return response.json()
 }
@@ -80,7 +89,7 @@ export async function updateAIProvider(
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    throw new Error('Failed to update AI provider')
+    throw new Error(await extractErrorMessage(response, 'Failed to update AI provider'))
   }
   return response.json()
 }
@@ -91,7 +100,7 @@ export async function deleteAIProvider(orgId: string, providerId: string): Promi
     headers: getAuthHeaders(),
   })
   if (!response.ok) {
-    throw new Error('Failed to delete AI provider')
+    throw new Error(await extractErrorMessage(response, 'Failed to delete AI provider'))
   }
 }
 
@@ -104,7 +113,7 @@ export async function testAIProvider(
     headers: getAuthHeaders(),
   })
   if (!response.ok) {
-    throw new Error('Failed to test AI provider')
+    throw new Error(await extractErrorMessage(response, 'Failed to test AI provider'))
   }
   return response.json()
 }

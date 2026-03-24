@@ -2,7 +2,7 @@ import { ref } from 'vue'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
-export function getAuthHeaders(): HeadersInit {
+function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem('access_token')
   return {
     'Content-Type': 'application/json',

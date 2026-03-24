@@ -135,11 +135,26 @@ describe('aiProviders API', () => {
       expect(JSON.parse(options.body)).toEqual(requestBody)
     })
 
-    it('throws on non-ok response', async () => {
+    it('throws on non-ok response with backend error message', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 403,
         json: () => Promise.resolve({ error: 'Forbidden' }),
+      })
+
+      await expect(
+        createAIProvider('org-1', {
+          provider_type: 'openai',
+          display_name: 'Test',
+          base_url: 'https://api.openai.com/v1',
+        }),
+      ).rejects.toThrow('Forbidden')
+    })
+
+    it('throws generic error when backend provides no error message', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
       })
 
       await expect(

@@ -398,9 +398,9 @@ func copilotModelsPayload() string {
 
 // copilotHeaders are the headers the CopilotProvider must send on every request.
 var copilotExpectedHeaders = map[string]string{
-	"Editor-Version":        "vscode/1.100.0",
-	"Editor-Plugin-Version": "copilot/1.300.0",
-	"User-Agent":            "GithubCopilot/1.300.0",
+	"Editor-Version":         "vscode/1.100.0",
+	"Editor-Plugin-Version":  "copilot/1.300.0",
+	"User-Agent":             "GithubCopilot/1.300.0",
 	"Copilot-Integration-Id": "vscode-chat",
 }
 

@@ -237,6 +237,8 @@ func (p *CopilotProvider) getCopilotSessionToken(ctx context.Context, ghToken st
 		if entry.expiresAt-60 > time.Now().Unix() {
 			return entry.token, entry.apiEndpoint, nil
 		}
+		// Evict expired entry to prevent stale accumulation
+		copilotTokenCache.Delete(cacheKey)
 	}
 
 	// Fetch a fresh token
@@ -337,7 +339,7 @@ func (p *CopilotProvider) ListModels(ctx context.Context) ([]AIModel, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Copilot models API returned %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("copilot models API returned %d: %s", resp.StatusCode, string(body))
 	}
 
 	var raw copilotModelsResponse
@@ -417,7 +419,7 @@ func (p *CopilotProvider) Chat(ctx context.Context, chatReq ChatRequest, w http.
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Copilot API returned %d: %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("copilot API returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	if !chatReq.Stream {
