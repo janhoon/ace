@@ -7,6 +7,7 @@ import {
   GanttChart,
   GaugeCircle,
   GitBranch,
+  Globe,
   Grid3x3,
   LayoutDashboard,
   LayoutGrid,
@@ -326,4 +327,19 @@ registerPanel({
   category: 'widgets',
   label: 'Dashboard List',
   icon: LayoutDashboard,
+})
+
+// Register Geomap
+registerPanel({
+  type: 'geomap',
+  component: () => import('./GeomapPanel.vue'),
+  dataAdapter: (_raw: RawQueryResult) => {
+    // Geo data typically comes from metrics with location labels
+    // Stub for now
+    return { points: [] }
+  },
+  defaultQuery: {},
+  category: 'charts',
+  label: 'Geomap',
+  icon: Globe,
 })
