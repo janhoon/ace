@@ -963,7 +963,7 @@ function roleBadgeStyle(role: string) {
             <Info :size="16" class="shrink-0 mt-0.5" :style="{ color: 'var(--color-on-surface-variant)' }" />
             <p class="text-sm" :style="{ color: 'var(--color-on-surface-variant)' }">
               Groups here manage access to specific dashboards and folders. SSO group-to-role mappings are configured in the
-              <button class="underline" @click="navigateToSection('sso')">SSO / Auth</button> tab.
+              <button class="underline" @click="$router.push({ name: 'settings', params: { section: 'sso' } })">SSO / Auth</button> tab.
             </p>
           </div>
 
