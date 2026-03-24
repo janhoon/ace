@@ -493,9 +493,15 @@ const registryPanel = computed(() => {
   return lookupPanel(props.panel.type)
 })
 
+const registryComponentCache = new Map<string, ReturnType<typeof defineAsyncComponent>>()
+
 const registryComponent = computed(() => {
   if (!registryPanel.value) return null
-  return defineAsyncComponent(registryPanel.value.component)
+  const type = props.panel.type
+  if (!registryComponentCache.has(type)) {
+    registryComponentCache.set(type, defineAsyncComponent(registryPanel.value.component))
+  }
+  return registryComponentCache.get(type)!
 })
 
 const registryProps = computed(() => {
@@ -505,7 +511,7 @@ const registryProps = computed(() => {
     logs: logEntries.value,
     traces: traceSummaries.value,
   }
-  return registryPanel.value.dataAdapter(raw)
+  return registryPanel.value.dataAdapter(raw, props.panel.query)
 })
 
 const isRegistryPanel = computed(() => registryPanel.value !== null)

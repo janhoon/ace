@@ -641,6 +641,7 @@ describe('Panel', () => {
           logs: expect.any(Array),
           traces: expect.any(Array),
         }),
+        expect.anything(), // panel.query passed as second arg
       )
     })
 

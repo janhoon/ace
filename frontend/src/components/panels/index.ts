@@ -13,9 +13,8 @@ import { registerPanel } from '../../utils/panelRegistry'
 registerPanel({
   type: 'text',
   component: () => import('./TextPanel.vue'),
-  dataAdapter: () => {
-    // Text panel doesn't use query data — content comes from panel.query.content
-    return { content: '' }
+  dataAdapter: (_raw: RawQueryResult, query?: Record<string, unknown>) => {
+    return { content: typeof query?.content === 'string' ? query.content : '' }
   },
   defaultQuery: { content: '# Hello\n\nEdit this panel to add content.' },
   category: 'widgets',
@@ -59,7 +58,8 @@ registerPanel({
     const items = raw.series.map((s) => {
       const points = s.data as Array<{ timestamp: number; value: number }>
       const latestValue = points.length > 0 ? points[points.length - 1].value : 0
-      return { label: s.name, value: latestValue, max: 100 }
+      const maxValue = points.length > 0 ? Math.max(...points.map((p) => p.value), 1) : 100
+      return { label: s.name, value: latestValue, max: maxValue }
     })
     return { items }
   },
@@ -113,7 +113,9 @@ registerPanel({
   type: 'alert_list',
   component: () => import('./AlertListPanel.vue'),
   dataAdapter: () => {
-    // Alert list gets data from backend alert API, not from query results
+    // TODO: Alert list needs backend alert API integration (Tier 2 follow-up).
+    // Currently returns empty — the component will fetch alerts directly once
+    // the backend endpoint is available.
     return { alerts: [] }
   },
   defaultQuery: {},

@@ -15,7 +15,7 @@ export interface PanelRegistration {
   /** Lazy-loaded Vue component factory */
   component: () => Promise<Component>
   /** Transforms raw query result into chart-specific option data */
-  dataAdapter: (raw: RawQueryResult) => Record<string, unknown>
+  dataAdapter: (raw: RawQueryResult, query?: Record<string, unknown>) => Record<string, unknown>
   /** Default query object shown in the panel editor */
   defaultQuery: Record<string, unknown>
   category: PanelCategory
