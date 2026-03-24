@@ -156,6 +156,10 @@ func main() {
 	mux.HandleFunc("GET /api/orgs/{id}/sso/okta", auth.RequireAuth(jwtManager, oktaSSOHandler.GetSSOConfig))
 	mux.HandleFunc("POST /api/orgs/{id}/sso/okta/test", auth.RequireAuth(jwtManager, oktaSSOHandler.TestConnection))
 
+	// Public SSO provider discovery (no auth required)
+	ssoDiscoveryHandler := handlers.NewSSODiscoveryHandler(pool)
+	mux.HandleFunc("GET /api/orgs/{slug}/sso/providers", ssoDiscoveryHandler.ListProviders)
+
 	// User group routes
 	groupHandler := handlers.NewGroupHandler(pool)
 	mux.HandleFunc("POST /api/orgs/{id}/groups", auth.RequireAuth(jwtManager, groupHandler.Create))
