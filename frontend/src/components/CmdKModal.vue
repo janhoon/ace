@@ -3,7 +3,7 @@ import { nextTick, ref, watch } from 'vue'
 import CmdKChatView from './CmdKChatView.vue'
 import CmdKSearchResults from './CmdKSearchResults.vue'
 import { useCommandContext } from '../composables/useCommandContext'
-import { useCopilot } from '../composables/useCopilot'
+import { useAIProvider } from '../composables/useAIProvider'
 import { useOrganization } from '../composables/useOrganization'
 import { useRouter } from 'vue-router'
 
@@ -16,7 +16,7 @@ const emit = defineEmits<{
 }>()
 
 const { currentContext } = useCommandContext()
-const { isConnected, chatMessages } = useCopilot()
+const { providers, chatMessages, fetchProviders } = useAIProvider()
 const { currentOrg } = useOrganization()
 const router = useRouter()
 
@@ -31,6 +31,7 @@ watch(
   () => props.isOpen,
   async (open) => {
     if (open) {
+      fetchProviders()
       await nextTick()
       inputRef.value?.focus()
     } else {
@@ -53,7 +54,7 @@ function handleScrimClick() {
 }
 
 function handleEnterChat(q: string) {
-  if (!isConnected.value) {
+  if (providers.value.length === 0) {
     showNotConnected.value = true
     return
   }
@@ -135,9 +136,8 @@ function handleNavigate(path: string) {
       <!-- Not connected message -->
       <div v-if="showNotConnected" data-testid="not-connected-message" class="px-4 pb-3">
         <p class="text-sm m-0" :style="{ color: 'var(--color-on-surface-variant)' }">
-          Connect your GitHub Copilot subscription in
-          <a href="/app/settings/ai" :style="{ color: 'var(--color-primary)' }" @click.prevent="emit('close'); router.push('/app/settings/ai')">Settings</a>
-          to use AI features.
+          Configure an AI provider in
+          <a href="/app/settings/ai" :style="{ color: 'var(--color-primary)' }" @click.prevent="emit('close'); router.push('/app/settings/ai')">Settings</a>, or connect GitHub Copilot.
         </p>
       </div>
 

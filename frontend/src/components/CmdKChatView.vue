@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ArrowLeft, Loader2, Send, Wrench } from 'lucide-vue-next'
 import { nextTick, onMounted, ref, watch } from 'vue'
-import type { CopilotMessage, ToolCall } from '../composables/useCopilot'
-import { useCopilot } from '../composables/useCopilot'
+import type { ToolCall } from '../composables/useAIProvider'
+import { useAIProvider } from '../composables/useAIProvider'
 import { getMetricsTools, useCopilotToolExecutor } from '../composables/useCopilotTools'
 import type { DashboardSpec } from '../utils/dashboardSpec'
 import { initMarkdown, renderMarkdown } from '../utils/markdown'
@@ -17,8 +17,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'exit-chat': [] }>()
 
-const { sendChatRequest, chatMessages, models, selectedModel, fetchModels, isLoading, error } =
-  useCopilot()
+const { sendChatRequest, chatMessages, models, selectedModel, fetchModels, isLoading, error, providers } =
+  useAIProvider()
 
 const { executeTool } = useCopilotToolExecutor(() => props.datasourceId)
 
@@ -44,7 +44,7 @@ type ChatRequestMessage =
   | { role: 'assistant'; content: string | null; tool_calls: ToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string }
 
-// --- Build request messages from CopilotMessage[] ---
+// --- Build request messages from AIMessage[] ---
 
 function buildChatRequestMessages(): ChatRequestMessage[] {
   return chatMessages.value.map((m) => ({
@@ -210,9 +210,18 @@ function toolStatusIcon(status: ToolStatus['status']): string {
           borderColor: 'var(--color-outline-variant)',
         }"
       >
-        <option v-for="m in models" :key="m.id" :value="m.id">
-          {{ m.name }}
-        </option>
+        <template v-if="providers.length > 1">
+          <optgroup v-for="p in providers" :key="p.id" :label="p.display_name">
+            <option v-for="m in models.filter(mod => mod.provider_id === p.id)" :key="m.id" :value="m.id">
+              {{ m.name }}
+            </option>
+          </optgroup>
+        </template>
+        <template v-else>
+          <option v-for="m in models" :key="m.id" :value="m.id">
+            {{ m.name }}
+          </option>
+        </template>
       </select>
     </div>
 
