@@ -1,4 +1,4 @@
-import { BarChart3, FileText, GaugeCircle, Grid3x3, ScatterChart as ScatterIcon } from 'lucide-vue-next'
+import { BarChart3, Bell, FileText, GaugeCircle, Grid3x3, ScatterChart as ScatterIcon } from 'lucide-vue-next'
 import type { RawQueryResult } from '../../types/panel'
 import { registerPanel } from '../../utils/panelRegistry'
 
@@ -100,6 +100,20 @@ registerPanel({
   category: 'charts',
   label: 'Scatter',
   icon: ScatterIcon,
+})
+
+// Register Alert List
+registerPanel({
+  type: 'alert_list',
+  component: () => import('./AlertListPanel.vue'),
+  dataAdapter: () => {
+    // Alert list gets data from backend alert API, not from query results
+    return { alerts: [] }
+  },
+  defaultQuery: {},
+  category: 'widgets',
+  label: 'Alert List',
+  icon: Bell,
 })
 
 // Register Histogram
