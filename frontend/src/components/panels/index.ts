@@ -2,6 +2,7 @@ import {
   BarChart3,
   Bell,
   FileText,
+  GanttChart,
   GaugeCircle,
   Grid3x3,
   ScatterChart as ScatterIcon,
@@ -122,6 +123,38 @@ registerPanel({
   category: 'widgets',
   label: 'Alert List',
   icon: Bell,
+})
+
+// Register State Timeline
+registerPanel({
+  type: 'state_timeline',
+  component: () => import('./StateTimelinePanel.vue'),
+  dataAdapter: (raw: RawQueryResult) => {
+    // Transform metric series into state segments
+    // Each series = one entity, value thresholds determine state
+    const segments: Array<{ entity: string; state: string; start: number; end: number }> = []
+    for (const series of raw.series) {
+      const points = series.data as Array<{ timestamp: number; value: number }>
+      if (points.length === 0) continue
+      let currentState = points[0].value > 0 ? 'up' : 'down'
+      let segStart = points[0].timestamp
+      for (let i = 1; i < points.length; i++) {
+        const newState = points[i].value > 0 ? 'up' : 'down'
+        if (newState !== currentState) {
+          segments.push({ entity: series.name, state: currentState, start: segStart, end: points[i].timestamp })
+          currentState = newState
+          segStart = points[i].timestamp
+        }
+      }
+      // Close final segment
+      segments.push({ entity: series.name, state: currentState, start: segStart, end: points[points.length - 1].timestamp })
+    }
+    return { segments }
+  },
+  defaultQuery: {},
+  category: 'observability',
+  label: 'State Timeline',
+  icon: GanttChart,
 })
 
 // Register Histogram
