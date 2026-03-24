@@ -142,6 +142,12 @@ func main() {
 	mux.HandleFunc("GET /api/orgs/{id}/audit-log", auth.RequireAuth(jwtManager, auditHandler.ListAuditLog))
 	mux.HandleFunc("GET /api/orgs/{id}/audit-log/export", auth.RequireAuth(jwtManager, auditHandler.ExportAuditLog))
 
+	// SSO role mapping routes
+	roleMappingHandler := handlers.NewSSORoleMappingHandler(pool, auditLogger)
+	mux.HandleFunc("GET /api/orgs/{id}/sso/{provider}/role-mappings", auth.RequireAuth(jwtManager, roleMappingHandler.ListMappings))
+	mux.HandleFunc("POST /api/orgs/{id}/sso/{provider}/role-mappings", auth.RequireAuth(jwtManager, roleMappingHandler.CreateMapping))
+	mux.HandleFunc("DELETE /api/orgs/{id}/sso/{provider}/role-mappings/{mappingId}", auth.RequireAuth(jwtManager, roleMappingHandler.DeleteMapping))
+
 	// User group routes
 	groupHandler := handlers.NewGroupHandler(pool)
 	mux.HandleFunc("POST /api/orgs/{id}/groups", auth.RequireAuth(jwtManager, groupHandler.Create))

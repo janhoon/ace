@@ -236,9 +236,12 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			ADD COLUMN IF NOT EXISTS linked_trace_datasource_id UUID REFERENCES datasources(id) ON DELETE SET NULL`,
 		`CREATE INDEX IF NOT EXISTS idx_datasources_linked_trace ON datasources(linked_trace_datasource_id)`,
 		// Widen sso_configs provider constraint to include github_copilot (009_github_copilot_per_org.sql)
+		// NOTE: include 'okta' here for idempotency -- a later migration widens
+		// to include okta, and re-running migrations would fail if okta rows
+		// already exist from a previous run.
 		`ALTER TABLE sso_configs DROP CONSTRAINT IF EXISTS sso_configs_provider_check`,
 		`ALTER TABLE sso_configs ADD CONSTRAINT sso_configs_provider_check
-			CHECK (provider IN ('google', 'microsoft', 'github_copilot'))`,
+			CHECK (provider IN ('google', 'microsoft', 'github_copilot', 'okta'))`,
 		// Widen organization_memberships role constraint to include auditor (010_auditor_role.sql)
 		`ALTER TABLE organization_memberships DROP CONSTRAINT IF EXISTS organization_memberships_role_check`,
 		`ALTER TABLE organization_memberships ADD CONSTRAINT organization_memberships_role_check
