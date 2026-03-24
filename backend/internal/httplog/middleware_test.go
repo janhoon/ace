@@ -215,7 +215,7 @@ func TestResponseWriter_WriteHeaderOnce(t *testing.T) {
 	middleware := NewMiddleware(logger)
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusCreated) // first call — this is the real status
+		w.WriteHeader(http.StatusCreated)  // first call — this is the real status
 		w.WriteHeader(http.StatusConflict) // second call — should be ignored for logging
 	})
 
@@ -303,7 +303,7 @@ type noFlushWriter struct {
 	http.ResponseWriter
 }
 
-func (n *noFlushWriter) Header() http.Header        { return http.Header{} }
+func (n *noFlushWriter) Header() http.Header         { return http.Header{} }
 func (n *noFlushWriter) Write(b []byte) (int, error) { return len(b), nil }
 func (n *noFlushWriter) WriteHeader(int)             {}
 
