@@ -271,12 +271,12 @@ func (h *AuditHandler) ExportAuditLog(w http.ResponseWriter, r *http.Request) {
 
 		for rows.Next() {
 			var (
-				id, orgIDVal                            uuid.UUID
-				actorID                                 *uuid.UUID
-				actorEmail, action, outcome             string
-				resourceType, resourceName, ipAddress   *string
-				resourceID                              *uuid.UUID
-				createdAt                               time.Time
+				id, orgIDVal                          uuid.UUID
+				actorID                               *uuid.UUID
+				actorEmail, action, outcome           string
+				resourceType, resourceName, ipAddress *string
+				resourceID                            *uuid.UUID
+				createdAt                             time.Time
 			)
 			if err := rows.Scan(
 				&id, &orgIDVal, &actorID, &actorEmail, &action,

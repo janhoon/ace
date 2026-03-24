@@ -20,7 +20,6 @@ import {
 } from '../api/sso'
 import DataSourceSettingsPanel from '../components/DataSourceSettingsPanel.vue'
 import CopilotConnectionPanel from '../components/CopilotConnectionPanel.vue'
-import GitHubAppSettings from '../components/GitHubAppSettings.vue'
 import { useCommandContext } from '../composables/useCommandContext'
 import { useOrganization } from '../composables/useOrganization'
 import type { Member, MembershipRole, Organization } from '../types/organization'

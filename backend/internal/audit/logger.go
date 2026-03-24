@@ -131,7 +131,7 @@ func (l *Logger) insert(
 		     outcome, ip_address)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		orgID,
-		actorID,   // nullable UUID pointer
+		actorID, // nullable UUID pointer
 		actorEmail,
 		action,
 		nullableString(resourceType),
