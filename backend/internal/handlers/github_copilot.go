@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/crypto"
+	"go.uber.org/zap"
 )
 
 type GitHubCopilotHandler struct {
@@ -213,7 +213,7 @@ func (h *GitHubCopilotHandler) PollDeviceFlow(w http.ResponseWriter, r *http.Req
 	if _, _, copilotErr := h.fetchCopilotToken(ctx, ghToken); copilotErr == nil {
 		hasCopilot = true
 	} else {
-		log.Printf("copilot token check: %v", copilotErr)
+		zap.L().Warn("copilot token check failed", zap.Error(copilotErr))
 	}
 
 	// Encrypt the access token before storing

@@ -6,13 +6,13 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 var (
@@ -117,26 +117,26 @@ func loadOrGenerateJWTManager() (*JWTManager, error) {
 	}
 
 	if mkErr := os.MkdirAll(dir, 0o700); mkErr != nil {
-		log.Printf("warning: could not create data dir %s: %v (JWT keys will not persist)", dir, mkErr)
+		zap.L().Warn("JWT keys will not persist", zap.String("reason", "could not create data dir"), zap.String("dir", dir), zap.Error(mkErr))
 		return mgr, nil
 	}
 
 	pubStr, err := mgr.GetPublicKeyPEM()
 	if err != nil {
-		log.Printf("warning: could not encode public key: %v (JWT keys will not persist)", err)
+		zap.L().Warn("JWT keys will not persist", zap.String("reason", "could not encode public key"), zap.Error(err))
 		return mgr, nil
 	}
 
 	if err := os.WriteFile(privPath, []byte(mgr.GetPrivateKeyPEM()), 0o600); err != nil {
-		log.Printf("warning: could not write %s: %v (JWT keys will not persist)", privPath, err)
+		zap.L().Warn("JWT keys will not persist", zap.String("reason", "could not write key file"), zap.String("path", privPath), zap.Error(err))
 		return mgr, nil
 	}
 	if err := os.WriteFile(pubPath, []byte(pubStr), 0o644); err != nil {
-		log.Printf("warning: could not write %s: %v (JWT keys will not persist)", pubPath, err)
+		zap.L().Warn("JWT keys will not persist", zap.String("reason", "could not write key file"), zap.String("path", pubPath), zap.Error(err))
 		return mgr, nil
 	}
 
-	log.Printf("generated and cached JWT keys in %s", dir)
+	zap.L().Info("generated and cached JWT keys", zap.String("dir", dir))
 	return mgr, nil
 }
 
