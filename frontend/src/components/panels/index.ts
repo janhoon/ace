@@ -1,4 +1,4 @@
-import { BarChart3, Grid3x3 } from 'lucide-vue-next'
+import { BarChart3, GaugeCircle, Grid3x3 } from 'lucide-vue-next'
 import type { RawQueryResult } from '../../types/panel'
 import { registerPanel } from '../../utils/panelRegistry'
 
@@ -28,6 +28,25 @@ registerPanel({
   category: 'charts',
   label: 'Heatmap',
   icon: Grid3x3,
+})
+
+// Register Bar Gauge
+registerPanel({
+  type: 'bar_gauge',
+  component: () => import('./BarGaugePanel.vue'),
+  dataAdapter: (raw: RawQueryResult) => {
+    // Each series becomes an item with its latest value
+    const items = raw.series.map(s => {
+      const points = s.data as Array<{ timestamp: number; value: number }>
+      const latestValue = points.length > 0 ? points[points.length - 1].value : 0
+      return { label: s.name, value: latestValue, max: 100 }
+    })
+    return { items }
+  },
+  defaultQuery: {},
+  category: 'stats',
+  label: 'Bar Gauge',
+  icon: GaugeCircle,
 })
 
 // Register Histogram
