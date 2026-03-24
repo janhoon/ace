@@ -954,6 +954,15 @@ function roleBadgeStyle(role: string) {
 
         <!-- Groups Section -->
         <section v-if="activeSection === 'groups'" class="flex flex-col gap-4 max-w-2xl" data-testid="settings-groups">
+          <div class="flex items-start gap-2 rounded-md p-3 mb-4"
+               :style="{ background: 'var(--color-surface-container-high)', border: '1px solid var(--color-outline)' }">
+            <Info :size="16" class="shrink-0 mt-0.5" :style="{ color: 'var(--color-on-surface-variant)' }" />
+            <p class="text-sm" :style="{ color: 'var(--color-on-surface-variant)' }">
+              Groups here manage access to specific dashboards and folders. SSO group-to-role mappings are configured in the
+              <button class="underline" @click="navigateToSection('sso')">SSO / Auth</button> tab.
+            </p>
+          </div>
+
           <div class="rounded-lg p-6" :style="{ backgroundColor: 'var(--color-surface-container-low)' }">
             <div class="flex justify-between items-center mb-4">
               <h2 class="flex items-center gap-2 m-0 text-base font-semibold font-display" :style="{ color: 'var(--color-on-surface)' }"><Shield :size="20" /> Groups ({{ groups.length }})</h2>
