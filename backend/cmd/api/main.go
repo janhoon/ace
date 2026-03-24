@@ -148,6 +148,14 @@ func main() {
 	mux.HandleFunc("POST /api/orgs/{id}/sso/{provider}/role-mappings", auth.RequireAuth(jwtManager, roleMappingHandler.CreateMapping))
 	mux.HandleFunc("DELETE /api/orgs/{id}/sso/{provider}/role-mappings/{mappingId}", auth.RequireAuth(jwtManager, roleMappingHandler.DeleteMapping))
 
+	// Okta SSO routes
+	oktaSSOHandler := handlers.NewOktaSSOHandler(pool, jwtManager, rdb, auditLogger)
+	mux.HandleFunc("GET /api/auth/okta/login", oktaSSOHandler.Login)
+	mux.HandleFunc("GET /api/auth/okta/callback", oktaSSOHandler.Callback)
+	mux.HandleFunc("POST /api/orgs/{id}/sso/okta", auth.RequireAuth(jwtManager, oktaSSOHandler.ConfigureSSO))
+	mux.HandleFunc("GET /api/orgs/{id}/sso/okta", auth.RequireAuth(jwtManager, oktaSSOHandler.GetSSOConfig))
+	mux.HandleFunc("POST /api/orgs/{id}/sso/okta/test", auth.RequireAuth(jwtManager, oktaSSOHandler.TestConnection))
+
 	// User group routes
 	groupHandler := handlers.NewGroupHandler(pool)
 	mux.HandleFunc("POST /api/orgs/{id}/groups", auth.RequireAuth(jwtManager, groupHandler.Create))
