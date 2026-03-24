@@ -29,6 +29,10 @@ import type { DataSourceType } from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
 import { dataSourceTypeLogos } from '../utils/datasourceLogos'
 
+const emit = defineEmits<{
+  'datasource-changed': [payload: { id: string; name: string; type: string }]
+}>()
+
 const { timeRange, onRefresh, setCustomRange } = useTimeRange()
 const { currentOrg } = useOrganization()
 const { metricsDatasources, fetchDatasources } = useDatasource()
@@ -483,6 +487,13 @@ watch(
 
 watch(selectedDatasourceId, () => {
   showDatasourceMenu.value = false
+})
+
+watch(selectedDatasourceId, (newId) => {
+  const ds = metricsDatasources.value.find((d) => d.id === newId)
+  if (ds) {
+    emit('datasource-changed', { id: ds.id, name: ds.name, type: ds.type })
+  }
 })
 </script>
 

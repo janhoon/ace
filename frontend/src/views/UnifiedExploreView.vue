@@ -40,6 +40,17 @@ function navigateToTab(type: ExploreType) {
   router.push(`/app/explore/${type}`)
 }
 
+function handleDatasourceChanged(payload: { id: string; name: string; type: string }) {
+  registerContext({
+    viewName: 'Explore',
+    viewRoute: '/app/explore',
+    description: 'Query and visualize metrics, logs, and traces from connected datasources',
+    datasourceId: payload.id,
+    datasourceName: payload.name,
+    datasourceType: payload.type,
+  })
+}
+
 onMounted(() => {
   registerContext({
     viewName: 'Explore',
@@ -89,6 +100,6 @@ onUnmounted(() => {
     </nav>
 
     <!-- Tab content -->
-    <component :is="activeComponent" :key="activeType" />
+    <component :is="activeComponent" :key="activeType" @datasource-changed="handleDatasourceChanged" />
   </div>
 </template>
