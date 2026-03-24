@@ -65,7 +65,8 @@ function buildChatRequestMessages(): ChatRequestMessage[] {
   } else {
     messages.push({
       role: 'system',
-      content: 'You have tools to explore datasource data. No datasource is currently selected. Call list_datasources first to discover available datasources, then pass the datasource_id to other tools.',
+      content:
+        'You have tools to explore datasource data. No datasource is currently selected. Call list_datasources first to discover available datasources, then pass the datasource_id to other tools.',
     })
   }
 

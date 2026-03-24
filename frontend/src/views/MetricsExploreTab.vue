@@ -22,7 +22,11 @@ import QueryBuilder from '../components/QueryBuilder.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import { useDatasource } from '../composables/useDatasource'
 import { useOrganization } from '../composables/useOrganization'
-import { type PrometheusQueryData, type PrometheusQueryResult, transformToChartData } from '../composables/useProm'
+import {
+  type PrometheusQueryData,
+  type PrometheusQueryResult,
+  transformToChartData,
+} from '../composables/useProm'
 import { useQueryEditor } from '../composables/useQueryEditor'
 import { useTimeRange } from '../composables/useTimeRange'
 import type { DataSourceType } from '../types/datasource'

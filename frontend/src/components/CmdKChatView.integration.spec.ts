@@ -9,8 +9,30 @@ vi.mock('../api/datasources', () => ({
   fetchDataSourceLabelValues: vi.fn().mockResolvedValue(['node1']),
   fetchDataSourceTraceServices: vi.fn().mockResolvedValue(['frontend', 'api']),
   listDataSources: vi.fn().mockResolvedValue([
-    { id: 'ds-1', name: 'Prometheus', type: 'prometheus', organization_id: 'org-1', url: '', is_default: true, auth_type: 'none', trace_id_field: '', created_at: '', updated_at: '' },
-    { id: 'ds-2', name: 'Loki', type: 'loki', organization_id: 'org-1', url: '', is_default: false, auth_type: 'none', trace_id_field: '', created_at: '', updated_at: '' },
+    {
+      id: 'ds-1',
+      name: 'Prometheus',
+      type: 'prometheus',
+      organization_id: 'org-1',
+      url: '',
+      is_default: true,
+      auth_type: 'none',
+      trace_id_field: '',
+      created_at: '',
+      updated_at: '',
+    },
+    {
+      id: 'ds-2',
+      name: 'Loki',
+      type: 'loki',
+      organization_id: 'org-1',
+      url: '',
+      is_default: false,
+      auth_type: 'none',
+      trace_id_field: '',
+      created_at: '',
+      updated_at: '',
+    },
   ]),
 }))
 
@@ -57,7 +79,9 @@ describe('CmdKChatView integration — real tool executor', () => {
     mockSendChatRequest
       .mockResolvedValueOnce({
         content: null,
-        toolCalls: [{ id: 'tc-1', type: 'function', function: { name: 'get_metrics', arguments: '{}' } }],
+        toolCalls: [
+          { id: 'tc-1', type: 'function', function: { name: 'get_metrics', arguments: '{}' } },
+        ],
       })
       .mockResolvedValueOnce({ content: 'Found metrics: up', toolCalls: [] })
 
@@ -81,7 +105,9 @@ describe('CmdKChatView integration — real tool executor', () => {
     mockSendChatRequest
       .mockResolvedValueOnce({
         content: null,
-        toolCalls: [{ id: 'tc-1', type: 'function', function: { name: 'get_labels', arguments: '{}' } }],
+        toolCalls: [
+          { id: 'tc-1', type: 'function', function: { name: 'get_labels', arguments: '{}' } },
+        ],
       })
       .mockResolvedValueOnce({ content: 'Found labels', toolCalls: [] })
 
@@ -105,11 +131,19 @@ describe('CmdKChatView integration — real tool executor', () => {
     mockSendChatRequest
       .mockResolvedValueOnce({
         content: null,
-        toolCalls: [{ id: 'tc-1', type: 'function', function: { name: 'list_datasources', arguments: '{}' } }],
+        toolCalls: [
+          { id: 'tc-1', type: 'function', function: { name: 'list_datasources', arguments: '{}' } },
+        ],
       })
       .mockResolvedValueOnce({
         content: null,
-        toolCalls: [{ id: 'tc-2', type: 'function', function: { name: 'get_metrics', arguments: '{"datasource_id":"ds-1"}' } }],
+        toolCalls: [
+          {
+            id: 'tc-2',
+            type: 'function',
+            function: { name: 'get_metrics', arguments: '{"datasource_id":"ds-1"}' },
+          },
+        ],
       })
       .mockResolvedValueOnce({ content: 'Here are your metrics', toolCalls: [] })
 

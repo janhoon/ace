@@ -2,8 +2,8 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCommandContext } from '../composables/useCommandContext'
-import MetricsExploreTab from './MetricsExploreTab.vue'
 import LogsExploreTab from './LogsExploreTab.vue'
+import MetricsExploreTab from './MetricsExploreTab.vue'
 import TracesExploreTab from './TracesExploreTab.vue'
 
 const route = useRoute()
