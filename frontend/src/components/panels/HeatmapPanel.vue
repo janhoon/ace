@@ -6,15 +6,20 @@ import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import VChart from 'vue-echarts'
-import { chartAxisStyle, chartGridStyle, chartPalette, chartTooltipStyle } from '../../utils/chartTheme'
+import {
+  chartAxisStyle,
+  chartGridStyle,
+  chartPalette,
+  chartTooltipStyle,
+} from '../../utils/chartTheme'
 
 // Register ECharts components
 use([CanvasRenderer, HeatmapChart, GridComponent, TooltipComponent, VisualMapComponent])
 
 export interface HeatmapDataPoint {
-  x: number | string  // x-axis value (timestamp or category)
-  y: number | string  // y-axis value (bucket/category)
-  value: number       // heat value
+  x: number | string // x-axis value (timestamp or category)
+  y: number | string // y-axis value (bucket/category)
+  value: number // heat value
 }
 
 const props = defineProps<{

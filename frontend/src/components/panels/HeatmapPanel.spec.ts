@@ -272,13 +272,9 @@ describe('heatmap dataAdapter', () => {
         for (const series of raw.series) {
           yLabels.push(series.name)
           const yIndex = yLabels.length - 1
-          for (
-            let xIndex = 0;
-            xIndex <
-            (series.data as Array<{ timestamp: number; value: number }>).length;
-            xIndex++
-          ) {
-            const point = (series.data as Array<{ timestamp: number; value: number }>)[xIndex]
+          const points = series.data as Array<{ timestamp: number; value: number }>
+          for (let xIndex = 0; xIndex < points.length; xIndex++) {
+            const point = points[xIndex]
             data.push({ x: point.timestamp, y: yIndex, value: point.value })
           }
         }
@@ -351,11 +347,8 @@ describe('heatmap dataAdapter', () => {
     const registration = lookupPanel('heatmap')
 
     expect(registration).not.toBeNull()
-    // biome-ignore lint/style/noNonNullAssertion: assertion above guarantees non-null
-    expect(registration!.type).toBe('heatmap')
-    // biome-ignore lint/style/noNonNullAssertion: assertion above guarantees non-null
-    expect(registration!.category).toBe('charts')
-    // biome-ignore lint/style/noNonNullAssertion: assertion above guarantees non-null
-    expect(registration!.label).toBe('Heatmap')
+    expect(registration?.type).toBe('heatmap')
+    expect(registration?.category).toBe('charts')
+    expect(registration?.label).toBe('Heatmap')
   })
 })
