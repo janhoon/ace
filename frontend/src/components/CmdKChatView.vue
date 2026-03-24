@@ -238,7 +238,7 @@ function toolStatusIcon(status: ToolStatus['status']): string {
         <!-- Assistant message -->
         <div v-else-if="msg.role === 'assistant'" class="flex justify-start">
           <div
-            class="rounded-lg px-3 py-2 text-sm max-w-[80%] prose prose-sm"
+            class="rounded-lg px-3 py-2 text-sm max-w-[80%] prose prose-sm prose-invert"
             :style="{
               backgroundColor: 'var(--color-surface-container-low)',
               color: 'var(--color-on-surface)',

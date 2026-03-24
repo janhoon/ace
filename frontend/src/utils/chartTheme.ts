@@ -43,6 +43,22 @@ export const thresholdColors = {
 } as const
 
 // ---------------------------------------------------------------------------
+// Convenience aliases used by Kinetic v2 components (from master)
+// ---------------------------------------------------------------------------
+
+export const chartColors = {
+  grid: 'rgba(42,49,56,0.3)',
+  label: '#8A847A',
+  text: '#B8B2A7',
+  tooltipBg: '#1E2429',
+  tooltipBorder: 'rgba(58,68,78,0.4)',
+  surface: '#111417',
+  fontDisplay: 'Space Grotesk, DM Sans, sans-serif',
+  fontBody: 'DM Sans, sans-serif',
+  fontMono: 'JetBrains Mono, monospace',
+} as const
+
+// ---------------------------------------------------------------------------
 // Shared ECharts style objects
 // ---------------------------------------------------------------------------
 
