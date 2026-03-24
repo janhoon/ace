@@ -1,6 +1,20 @@
-import { BarChart3, GaugeCircle, Grid3x3, ScatterChart as ScatterIcon } from 'lucide-vue-next'
+import { BarChart3, FileText, GaugeCircle, Grid3x3, ScatterChart as ScatterIcon } from 'lucide-vue-next'
 import type { RawQueryResult } from '../../types/panel'
 import { registerPanel } from '../../utils/panelRegistry'
+
+// Register Text
+registerPanel({
+  type: 'text',
+  component: () => import('./TextPanel.vue'),
+  dataAdapter: () => {
+    // Text panel doesn't use query data — content comes from panel.query.content
+    return { content: '' }
+  },
+  defaultQuery: { content: '# Hello\n\nEdit this panel to add content.' },
+  category: 'widgets',
+  label: 'Text',
+  icon: FileText,
+})
 
 // Register Heatmap
 registerPanel({
