@@ -2,6 +2,7 @@ import {
   BarChart3,
   Bell,
   FileText,
+  Flame,
   GanttChart,
   GaugeCircle,
   Grid3x3,
@@ -203,4 +204,23 @@ registerPanel({
   category: 'observability',
   label: 'Status History',
   icon: LayoutGrid,
+})
+
+// Register Flame Graph
+registerPanel({
+  type: 'flame_graph',
+  component: () => import('./FlameGraphPanel.vue'),
+  dataAdapter: (_raw: RawQueryResult) => {
+    // Flame graphs typically come from trace/profiling data
+    // For now, return a stub root node
+    // Real integration would parse trace spans into a call tree
+    return {
+      root: { name: 'root', value: 0, children: [] },
+      unit: 'ms',
+    }
+  },
+  defaultQuery: {},
+  category: 'observability',
+  label: 'Flame Graph',
+  icon: Flame,
 })
