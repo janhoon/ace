@@ -2,13 +2,13 @@ package audit
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/janhoon/dash/backend/internal/auth"
+	"go.uber.org/zap"
 )
 
 // Logger writes immutable audit entries to the audit_log table.
@@ -141,7 +141,7 @@ func (l *Logger) insert(
 		nullableString(ipAddress),
 	)
 	if err != nil {
-		log.Printf("audit: failed to write audit log entry: %v", err)
+		zap.L().Error("failed to write audit log entry", zap.Error(err))
 	}
 }
 

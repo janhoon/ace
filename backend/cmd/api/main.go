@@ -14,13 +14,34 @@ import (
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/db"
 	"github.com/janhoon/dash/backend/internal/handlers"
+	"github.com/janhoon/dash/backend/internal/httplog"
 	"github.com/janhoon/dash/backend/internal/telemetry"
 	"github.com/janhoon/dash/backend/internal/valkey"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.uber.org/zap"
 )
 
 func main() {
+	// Configure structured logging (must be first — other init steps log)
+	logLevel := zap.NewAtomicLevel()
+	if lvl := os.Getenv("LOG_LEVEL"); lvl != "" {
+		if err := logLevel.UnmarshalText([]byte(lvl)); err != nil {
+			log.Fatalf("invalid LOG_LEVEL %q: %v", lvl, err)
+		}
+	}
+	cfg := zap.NewProductionConfig()
+	cfg.Level = logLevel
+	cfg.Sampling = nil // disable sampling — every request must be logged
+	cfg.OutputPaths = []string{"stdout"}
+	cfg.ErrorOutputPaths = []string{"stderr"}
+	logger, err := cfg.Build()
+	if err != nil {
+		log.Fatalf("failed to initialize logger: %v", err)
+	}
+	defer func() { _ = logger.Sync() }()
+	zap.ReplaceGlobals(logger)
+
 	// Get database URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -36,34 +57,34 @@ func main() {
 	// Connect to database
 	pool, err := db.Connect(context.Background(), dbURL)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
 	defer pool.Close()
 
 	// Run migrations
 	if err := db.RunMigrations(context.Background(), pool); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+		logger.Fatal("failed to run migrations", zap.Error(err))
 	}
 
 	// Initialize JWT manager
 	jwtManager, err := auth.NewJWTManager()
 	if err != nil {
-		log.Fatalf("Failed to initialize JWT manager: %v", err)
+		logger.Fatal("failed to initialize JWT manager", zap.Error(err))
 	}
 
 	// Initialize Valkey client (optional - refresh tokens won't work without it)
 	valkeyClient, err := valkey.NewClient()
 	if err != nil {
-		log.Printf("Warning: Valkey not available, refresh tokens disabled: %v", err)
+		logger.Warn("valkey not available, refresh tokens disabled", zap.Error(err))
 	} else {
 		defer valkeyClient.Close()
-		log.Println("Valkey connected successfully")
+		logger.Info("valkey connected")
 	}
 
 	telemetryShutdown := func(context.Context) error { return nil }
 	shutdownTracing, err := telemetry.Setup(context.Background())
 	if err != nil {
-		log.Printf("Warning: OpenTelemetry tracing setup failed: %v", err)
+		logger.Warn("OpenTelemetry tracing setup failed", zap.Error(err))
 	} else {
 		telemetryShutdown = shutdownTracing
 	}
@@ -72,18 +93,18 @@ func main() {
 		defer cancel()
 
 		if shutdownErr := telemetryShutdown(shutdownCtx); shutdownErr != nil {
-			log.Printf("Warning: OpenTelemetry tracing shutdown failed: %v", shutdownErr)
+			logger.Warn("OpenTelemetry tracing shutdown failed", zap.Error(shutdownErr))
 		}
 	}()
 
 	analyticsService, err := analytics.NewFromEnv()
 	if err != nil {
-		log.Printf("Warning: analytics disabled: %v", err)
+		logger.Warn("analytics disabled", zap.Error(err))
 	}
 	analytics.SetGlobal(analyticsService)
 	defer func() {
 		if closeErr := analyticsService.Close(); closeErr != nil {
-			log.Printf("Warning: PostHog shutdown failed: %v", closeErr)
+			logger.Warn("PostHog shutdown failed", zap.Error(closeErr))
 		}
 	}()
 
@@ -248,8 +269,10 @@ func main() {
 	grafanaConverterHandler := handlers.NewGrafanaConverterHandler()
 	mux.HandleFunc("POST /api/convert/grafana", auth.RequireAuth(jwtManager, grafanaConverterHandler.Convert))
 
-	// Apply middleware
-	handler := corsMiddleware(otelhttp.NewHandler(mux, "ace-api"))
+	// Apply middleware (httplog inside otelhttp so trace_id is available in context)
+	handler := httplog.NewMiddleware(logger)(mux)
+	handler = otelhttp.NewHandler(handler, "ace-api")
+	handler = corsMiddleware(handler)
 	handler = auditLogger.Middleware(handler)
 
 	// Create server
@@ -261,13 +284,14 @@ func main() {
 		// needed; per-request context timeouts handle individual request limits.
 		WriteTimeout: 0,
 		IdleTimeout:  60 * time.Second,
+		ErrorLog:     log.New(zap.NewStdLog(logger).Writer(), "", 0),
 	}
 
 	// Start server in goroutine
 	go func() {
-		log.Println("Starting server on :8080")
+		logger.Info("starting server", zap.String("addr", ":8080"))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			logger.Fatal("server error", zap.Error(err))
 		}
 	}()
 
@@ -276,15 +300,15 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	logger.Info("shutting down server")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		logger.Fatal("server forced to shutdown", zap.Error(err))
 	}
 
-	log.Println("Server exiting")
+	logger.Info("server stopped")
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

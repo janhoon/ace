@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/crypto"
+	"go.uber.org/zap"
 )
 
 // jsonError writes a JSON error response with proper encoding, preventing JSON injection.
@@ -323,13 +323,13 @@ func (h *AIHandler) ListProviders(w http.ResponseWriter, r *http.Request) {
 			orgID,
 		)
 		if err != nil {
-			log.Printf("ai_handler: ListProviders query failed: %v", err)
+			zap.L().Error("list providers query failed", zap.Error(err))
 		} else {
 			defer rows.Close()
 			for rows.Next() {
 				var p providerRow
 				if err := rows.Scan(&p.ID, &p.ProviderType, &p.DisplayName, &p.BaseURL, &p.Enabled, &p.ModelsOverride); err != nil {
-					log.Printf("ai_handler: ListProviders row scan failed: %v", err)
+					zap.L().Error("list providers row scan failed", zap.Error(err))
 					continue
 				}
 				providers = append(providers, providerToJSON(p))
@@ -539,7 +539,7 @@ func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		// Graceful tool degradation: retry without tools if it looks like a tool error
 		// Only retry if no bytes have been written to the client yet
 		if !bw.wroteBytes && len(chatReq.Tools) > 0 && isToolIncompatibilityError(err.Error()) {
-			log.Printf("ai_handler: tool incompatibility detected, retrying without tools: %v", err)
+			zap.L().Warn("tool incompatibility detected, retrying without tools", zap.Error(err))
 			chatReq.Tools = nil
 			bw.Header().Set("X-Tools-Unsupported", "true")
 			retryErr := provider.Chat(ctx, chatReq, bw)
@@ -624,7 +624,7 @@ func (h *AIHandler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 		orgID, reqBody.ProviderType, reqBody.DisplayName, reqBody.BaseURL, encryptedKey, enabled, reqBody.ModelsOverride,
 	).Scan(&p.ID, &p.ProviderType, &p.DisplayName, &p.BaseURL, &p.Enabled, &p.ModelsOverride, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
-		log.Printf("ai_handler: failed to create provider: %v", err)
+		zap.L().Error("failed to create provider", zap.Error(err))
 		jsonError(w, "failed to create provider", http.StatusInternalServerError)
 		return
 	}
@@ -734,7 +734,7 @@ func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 		pid, orgID,
 	).Scan(&updated.ID, &updated.ProviderType, &updated.DisplayName, &updated.BaseURL, &updated.Enabled, &updated.ModelsOverride, &updated.CreatedAt, &updated.UpdatedAt)
 	if err != nil {
-		log.Printf("ai_handler: failed to update provider: %v", err)
+		zap.L().Error("failed to update provider", zap.Error(err))
 		jsonError(w, "failed to update provider", http.StatusInternalServerError)
 		return
 	}
