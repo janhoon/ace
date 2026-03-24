@@ -8,9 +8,11 @@ import {
   GaugeCircle,
   GitBranch,
   Grid3x3,
+  LayoutDashboard,
   LayoutGrid,
   Network,
   ScatterChart as ScatterIcon,
+  StickyNote,
 } from 'lucide-vue-next'
 import type { RawQueryResult } from '../../types/panel'
 import { registerPanel } from '../../utils/panelRegistry'
@@ -296,4 +298,32 @@ registerPanel({
   category: 'observability',
   label: 'Trace Detail',
   icon: GitBranch,
+})
+
+// Register Annotation List
+registerPanel({
+  type: 'annotation_list',
+  component: () => import('./AnnotationListPanel.vue'),
+  dataAdapter: () => {
+    // TODO: Annotation list needs backend annotation API integration
+    return { annotations: [] }
+  },
+  defaultQuery: {},
+  category: 'widgets',
+  label: 'Annotation List',
+  icon: StickyNote,
+})
+
+// Register Dashboard List
+registerPanel({
+  type: 'dashboard_list',
+  component: () => import('./DashboardListPanel.vue'),
+  dataAdapter: () => {
+    // TODO: Dashboard list needs backend dashboard API integration
+    return { dashboards: [] }
+  },
+  defaultQuery: {},
+  category: 'widgets',
+  label: 'Dashboard List',
+  icon: LayoutDashboard,
 })
