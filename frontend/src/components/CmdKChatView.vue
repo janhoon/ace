@@ -23,16 +23,17 @@ const { sendChatRequest, chatMessages, models, selectedModel, fetchModels, isLoa
 
 const { currentOrg } = useOrganization()
 
-const { executeTool } = useCopilotToolExecutor(
-  () => props.datasourceId,
-  () => currentOrg.value?.id ?? '',
-  () => props.datasourceType,
-)
-
 // --- State ---
 
 const followUp = ref('')
 const lastUsedDatasourceId = ref('')
+const lastUsedDatasourceType = ref('')
+
+const { executeTool } = useCopilotToolExecutor(
+  () => props.datasourceId,
+  () => currentOrg.value?.id ?? '',
+  () => props.datasourceType || lastUsedDatasourceType.value,
+)
 const dashboardSpec = ref<DashboardSpec | null>(null)
 const renderedHtml = ref<Record<number, string>>({})
 const messagesContainer = ref<HTMLDivElement | null>(null)
@@ -82,6 +83,7 @@ async function handleSend(userMessage: string) {
   const tools = getToolsForDatasourceType(props.datasourceType)
   toolStatuses.value = []
   dashboardSpec.value = null
+  let discoveredDatasources: Array<{ id: string; name: string; type: string }> = []
 
   isLoading.value = true
   error.value = null
@@ -134,9 +136,25 @@ async function handleSend(userMessage: string) {
         if (toolStatuses.value[statusIndex]!.status === 'running') {
           toolStatuses.value[statusIndex]!.status = 'complete'
         }
-        const tcArgs = JSON.parse(tc.function.arguments || '{}')
+        let tcArgs: Record<string, unknown> = {}
+        try {
+          tcArgs = JSON.parse(tc.function.arguments || '{}')
+        } catch {
+          // ignore parse errors — tracking is best-effort
+        }
+        // Cache list_datasources results for type lookup
+        if (tc.function.name === 'list_datasources' && result && !result.startsWith('Error')) {
+          try {
+            discoveredDatasources = JSON.parse(result) as Array<{ id: string; name: string; type: string }>
+          } catch {
+            // ignore
+          }
+        }
+        // Track which datasource the model is using
         if (tcArgs.datasource_id) {
-          lastUsedDatasourceId.value = tcArgs.datasource_id
+          lastUsedDatasourceId.value = tcArgs.datasource_id as string
+          const match = discoveredDatasources.find((ds) => ds.id === tcArgs.datasource_id)
+          if (match) lastUsedDatasourceType.value = match.type
         }
         requestMessages.push(
           { role: 'assistant', content: null, tool_calls: [tc] },

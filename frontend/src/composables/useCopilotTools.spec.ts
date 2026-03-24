@@ -104,7 +104,7 @@ describe('getToolsForDatasourceType', () => {
   })
 
   it('excludes get_metrics for logs datasource types', () => {
-    for (const type of ['loki', 'victorialogs']) {
+    for (const type of ['loki', 'victorialogs', 'elasticsearch', 'clickhouse']) {
       const tools = getToolsForDatasourceType(type)
       expect(tools.find((t) => t.function.name === 'get_metrics')).toBeUndefined()
     }

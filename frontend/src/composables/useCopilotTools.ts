@@ -98,13 +98,13 @@ export const writeQueryTool: ToolDefinition = {
   function: {
     name: 'write_query',
     description:
-      'Write a PromQL/MetricsQL query into the query editor on the current page. The user can then review it before running.',
+      'Write a query into the query editor on the current page. Supports PromQL/MetricsQL for metrics, LogQL for logs, and TraceQL for traces. The user can then review it before running.',
     parameters: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
-          description: 'The PromQL/MetricsQL query expression to write',
+          description: 'The query expression to write (PromQL/MetricsQL, LogQL, TraceQL, etc.)',
         },
       },
       required: ['query'],
@@ -201,7 +201,7 @@ export const getTraceServicesTool: ToolDefinition = {
 // --- Tool set composition by datasource type ---
 
 const METRICS_TYPES = ['victoriametrics', 'prometheus']
-const LOGS_TYPES = ['loki', 'victorialogs']
+const LOGS_TYPES = ['loki', 'victorialogs', 'elasticsearch', 'clickhouse']
 const TRACES_TYPES = ['tempo', 'victoriatraces']
 
 const commonTools: ToolDefinition[] = [
