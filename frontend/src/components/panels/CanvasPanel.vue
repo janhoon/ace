@@ -75,7 +75,7 @@ onUnmounted(() => {
 
 // Re-mount if readOnly changes
 watch(
-  () => props.readOnly,
+  () => [props.readOnly, props.data] as const,
   () => {
     if (reactRoot) {
       reactRoot.unmount()

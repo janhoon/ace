@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { chartPalette, thresholdColors } from '../../utils/chartTheme'
 
 // ---------------------------------------------------------------------------
@@ -34,10 +34,21 @@ function typeColor(type: AnnotationItem['type']): string {
   return chartPalette[7]                               // Alloy Silver — other
 }
 
+// Reactive clock for relative timestamps — refreshes every 60s
+const now = ref(Date.now())
+let ticker: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  ticker = setInterval(() => {
+    now.value = Date.now()
+  }, 60_000)
+})
+onUnmounted(() => {
+  if (ticker) clearInterval(ticker)
+})
+
 function formatTimestamp(iso: string): string {
-  const now = Date.now()
   const ts = new Date(iso).getTime()
-  const diffMs = now - ts
+  const diffMs = now.value - ts
   const diffSec = Math.floor(diffMs / 1000)
 
   if (diffSec < 60) return `${diffSec}s ago`

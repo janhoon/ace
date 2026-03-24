@@ -71,7 +71,7 @@ describe('CandlestickPanel', () => {
     expect(option.series[0].type).toBe('candlestick')
   })
 
-  it('maps data correctly to [open, close, low, high] arrays', () => {
+  it('maps data correctly to [timestamp_ms, open, close, low, high] arrays', () => {
     const wrapper = mount(CandlestickPanel, {
       props: { data: mockData },
     })
@@ -79,11 +79,11 @@ describe('CandlestickPanel', () => {
 
     const seriesData = option.series[0].data
     expect(seriesData).toHaveLength(4)
-    // ECharts candlestick format: [open, close, low, high]
-    expect(seriesData[0]).toEqual([100, 110, 95, 115])
-    expect(seriesData[1]).toEqual([110, 105, 100, 120])
-    expect(seriesData[2]).toEqual([105, 115, 102, 118])
-    expect(seriesData[3]).toEqual([115, 108, 105, 122])
+    // ECharts candlestick format with time axis: [timestamp_ms, open, close, low, high]
+    expect(seriesData[0]).toEqual([1000000, 100, 110, 95, 115])
+    expect(seriesData[1]).toEqual([2000000, 110, 105, 100, 120])
+    expect(seriesData[2]).toEqual([3000000, 105, 115, 102, 118])
+    expect(seriesData[3]).toEqual([4000000, 115, 108, 105, 122])
   })
 
   it('up candles use thresholdColors.good', () => {
@@ -170,7 +170,7 @@ describe('CandlestickPanel', () => {
     const option = JSON.parse(wrapper.find('.echarts-mock').attributes('data-option') || '{}')
 
     expect(option.series[0].data).toHaveLength(0)
-    expect(option.xAxis.data).toHaveLength(0)
+    expect(option.xAxis.type).toBe('time')
   })
 
   it('has transparent background', () => {

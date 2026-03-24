@@ -30,12 +30,9 @@ const props = defineProps<{
 
 const chartRef = ref<typeof VChart | null>(null)
 
-// ECharts candlestick expects timestamps in milliseconds for time axis
-const xAxisData = computed(() => props.data.map((d) => d.timestamp * 1000))
-
-// ECharts candlestick data format: [open, close, low, high]
+// ECharts candlestick data format with time axis: [timestamp_ms, open, close, low, high]
 const seriesData = computed(() =>
-  props.data.map((d) => [d.open, d.close, d.low, d.high]),
+  props.data.map((d) => [d.timestamp * 1000, d.open, d.close, d.low, d.high]),
 )
 
 const chartOption = computed(() => ({
@@ -61,13 +58,14 @@ const chartOption = computed(() => ({
       fontSize: chartTooltipStyle.textStyle.fontSize,
     },
     formatter: (
-      params: Array<{ name: string; data: [number, number, number, number] }>,
+      params: Array<{ data: [number, number, number, number, number] }>,
     ) => {
       const p = params[0]
       if (!p) return ''
-      const [open, close, low, high] = p.data
+      const [ts, open, close, low, high] = p.data
+      const date = new Date(ts).toLocaleString()
       return [
-        `<b>${p.name}</b>`,
+        `<b>${date}</b>`,
         `Open: ${open}`,
         `Close: ${close}`,
         `Low: ${low}`,
@@ -77,7 +75,6 @@ const chartOption = computed(() => ({
   },
   xAxis: {
     type: 'time' as const,
-    data: xAxisData.value,
     axisLine: {
       lineStyle: {
         color: chartAxisStyle.axisLine.lineStyle.color,
