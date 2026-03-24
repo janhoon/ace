@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +14,13 @@ import (
 
 	"github.com/janhoon/dash/backend/internal/crypto"
 )
+
+// hashToken returns a hex-encoded SHA-256 hash of the given token,
+// used as a safe cache key instead of storing plaintext tokens in memory.
+func hashToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
+}
 
 // AIProvider defines the interface for AI model providers (OpenAI-compatible, Copilot, etc.)
 type AIProvider interface {
@@ -218,10 +227,12 @@ func (p *CopilotProvider) getTokenEndpoint() string {
 }
 
 // getCopilotSessionToken obtains a Copilot session token, using the cache
-// when available. The cache key is the plaintext GitHub token.
+// when available. The cache key is a SHA-256 hash of the GitHub token.
 func (p *CopilotProvider) getCopilotSessionToken(ctx context.Context, ghToken string) (sessionToken string, apiEndpoint string, err error) {
+	cacheKey := hashToken(ghToken)
+
 	// Check cache: valid if expiresAt - 60 > now (60s buffer)
-	if cached, ok := copilotTokenCache.Load(ghToken); ok {
+	if cached, ok := copilotTokenCache.Load(cacheKey); ok {
 		entry := cached.(cachedCopilotToken)
 		if entry.expiresAt-60 > time.Now().Unix() {
 			return entry.token, entry.apiEndpoint, nil
@@ -272,8 +283,8 @@ func (p *CopilotProvider) getCopilotSessionToken(ctx context.Context, ghToken st
 		apiURL = "https://api.individual.githubcopilot.com"
 	}
 
-	// Cache the token
-	copilotTokenCache.Store(ghToken, cachedCopilotToken{
+	// Cache the token using hashed key
+	copilotTokenCache.Store(cacheKey, cachedCopilotToken{
 		token:       tokenResp.Token,
 		apiEndpoint: apiURL,
 		expiresAt:   tokenResp.ExpiresAt,

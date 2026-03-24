@@ -599,7 +599,7 @@ func TestCopilotProvider_ListModels_TokenExpired(t *testing.T) {
 	})
 
 	// Pre-seed cache with an expired token (expiresAt in the past)
-	copilotTokenCache.Store("ghp_expired_test_token", cachedCopilotToken{
+	copilotTokenCache.Store(hashToken("ghp_expired_test_token"), cachedCopilotToken{
 		token:       "tid=expired",
 		apiEndpoint: copilotAPI.URL,
 		expiresAt:   time.Now().Unix() - 10, // already expired

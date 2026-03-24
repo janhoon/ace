@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -15,6 +17,71 @@ import (
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/crypto"
 )
+
+// jsonError writes a JSON error response with proper encoding, preventing JSON injection.
+func jsonError(w http.ResponseWriter, msg string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+// validateBaseURL checks that a URL is safe to use as a provider base URL.
+// It requires http:// or https:// scheme, rejects userinfo (@) and fragments (#),
+// and blocks cloud metadata IPs (169.254.169.254).
+func validateBaseURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("base_url must use http or https scheme")
+	}
+	if strings.Contains(raw, "@") {
+		return fmt.Errorf("base_url must not contain userinfo (@)")
+	}
+	if strings.Contains(raw, "#") {
+		return fmt.Errorf("base_url must not contain a fragment (#)")
+	}
+
+	// Resolve hostname to check for cloud metadata IPs
+	hostname := u.Hostname()
+	ips, err := net.LookupHost(hostname)
+	if err == nil {
+		for _, ip := range ips {
+			if ip == "169.254.169.254" {
+				return fmt.Errorf("base_url must not resolve to cloud metadata IP")
+			}
+		}
+	}
+	// If DNS fails (e.g. private hostname not resolvable from this host),
+	// also check the literal hostname in case it's an IP address.
+	if hostname == "169.254.169.254" {
+		return fmt.Errorf("base_url must not point to cloud metadata IP")
+	}
+
+	return nil
+}
+
+// bytesWrittenResponseWriter wraps an http.ResponseWriter and tracks whether
+// any bytes have been written to the response body.
+type bytesWrittenResponseWriter struct {
+	http.ResponseWriter
+	wroteBytes bool
+}
+
+func (bw *bytesWrittenResponseWriter) Write(p []byte) (int, error) {
+	if len(p) > 0 {
+		bw.wroteBytes = true
+	}
+	return bw.ResponseWriter.Write(p)
+}
+
+// Flush delegates to the underlying ResponseWriter if it implements http.Flusher.
+func (bw *bytesWrittenResponseWriter) Flush() {
+	if f, ok := bw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
 
 // AIHandler orchestrates all AI endpoints: provider CRUD, model listing, and chat.
 type AIHandler struct {
@@ -108,7 +175,7 @@ type updateProviderRequest struct {
 // false if it already wrote an error response.
 func (h *AIHandler) requireAdmin(ctx context.Context, w http.ResponseWriter, userID, orgID uuid.UUID) bool {
 	if h.pool == nil {
-		http.Error(w, `{"error":"admin access required"}`, http.StatusForbidden)
+		jsonError(w, "admin access required", http.StatusForbidden)
 		return false
 	}
 	var role string
@@ -117,7 +184,7 @@ func (h *AIHandler) requireAdmin(ctx context.Context, w http.ResponseWriter, use
 		userID, orgID,
 	).Scan(&role)
 	if err != nil || role != "admin" {
-		http.Error(w, `{"error":"admin access required"}`, http.StatusForbidden)
+		jsonError(w, "admin access required", http.StatusForbidden)
 		return false
 	}
 	return true
@@ -201,12 +268,12 @@ func (h *AIHandler) buildDBProvider(ctx context.Context, providerID, orgID uuid.
 func (h *AIHandler) ListProviders(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := auth.GetOrgID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"missing organization context"}`, http.StatusBadRequest)
+		jsonError(w, "missing organization context", http.StatusBadRequest)
 		return
 	}
 	userID, ok := auth.GetUserID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		jsonError(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -221,11 +288,14 @@ func (h *AIHandler) ListProviders(w http.ResponseWriter, r *http.Request) {
 			 FROM ai_providers WHERE organization_id = $1 AND enabled = true`,
 			orgID,
 		)
-		if err == nil {
+		if err != nil {
+			log.Printf("ai_handler: ListProviders query failed: %v", err)
+		} else {
 			defer rows.Close()
 			for rows.Next() {
 				var p providerRow
 				if err := rows.Scan(&p.ID, &p.ProviderType, &p.DisplayName, &p.BaseURL, &p.Enabled, &p.ModelsOverride); err != nil {
+					log.Printf("ai_handler: ListProviders row scan failed: %v", err)
 					continue
 				}
 				providers = append(providers, providerToJSON(p))
@@ -287,18 +357,18 @@ func (h *AIHandler) ListProviders(w http.ResponseWriter, r *http.Request) {
 func (h *AIHandler) ListModels(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := auth.GetOrgID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"missing organization context"}`, http.StatusBadRequest)
+		jsonError(w, "missing organization context", http.StatusBadRequest)
 		return
 	}
 	userID, ok := auth.GetUserID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		jsonError(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	providerID := r.URL.Query().Get("provider_id")
 	if providerID == "" {
-		http.Error(w, `{"error":"provider_id query parameter is required"}`, http.StatusBadRequest)
+		jsonError(w, "provider_id query parameter is required", http.StatusBadRequest)
 		return
 	}
 
@@ -307,7 +377,7 @@ func (h *AIHandler) ListModels(w http.ResponseWriter, r *http.Request) {
 
 	provider, err := h.resolveProvider(ctx, providerID, userID, orgID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusNotFound)
+		jsonError(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -337,7 +407,7 @@ func (h *AIHandler) ListModels(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		http.Error(w, fmt.Sprintf(`{"error":"failed to list models: %s"}`, err.Error()), http.StatusBadGateway)
+		jsonError(w, "failed to list models: "+err.Error(), http.StatusBadGateway)
 		return
 	}
 
@@ -359,25 +429,38 @@ func isToolIncompatibilityError(errMsg string) bool {
 }
 
 func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
+	// Fix #4: Limit request body to 2 MB
+	r.Body = http.MaxBytesReader(w, r.Body, 2*1024*1024)
+
 	orgID, ok := auth.GetOrgID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"missing organization context"}`, http.StatusBadRequest)
+		jsonError(w, "missing organization context", http.StatusBadRequest)
 		return
 	}
 	userID, ok := auth.GetUserID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		jsonError(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	var reqBody chatRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Fix #5: Validate required fields
+	if reqBody.ProviderID == "" {
+		jsonError(w, "provider_id is required", http.StatusBadRequest)
+		return
+	}
+	if reqBody.Model == "" {
+		jsonError(w, "model is required", http.StatusBadRequest)
 		return
 	}
 
 	if len(reqBody.Messages) == 0 {
-		http.Error(w, `{"error":"messages array is required"}`, http.StatusBadRequest)
+		jsonError(w, "messages array is required", http.StatusBadRequest)
 		return
 	}
 
@@ -387,7 +470,7 @@ func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	// Resolve provider
 	provider, err := h.resolveProvider(ctx, reqBody.ProviderID, userID, orgID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusNotFound)
+		jsonError(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -413,21 +496,29 @@ func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		Stream:   reqBody.Stream,
 	}
 
+	// Fix #3: Track whether bytes have been written to prevent retry after partial write
+	bw := &bytesWrittenResponseWriter{ResponseWriter: w}
+
 	// First attempt
-	err = provider.Chat(ctx, chatReq, w)
+	err = provider.Chat(ctx, chatReq, bw)
 	if err != nil {
 		// Graceful tool degradation: retry without tools if it looks like a tool error
-		if len(chatReq.Tools) > 0 && isToolIncompatibilityError(err.Error()) {
+		// Only retry if no bytes have been written to the client yet
+		if !bw.wroteBytes && len(chatReq.Tools) > 0 && isToolIncompatibilityError(err.Error()) {
 			log.Printf("ai_handler: tool incompatibility detected, retrying without tools: %v", err)
 			chatReq.Tools = nil
-			w.Header().Set("X-Tools-Unsupported", "true")
-			retryErr := provider.Chat(ctx, chatReq, w)
+			bw.Header().Set("X-Tools-Unsupported", "true")
+			retryErr := provider.Chat(ctx, chatReq, bw)
 			if retryErr != nil {
-				http.Error(w, fmt.Sprintf(`{"error":"chat failed: %s"}`, retryErr.Error()), http.StatusBadGateway)
+				if !bw.wroteBytes {
+					jsonError(w, "chat failed: "+retryErr.Error(), http.StatusBadGateway)
+				}
 			}
 			return
 		}
-		http.Error(w, fmt.Sprintf(`{"error":"chat failed: %s"}`, err.Error()), http.StatusBadGateway)
+		if !bw.wroteBytes {
+			jsonError(w, "chat failed: "+err.Error(), http.StatusBadGateway)
+		}
 		return
 	}
 }
@@ -437,14 +528,17 @@ func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 func (h *AIHandler) CreateProvider(w http.ResponseWriter, r *http.Request) {
+	// Fix #4: Limit request body to 64 KB for CRUD handlers
+	r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
+
 	orgID, ok := auth.GetOrgID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"missing organization context"}`, http.StatusBadRequest)
+		jsonError(w, "missing organization context", http.StatusBadRequest)
 		return
 	}
 	userID, ok := auth.GetUserID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		jsonError(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -457,12 +551,18 @@ func (h *AIHandler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 
 	var reqBody createProviderRequest
 	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		jsonError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	if reqBody.ProviderType == "" || reqBody.DisplayName == "" || reqBody.BaseURL == "" {
-		http.Error(w, `{"error":"provider_type, display_name, and base_url are required"}`, http.StatusBadRequest)
+		jsonError(w, "provider_type, display_name, and base_url are required", http.StatusBadRequest)
+		return
+	}
+
+	// Fix #1: SSRF validation on base_url
+	if err := validateBaseURL(reqBody.BaseURL); err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -471,7 +571,7 @@ func (h *AIHandler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 	if reqBody.APIKey != "" {
 		enc, err := crypto.EncryptToken(reqBody.APIKey)
 		if err != nil {
-			http.Error(w, `{"error":"failed to encrypt API key"}`, http.StatusInternalServerError)
+			jsonError(w, "failed to encrypt API key", http.StatusInternalServerError)
 			return
 		}
 		encryptedKey = &enc
@@ -491,7 +591,7 @@ func (h *AIHandler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 	).Scan(&p.ID, &p.ProviderType, &p.DisplayName, &p.BaseURL, &p.Enabled, &p.ModelsOverride, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		log.Printf("ai_handler: failed to create provider: %v", err)
-		http.Error(w, `{"error":"failed to create provider"}`, http.StatusInternalServerError)
+		jsonError(w, "failed to create provider", http.StatusInternalServerError)
 		return
 	}
 
@@ -505,20 +605,23 @@ func (h *AIHandler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
+	// Fix #4: Limit request body to 64 KB for CRUD handlers
+	r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
+
 	orgID, ok := auth.GetOrgID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"missing organization context"}`, http.StatusBadRequest)
+		jsonError(w, "missing organization context", http.StatusBadRequest)
 		return
 	}
 	userID, ok := auth.GetUserID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		jsonError(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	pid, err := uuid.Parse(r.PathValue("pid"))
 	if err != nil {
-		http.Error(w, `{"error":"invalid provider id"}`, http.StatusBadRequest)
+		jsonError(w, "invalid provider id", http.StatusBadRequest)
 		return
 	}
 
@@ -531,7 +634,7 @@ func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 
 	var reqBody updateProviderRequest
 	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		jsonError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
@@ -544,9 +647,9 @@ func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 	).Scan(&existing.ID, &existing.ProviderType, &existing.DisplayName, &existing.BaseURL, &existing.APIKey, &existing.Enabled, &existing.ModelsOverride)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			http.Error(w, `{"error":"provider not found"}`, http.StatusNotFound)
+			jsonError(w, "provider not found", http.StatusNotFound)
 		} else {
-			http.Error(w, `{"error":"failed to load provider"}`, http.StatusInternalServerError)
+			jsonError(w, "failed to load provider", http.StatusInternalServerError)
 		}
 		return
 	}
@@ -568,12 +671,18 @@ func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 		existing.ModelsOverride = *reqBody.ModelsOverride
 	}
 
+	// Fix #1: SSRF validation on base_url (validate the final URL after applying updates)
+	if err := validateBaseURL(existing.BaseURL); err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	// Encrypt new API key if provided
 	var encryptedKey *string
 	if reqBody.APIKey != nil && *reqBody.APIKey != "" {
 		enc, encErr := crypto.EncryptToken(*reqBody.APIKey)
 		if encErr != nil {
-			http.Error(w, `{"error":"failed to encrypt API key"}`, http.StatusInternalServerError)
+			jsonError(w, "failed to encrypt API key", http.StatusInternalServerError)
 			return
 		}
 		encryptedKey = &enc
@@ -592,7 +701,7 @@ func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 	).Scan(&updated.ID, &updated.ProviderType, &updated.DisplayName, &updated.BaseURL, &updated.Enabled, &updated.ModelsOverride, &updated.CreatedAt, &updated.UpdatedAt)
 	if err != nil {
 		log.Printf("ai_handler: failed to update provider: %v", err)
-		http.Error(w, `{"error":"failed to update provider"}`, http.StatusInternalServerError)
+		jsonError(w, "failed to update provider", http.StatusInternalServerError)
 		return
 	}
 
@@ -607,18 +716,18 @@ func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 func (h *AIHandler) DeleteProvider(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := auth.GetOrgID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"missing organization context"}`, http.StatusBadRequest)
+		jsonError(w, "missing organization context", http.StatusBadRequest)
 		return
 	}
 	userID, ok := auth.GetUserID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		jsonError(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	pid, err := uuid.Parse(r.PathValue("pid"))
 	if err != nil {
-		http.Error(w, `{"error":"invalid provider id"}`, http.StatusBadRequest)
+		jsonError(w, "invalid provider id", http.StatusBadRequest)
 		return
 	}
 
@@ -634,11 +743,11 @@ func (h *AIHandler) DeleteProvider(w http.ResponseWriter, r *http.Request) {
 		pid, orgID,
 	)
 	if err != nil {
-		http.Error(w, `{"error":"failed to delete provider"}`, http.StatusInternalServerError)
+		jsonError(w, "failed to delete provider", http.StatusInternalServerError)
 		return
 	}
 	if tag.RowsAffected() == 0 {
-		http.Error(w, `{"error":"provider not found"}`, http.StatusNotFound)
+		jsonError(w, "provider not found", http.StatusNotFound)
 		return
 	}
 
@@ -652,18 +761,18 @@ func (h *AIHandler) DeleteProvider(w http.ResponseWriter, r *http.Request) {
 func (h *AIHandler) TestProvider(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := auth.GetOrgID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"missing organization context"}`, http.StatusBadRequest)
+		jsonError(w, "missing organization context", http.StatusBadRequest)
 		return
 	}
 	userID, ok := auth.GetUserID(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		jsonError(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	pid, err := uuid.Parse(r.PathValue("pid"))
 	if err != nil {
-		http.Error(w, `{"error":"invalid provider id"}`, http.StatusBadRequest)
+		jsonError(w, "invalid provider id", http.StatusBadRequest)
 		return
 	}
 
