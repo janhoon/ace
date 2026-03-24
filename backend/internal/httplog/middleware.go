@@ -66,8 +66,8 @@ func NewMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 			duration := time.Since(start)
 
 			fields := []zap.Field{
-				zap.String("method", r.Method),
-				zap.String("path", r.URL.Path),
+				zap.String("method", sanitize(r.Method)),
+				zap.String("path", sanitize(r.URL.Path)),
 				zap.Int("status", rw.statusCode),
 				zap.Duration("duration", duration),
 				zap.Int("bytes", rw.bytesWritten),
