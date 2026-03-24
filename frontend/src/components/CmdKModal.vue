@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import CmdKChatView from './CmdKChatView.vue'
-import CmdKSearchResults from './CmdKSearchResults.vue'
+import { useRouter } from 'vue-router'
 import { useCommandContext } from '../composables/useCommandContext'
 import { useCopilot } from '../composables/useCopilot'
 import { useOrganization } from '../composables/useOrganization'
-import { useRouter } from 'vue-router'
+import CmdKChatView from './CmdKChatView.vue'
+import CmdKSearchResults from './CmdKSearchResults.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -153,8 +153,8 @@ function handleNavigate(path: string) {
       <CmdKChatView
         v-else-if="mode === 'chat'"
         :initial-query="chatQuery"
-        :datasource-type="currentContext?.datasourceType ?? 'victoriametrics'"
-        :datasource-name="currentContext?.datasourceName ?? 'default'"
+        :datasource-type="currentContext?.datasourceType ?? ''"
+        :datasource-name="currentContext?.datasourceName ?? ''"
         :datasource-id="currentContext?.datasourceId ?? ''"
         @exit-chat="handleExitChat"
       />
