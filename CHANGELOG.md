@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.10.0](https://github.com/aceobservability/ace/compare/v0.9.0...v0.10.0) (2026-03-25)
+
+
+### Changed
+
+* **sidebar:** replace icon rail + flyout with single collapsible sidebar (64px collapsed / 220px expanded)
+* **sidebar:** inline accordion sub-nav for Explore (metrics/logs/traces) and Settings (7 items)
+* **sidebar:** remove non-functional Alerts sub-nav (dead routes — AlertsView uses internal tabs)
+* **sidebar:** labels fade in with 80ms delay on expand, instant hide on collapse
+* **sidebar:** add `prefers-reduced-motion` support for sidebar transitions
+
+### Removed
+
+* **sidebar:** remove SidebarRail and SidebarFlyout components (merged into AppSidebar)
+* **sidebar:** remove hover-to-peek and click-to-pin flyout behavior
+* **sidebar:** remove flyout search bar (was non-functional placeholder)
+
 ## [0.9.0](https://github.com/aceobservability/ace/compare/v0.8.0...v0.9.0) (2026-03-24)
 
 
