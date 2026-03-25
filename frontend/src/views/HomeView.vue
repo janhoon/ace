@@ -13,6 +13,13 @@ const { registerContext, deregisterContext } = useCommandContext()
 const { datasources } = useDatasource()
 const { favorites, recentDashboards } = useFavorites()
 
+const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+const shortcutLabel = isMac ? '⌘K' : 'Ctrl+K'
+
+function openCmdK() {
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))
+}
+
 const hasDataSources = computed(() => datasources.value.length > 0)
 
 // Onboarding banner visibility — check if user dismissed it
@@ -128,6 +135,7 @@ onUnmounted(() => {
           color: 'var(--color-on-surface-variant)',
           border: '1px solid var(--color-outline-variant)',
         }"
+        @click="openCmdK"
       >
         <span class="opacity-60">Search services, query data, generate dashboards...</span>
         <kbd
@@ -136,7 +144,7 @@ onUnmounted(() => {
             border: '1px solid var(--color-outline-variant)',
             color: 'var(--color-outline)',
           }"
-        >&#8984;K</kbd>
+        >{{ shortcutLabel }}</kbd>
       </div>
     </div>
 
