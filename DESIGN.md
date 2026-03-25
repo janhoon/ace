@@ -184,14 +184,14 @@ Brand and data colors are separate systems. Never use the brand brass as the def
 | Token | Value | Usage |
 |-------|-------|-------|
 | motion-fast | `120ms` | Micro-interactions, hover states |
-| motion-base | `180ms` | Standard transitions, flyout expand |
+| motion-base | `180ms` | Standard transitions, sidebar expand |
 | motion-slow | `240ms` | Larger transitions, panel entrance |
 | ease-standard | `cubic-bezier(0.2, 0.8, 0.2, 1)` | Most enter/move transitions |
 | ease-exit | `cubic-bezier(0.4, 0, 1, 1)` | Exit transitions |
 
 - **Patterns:**
   - State changes (hover, focus, active): `120ms ease-standard`
-  - Shell: flyout expand `180ms ease-standard`, content stagger `20ms/item` (max 120ms)
+  - Shell: sidebar expand `180ms ease-standard`, content stagger `20ms/item` (max 120ms)
   - Panel enter on dashboard load: fade + translateY(8px), `200ms ease-standard`, stagger `30ms/panel` (caps at 300ms)
   - Modal/dropdown enter: `180ms ease-standard`
   - Modal/dropdown exit: `120ms ease-exit`
