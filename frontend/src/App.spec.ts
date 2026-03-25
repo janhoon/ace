@@ -1,20 +1,19 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import App from './App.vue'
 
-const mockPinnedSection = ref<string | null>(null)
+const mockIsExpanded = ref(true)
+const mockSidebarWidth = computed(() => mockIsExpanded.value ? '220px' : '64px')
 vi.mock('./composables/useSidebar', () => ({
   useSidebar: () => ({
-    hoveredSection: ref(null),
-    pinnedSection: mockPinnedSection,
-    isPeeking: ref(false),
-    activeFlyoutSection: ref(null),
+    isExpanded: mockIsExpanded,
+    sidebarWidth: mockSidebarWidth,
+    expandedSections: ref(new Set()),
     currentRouteSection: ref('dashboards'),
-    handleMouseEnter: vi.fn(),
-    handleMouseLeave: vi.fn(),
-    pinSection: vi.fn(),
-    closeFlyout: vi.fn(),
+    toggleSidebar: vi.fn(),
+    toggleSection: vi.fn(),
+    expandSection: vi.fn(),
     _reset: vi.fn(),
   }),
 }))
@@ -140,8 +139,8 @@ describe('App', () => {
     expect(wrapper.findComponent({ name: 'CmdKModal' }).exists()).toBe(true)
   })
 
-  it('applies 52px left margin when sidebar is shown and flyout is not pinned', () => {
-    mockPinnedSection.value = null
+  it('applies 220px left margin when sidebar is expanded', () => {
+    mockIsExpanded.value = true
     const wrapper = mount(App, {
       global: {
         stubs: {
@@ -155,11 +154,11 @@ describe('App', () => {
       },
     })
     const main = wrapper.find('main')
-    expect(main.element.style.marginLeft).toBe('52px')
+    expect(main.element.style.marginLeft).toBe('220px')
   })
 
-  it('applies 292px left margin when flyout is pinned', () => {
-    mockPinnedSection.value = 'explore'
+  it('applies 64px left margin when sidebar is collapsed', () => {
+    mockIsExpanded.value = false
     const wrapper = mount(App, {
       global: {
         stubs: {
@@ -173,6 +172,6 @@ describe('App', () => {
       },
     })
     const main = wrapper.find('main')
-    expect(main.element.style.marginLeft).toBe('292px')
+    expect(main.element.style.marginLeft).toBe('64px')
   })
 })

@@ -53,8 +53,8 @@ onUnmounted(() => {
     data-testid="user-menu"
     class="fixed z-[60] overflow-hidden animate-fade-in"
     :style="{
-      left: '8px',
-      bottom: '52px',
+      left: '12px',
+      bottom: '56px',
       width: '240px',
       backgroundColor: 'var(--color-surface-bright)',
       borderRadius: '8px',
