@@ -1,71 +1,5 @@
-import { computed, ref } from 'vue'
+import { type ComputedRef, type Ref, computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
-const HOVER_DELAY = 200
-const CLOSE_DELAY = 150
-const AUTO_CLOSE_DELAY = 2000
-
-const hoveredSection = ref<string | null>(null)
-const pinnedSection = ref<string | null>(null)
-
-let hoverTimer: ReturnType<typeof setTimeout> | null = null
-let closeTimer: ReturnType<typeof setTimeout> | null = null
-let autoCloseTimer: ReturnType<typeof setTimeout> | null = null
-
-const isPeeking = computed(() => {
-  return hoveredSection.value !== null && pinnedSection.value === null
-})
-
-const activeFlyoutSection = computed(() => {
-  if (pinnedSection.value) return pinnedSection.value
-  return hoveredSection.value
-})
-
-function clearTimers() {
-  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null }
-  if (closeTimer) { clearTimeout(closeTimer); closeTimer = null }
-}
-
-function clearAutoCloseTimer() {
-  if (autoCloseTimer) { clearTimeout(autoCloseTimer); autoCloseTimer = null }
-}
-
-function handleMouseEnter(sectionId: string) {
-  if (closeTimer) { clearTimeout(closeTimer); closeTimer = null }
-  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null }
-
-  hoverTimer = setTimeout(() => {
-    hoveredSection.value = sectionId
-    hoverTimer = null
-  }, HOVER_DELAY)
-}
-
-function handleMouseLeave() {
-  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null }
-
-  closeTimer = setTimeout(() => {
-    hoveredSection.value = null
-    closeTimer = null
-  }, CLOSE_DELAY)
-}
-
-function pinSection(sectionId: string) {
-  clearTimers()
-  clearAutoCloseTimer()
-  if (pinnedSection.value === sectionId) {
-    pinnedSection.value = null
-  } else {
-    pinnedSection.value = sectionId
-  }
-  hoveredSection.value = null
-}
-
-function closeFlyout() {
-  clearTimers()
-  clearAutoCloseTimer()
-  pinnedSection.value = null
-  hoveredSection.value = null
-}
 
 const ROUTE_SECTION_MAP: [string, string][] = [
   ['/app/dashboards', 'dashboards'],
@@ -92,21 +26,49 @@ function routeToSection(path: string): string {
   return 'home'
 }
 
+function readPersistedExpanded(): boolean {
+  try {
+    const stored = localStorage.getItem('ace-sidebar-expanded')
+    if (stored === 'true') return true
+    if (stored === 'false') return false
+    return true
+  } catch {
+    return true
+  }
+}
+
+// Module-level singleton state
+let isExpanded = ref<boolean>(readPersistedExpanded())
+let expandedSections = ref<Set<string>>(new Set())
+
 let cachedRoutePath: { value: string } | null = null
 let router: { push: (path: string) => void } | null = null
 
-function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
-    closeFlyout()
-    return
+function toggleSidebar() {
+  isExpanded.value = !isExpanded.value
+  try {
+    localStorage.setItem('ace-sidebar-expanded', String(isExpanded.value))
+  } catch {
+    // Ignore localStorage write failures
   }
+}
 
+function toggleSection(sectionId: string) {
+  if (expandedSections.value.has(sectionId)) {
+    expandedSections.value.delete(sectionId)
+  } else {
+    expandedSections.value.add(sectionId)
+  }
+}
+
+function expandSection(sectionId: string) {
+  expandedSections.value.add(sectionId)
+}
+
+function handleKeydown(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
     e.preventDefault()
-    if (cachedRoutePath) {
-      const section = routeToSection(cachedRoutePath.value)
-      pinSection(section)
-    }
+    toggleSidebar()
     return
   }
 
@@ -115,37 +77,34 @@ function handleKeydown(e: KeyboardEvent) {
     const { section, route: targetRoute } = SHORTCUT_NAV[e.key]
     router?.push(targetRoute)
 
-    if (section === 'home') return
-
-    clearAutoCloseTimer()
-    pinnedSection.value = section
-    hoveredSection.value = null
-
-    autoCloseTimer = setTimeout(() => {
-      if (pinnedSection.value === section) {
-        pinnedSection.value = null
-      }
-      autoCloseTimer = null
-    }, AUTO_CLOSE_DELAY)
+    if (section !== 'home') {
+      expandSection(section)
+    }
   }
 }
 
 let listenerRegistered = false
 
 function _reset() {
-  clearTimers()
-  clearAutoCloseTimer()
-  hoveredSection.value = null
-  pinnedSection.value = null
+  isExpanded.value = readPersistedExpanded()
+  expandedSections.value = new Set()
   cachedRoutePath = null
   router = null
 }
 
-export function useSidebar() {
+export function useSidebar(): {
+  isExpanded: Ref<boolean>
+  sidebarWidth: ComputedRef<string>
+  expandedSections: Ref<Set<string>>
+  currentRouteSection: ComputedRef<string>
+  toggleSidebar: () => void
+  toggleSection: (sectionId: string) => void
+  expandSection: (sectionId: string) => void
+  _reset: () => void
+} {
   const route = useRoute()
   const routerInstance = useRouter()
 
-  // Initialise router/route cache once — prevents silent overwrite from multiple callers
   if (!cachedRoutePath) {
     cachedRoutePath = { get value() { return route.path } }
     router = routerInstance
@@ -156,18 +115,17 @@ export function useSidebar() {
     listenerRegistered = true
   }
 
+  const sidebarWidth = computed(() => isExpanded.value ? '220px' : '64px')
   const currentRouteSection = computed(() => routeToSection(route.path))
 
   return {
-    hoveredSection,
-    pinnedSection,
-    isPeeking,
-    activeFlyoutSection,
+    isExpanded,
+    sidebarWidth,
+    expandedSections,
     currentRouteSection,
-    handleMouseEnter,
-    handleMouseLeave,
-    pinSection,
-    closeFlyout,
+    toggleSidebar,
+    toggleSection,
+    expandSection,
     _reset,
   }
 }

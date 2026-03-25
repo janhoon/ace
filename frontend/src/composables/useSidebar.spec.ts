@@ -1,233 +1,136 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockRoutePath = { value: '/app/dashboards' }
+const mockRoutePath = { value: '/app' }
+const mockRouterPush = vi.fn()
 vi.mock('vue-router', () => ({
   useRoute: () => ({ path: mockRoutePath.value }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockRouterPush }),
 }))
 
 import { useSidebar } from './useSidebar'
 
 describe('useSidebar', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
+    localStorage.clear()
     const { _reset } = useSidebar()
     _reset()
-    mockRoutePath.value = '/app/dashboards'
+    mockRoutePath.value = '/app'
+    mockRouterPush.mockClear()
   })
 
   afterEach(() => {
-    vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
-  describe('initial state', () => {
-    it('starts with no hovered or pinned section', () => {
-      const { hoveredSection, pinnedSection, isPeeking } = useSidebar()
-      expect(hoveredSection.value).toBeNull()
-      expect(pinnedSection.value).toBeNull()
-      expect(isPeeking.value).toBe(false)
-    })
-  })
-
-  describe('hover-to-peek', () => {
-    it('sets hoveredSection after 200ms delay', () => {
-      const { hoveredSection, handleMouseEnter } = useSidebar()
-      handleMouseEnter('explore')
-      expect(hoveredSection.value).toBeNull()
-      vi.advanceTimersByTime(200)
-      expect(hoveredSection.value).toBe('explore')
+  describe('isExpanded', () => {
+    it('defaults to true when localStorage has no value', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null)
+      const { _reset } = useSidebar()
+      _reset()
+      const { isExpanded } = useSidebar()
+      expect(isExpanded.value).toBe(true)
     })
 
-    it('clears hoveredSection after 150ms on mouse leave', () => {
-      const { hoveredSection, handleMouseEnter, handleMouseLeave } = useSidebar()
-      handleMouseEnter('explore')
-      vi.advanceTimersByTime(200)
-      expect(hoveredSection.value).toBe('explore')
-      handleMouseLeave()
-      expect(hoveredSection.value).toBe('explore')
-      vi.advanceTimersByTime(150)
-      expect(hoveredSection.value).toBeNull()
+    it('reads persisted state on init (localStorage "false" -> starts collapsed)', () => {
+      localStorage.setItem('ace-sidebar-expanded', 'false')
+      const { _reset } = useSidebar()
+      _reset()
+      const { isExpanded } = useSidebar()
+      expect(isExpanded.value).toBe(false)
     })
 
-    it('cancels close timer if mouse re-enters within 150ms', () => {
-      const { hoveredSection, handleMouseEnter, handleMouseLeave } = useSidebar()
-      handleMouseEnter('explore')
-      vi.advanceTimersByTime(200)
-      handleMouseLeave()
-      vi.advanceTimersByTime(100)
-      handleMouseEnter('explore')
-      vi.advanceTimersByTime(200)
-      expect(hoveredSection.value).toBe('explore')
+    it('defaults to true when localStorage throws on read', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('SecurityError')
+      })
+      const { _reset } = useSidebar()
+      _reset()
+      const { isExpanded } = useSidebar()
+      expect(isExpanded.value).toBe(true)
     })
 
-    it('isPeeking is true when hovered and not pinned', () => {
-      const { isPeeking, handleMouseEnter } = useSidebar()
-      handleMouseEnter('explore')
-      vi.advanceTimersByTime(200)
-      expect(isPeeking.value).toBe(true)
-    })
-
-    it('hovering does NOT change flyout when a section is pinned', () => {
-      const { pinnedSection, pinSection, handleMouseEnter } = useSidebar()
-      pinSection('dashboards')
-      expect(pinnedSection.value).toBe('dashboards')
-      handleMouseEnter('explore')
-      vi.advanceTimersByTime(200)
-      expect(pinnedSection.value).toBe('dashboards')
+    it('defaults to true when localStorage has non-boolean string', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('banana')
+      const { _reset } = useSidebar()
+      _reset()
+      const { isExpanded } = useSidebar()
+      expect(isExpanded.value).toBe(true)
     })
   })
 
-  describe('click-to-pin', () => {
-    it('pinSection sets pinnedSection', () => {
-      const { pinnedSection, pinSection } = useSidebar()
-      pinSection('explore')
-      expect(pinnedSection.value).toBe('explore')
-    })
+  describe('toggleSidebar', () => {
+    it('flips isExpanded and persists to localStorage', () => {
+      const { isExpanded, toggleSidebar } = useSidebar()
+      expect(isExpanded.value).toBe(true)
 
-    it('pinning same section again unpins it', () => {
-      const { pinnedSection, pinSection } = useSidebar()
-      pinSection('explore')
-      pinSection('explore')
-      expect(pinnedSection.value).toBeNull()
-    })
+      toggleSidebar()
+      expect(isExpanded.value).toBe(false)
+      expect(localStorage.getItem('ace-sidebar-expanded')).toBe('false')
 
-    it('pinning a different section switches to it', () => {
-      const { pinnedSection, pinSection } = useSidebar()
-      pinSection('explore')
-      pinSection('dashboards')
-      expect(pinnedSection.value).toBe('dashboards')
-    })
-
-    it('isPeeking is false when pinned', () => {
-      const { isPeeking, pinSection } = useSidebar()
-      pinSection('explore')
-      expect(isPeeking.value).toBe(false)
-    })
-
-    it('closeFlyout clears pinnedSection', () => {
-      const { pinnedSection, pinSection, closeFlyout } = useSidebar()
-      pinSection('explore')
-      closeFlyout()
-      expect(pinnedSection.value).toBeNull()
+      toggleSidebar()
+      expect(isExpanded.value).toBe(true)
+      expect(localStorage.getItem('ace-sidebar-expanded')).toBe('true')
     })
   })
 
-  describe('keyboard shortcuts', () => {
-    it('Escape clears pinnedSection', () => {
-      const { pinnedSection, pinSection } = useSidebar()
-      pinSection('explore')
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-      expect(pinnedSection.value).toBeNull()
+  describe('sidebarWidth', () => {
+    it('returns "220px" when expanded', () => {
+      const { sidebarWidth, isExpanded } = useSidebar()
+      expect(isExpanded.value).toBe(true)
+      expect(sidebarWidth.value).toBe('220px')
     })
 
-    it('Cmd+B toggles pin for current route section', () => {
-      mockRoutePath.value = '/app/explore/metrics'
-      const { pinnedSection } = useSidebar()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBe('explore')
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBeNull()
-    })
-
-    it('Ctrl+B also toggles pin (Windows/Linux)', () => {
-      mockRoutePath.value = '/app/dashboards'
-      const { pinnedSection } = useSidebar()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', ctrlKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBe('dashboards')
-    })
-
-    it('Cmd+1 navigates to home (no pin)', () => {
-      const { pinnedSection } = useSidebar()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', metaKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBeNull()
-    })
-
-    it('Cmd+2 navigates to dashboards and pins with auto-close', () => {
-      const { pinnedSection } = useSidebar()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2', metaKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBe('dashboards')
-      vi.advanceTimersByTime(2000)
-      expect(pinnedSection.value).toBeNull()
-    })
-
-    it('Cmd+3 navigates to services and pins with auto-close', () => {
-      const { pinnedSection } = useSidebar()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', metaKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBe('services')
-    })
-
-    it('Cmd+4 navigates to alerts and pins with auto-close', () => {
-      const { pinnedSection } = useSidebar()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '4', metaKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBe('alerts')
-    })
-
-    it('Cmd+5 navigates to explore and pins with auto-close', () => {
-      const { pinnedSection } = useSidebar()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '5', metaKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBe('explore')
-    })
-
-    it('auto-close timer is cancelled if user interacts', () => {
-      const { pinnedSection, pinSection } = useSidebar()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2', metaKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBe('dashboards')
-      pinSection('explore')
-      expect(pinnedSection.value).toBe('explore')
-      vi.advanceTimersByTime(2000)
-      expect(pinnedSection.value).toBe('explore')
+    it('returns "64px" when collapsed', () => {
+      const { sidebarWidth, toggleSidebar } = useSidebar()
+      toggleSidebar()
+      expect(sidebarWidth.value).toBe('64px')
     })
   })
 
-  describe('active flyout section', () => {
-    it('returns pinnedSection when pinned', () => {
-      const { activeFlyoutSection, pinSection } = useSidebar()
-      pinSection('explore')
-      expect(activeFlyoutSection.value).toBe('explore')
+  describe('toggleSection', () => {
+    it('adds a section when not present', () => {
+      const { expandedSections, toggleSection } = useSidebar()
+      toggleSection('dashboards')
+      expect(expandedSections.value.has('dashboards')).toBe(true)
     })
 
-    it('returns hoveredSection when peeking', () => {
-      const { activeFlyoutSection, handleMouseEnter } = useSidebar()
-      handleMouseEnter('alerts')
-      vi.advanceTimersByTime(200)
-      expect(activeFlyoutSection.value).toBe('alerts')
+    it('removes a section when already present', () => {
+      const { expandedSections, toggleSection } = useSidebar()
+      toggleSection('dashboards')
+      expect(expandedSections.value.has('dashboards')).toBe(true)
+      toggleSection('dashboards')
+      expect(expandedSections.value.has('dashboards')).toBe(false)
     })
 
-    it('returns null when nothing is hovered or pinned', () => {
-      const { activeFlyoutSection } = useSidebar()
-      expect(activeFlyoutSection.value).toBeNull()
-    })
-
-    it('returns pinnedSection even when hovering a different section', () => {
-      const { activeFlyoutSection, pinSection, handleMouseEnter } = useSidebar()
-      pinSection('dashboards')
-      handleMouseEnter('explore')
-      vi.advanceTimersByTime(200)
-      expect(activeFlyoutSection.value).toBe('dashboards')
+    it('supports multiple sections open simultaneously', () => {
+      const { expandedSections, toggleSection } = useSidebar()
+      toggleSection('dashboards')
+      toggleSection('explore')
+      toggleSection('alerts')
+      expect(expandedSections.value.has('dashboards')).toBe(true)
+      expect(expandedSections.value.has('explore')).toBe(true)
+      expect(expandedSections.value.has('alerts')).toBe(true)
     })
   })
 
-  describe('closeFlyout', () => {
-    it('clears hover timer when closing', () => {
-      const { hoveredSection, handleMouseEnter, closeFlyout } = useSidebar()
-      handleMouseEnter('explore')
-      closeFlyout()
-      vi.advanceTimersByTime(200)
-      expect(hoveredSection.value).toBeNull()
+  describe('expandSection', () => {
+    it('adds a section to expandedSections', () => {
+      const { expandedSections, expandSection } = useSidebar()
+      expandSection('dashboards')
+      expect(expandedSections.value.has('dashboards')).toBe(true)
+    })
+
+    it('is idempotent — adding already-open section is a no-op', () => {
+      const { expandedSections, expandSection } = useSidebar()
+      expandSection('dashboards')
+      expect(expandedSections.value.size).toBe(1)
+      expandSection('dashboards')
+      expect(expandedSections.value.size).toBe(1)
+      expect(expandedSections.value.has('dashboards')).toBe(true)
     })
   })
 
-  describe('Cmd+B from unpinned state', () => {
-    it('pins the current route section when nothing is pinned', () => {
-      mockRoutePath.value = '/app/services'
-      const { pinnedSection } = useSidebar()
-      expect(pinnedSection.value).toBeNull()
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true }))
-      expect(pinnedSection.value).toBe('services')
-    })
-  })
-
-  describe('route-to-section mapping', () => {
+  describe('currentRouteSection', () => {
     it('maps /app to home', () => {
       mockRoutePath.value = '/app'
       const { currentRouteSection } = useSidebar()
@@ -244,6 +147,85 @@ describe('useSidebar', () => {
       mockRoutePath.value = '/app/settings/org/123/general'
       const { currentRouteSection } = useSidebar()
       expect(currentRouteSection.value).toBe('settings')
+    })
+
+    it('maps /app/audit-log to settings', () => {
+      mockRoutePath.value = '/app/audit-log'
+      const { currentRouteSection } = useSidebar()
+      expect(currentRouteSection.value).toBe('settings')
+    })
+  })
+
+  describe('keyboard shortcuts', () => {
+    it('Cmd+B calls toggleSidebar', () => {
+      const { isExpanded } = useSidebar()
+      expect(isExpanded.value).toBe(true)
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true }))
+      expect(isExpanded.value).toBe(false)
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true }))
+      expect(isExpanded.value).toBe(true)
+    })
+
+    it('Ctrl+B calls toggleSidebar (Windows/Linux)', () => {
+      const { isExpanded } = useSidebar()
+      expect(isExpanded.value).toBe(true)
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', ctrlKey: true, bubbles: true }))
+      expect(isExpanded.value).toBe(false)
+    })
+
+    it('Cmd+1 navigates to home WITHOUT expanding', () => {
+      const { expandedSections } = useSidebar()
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', metaKey: true, bubbles: true }))
+      expect(mockRouterPush).toHaveBeenCalledWith('/app')
+      expect(expandedSections.value.has('home')).toBe(false)
+    })
+
+    it('Cmd+2 navigates to dashboards and expands section', () => {
+      const { expandedSections } = useSidebar()
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2', metaKey: true, bubbles: true }))
+      expect(mockRouterPush).toHaveBeenCalledWith('/app/dashboards')
+      expect(expandedSections.value.has('dashboards')).toBe(true)
+    })
+
+    it('Cmd+3 navigates to services and expands section', () => {
+      const { expandedSections } = useSidebar()
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', metaKey: true, bubbles: true }))
+      expect(mockRouterPush).toHaveBeenCalledWith('/app/services')
+      expect(expandedSections.value.has('services')).toBe(true)
+    })
+
+    it('Cmd+4 navigates to alerts and expands section', () => {
+      const { expandedSections } = useSidebar()
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '4', metaKey: true, bubbles: true }))
+      expect(mockRouterPush).toHaveBeenCalledWith('/app/alerts')
+      expect(expandedSections.value.has('alerts')).toBe(true)
+    })
+
+    it('Cmd+5 navigates to explore and expands section', () => {
+      const { expandedSections } = useSidebar()
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '5', metaKey: true, bubbles: true }))
+      expect(mockRouterPush).toHaveBeenCalledWith('/app/explore/metrics')
+      expect(expandedSections.value.has('explore')).toBe(true)
+    })
+  })
+
+  describe('_reset', () => {
+    it('clears all state', () => {
+      const { isExpanded, expandedSections, toggleSidebar, toggleSection, _reset } = useSidebar()
+      toggleSidebar() // collapse
+      toggleSection('dashboards')
+      toggleSection('explore')
+
+      expect(isExpanded.value).toBe(false)
+      expect(expandedSections.value.size).toBe(2)
+
+      // Clear localStorage so _reset reads null -> defaults true
+      localStorage.clear()
+      _reset()
+
+      const sidebar = useSidebar()
+      expect(sidebar.isExpanded.value).toBe(true)
+      expect(sidebar.expandedSections.value.size).toBe(0)
     })
   })
 })
