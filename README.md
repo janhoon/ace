@@ -57,19 +57,27 @@ There are two ways to run the local dev environment. Pick whichever suits you:
 
 The simplest way to get started. Docker Compose runs the infrastructure (postgres, valkey, datasource backends) and you run the backend and frontend on the host.
 
-#### 1. Start infrastructure
+#### 1. Start infrastructure with a datasource stack
 
 ```bash
-# Core services (postgres + valkey)
-make compose-up
-
-# Or with datasource backends
 make compose-up PROFILES=victoria
 ```
 
+This starts postgres, valkey, and the full Victoria stack (VictoriaMetrics, Victoria Logs, Victoria Traces, VMAlert, Alertmanager, OTel Collector).
+
 Available profiles: `victoria`, `lgtm`, `elk`, `clickhouse`
 
-#### 2. Start backend and frontend
+#### 2. Start telemetry generators
+
+```bash
+make telemetrygen PROFILES=victoria
+```
+
+This starts continuous synthetic metrics, logs, and traces flowing through the OTel Collector into the Victoria stack. The platform is immediately demoable with real-looking data.
+
+Each profile has a matching generator: `gen-victoria`, `gen-lgtm`, `gen-elk`, `gen-clickhouse`. The `make telemetrygen` command starts both the stack profile and its generators.
+
+#### 3. Start backend and frontend
 
 ```bash
 # Terminal 1 — backend (hot reload with air, or plain go run)
@@ -79,17 +87,25 @@ make backend
 make frontend
 ```
 
-#### 3. Seed test data
+#### 4. Seed admin user and datasources
 
 ```bash
 make seed
 # defaults: EMAIL=admin@admin.com PASSWORD=Admin1234
 ```
 
-#### 4. Open the app
+This creates the admin user, four organizations, and configures datasources pointing to the local service ports. You can also generate correlated log-to-trace pairs:
+
+```bash
+make seed-correlated
+```
+
+#### 5. Open the app
 
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8080
+
+You should see dashboards populated with live telemetry data from the generators.
 
 #### Stop
 
@@ -133,26 +149,20 @@ kind create cluster
 #### 2. Start the dev environment
 
 ```bash
-make tilt-up
+make tilt-up ENABLE="victoria-metrics victoria-logs"
 ```
 
-This deploys core services to your local cluster:
+This deploys to your local cluster:
 - **postgres** — metadata database (localhost:5432)
 - **valkey** — cache/session store (localhost:6379)
 - **backend** — Go API (http://localhost:8080)
 - **frontend** — Vite dev server with hot reload (http://localhost:5173)
+- **victoria-metrics** — metrics storage (http://localhost:8428)
+- **victoria-logs** — log storage (http://localhost:9428)
 
 Open the Tilt UI (URL shown in terminal output) to monitor service health.
 
-#### 3. Enable datasource backends
-
-Datasource backends are disabled by default. Enable them at startup:
-
-```bash
-make tilt-up ENABLE="victoria-metrics victoria-logs"
-```
-
-Or enable any combination:
+Enable any combination of datasource backends:
 
 ```bash
 # Prometheus + Loki + Tempo
@@ -162,7 +172,7 @@ make tilt-up ENABLE="prometheus loki tempo"
 make tilt-up ENABLE="prometheus loki victoria-metrics victoria-logs tempo"
 ```
 
-You can also enable services from the Tilt UI after startup.
+You can also enable/disable services from the Tilt UI after startup.
 
 | Service | Port | Enable name |
 |---------|------|-------------|
@@ -172,11 +182,14 @@ You can also enable services from the Tilt UI after startup.
 | Victoria Logs | http://localhost:9428 | `victoria-logs` |
 | Tempo | http://localhost:3200 | `tempo` |
 
-#### 4. Seed test data
+#### 3. Seed data for a demoable platform
 
 ```bash
+# Create admin user + organizations + datasource configs
 make seed
-# defaults: EMAIL=admin@admin.com PASSWORD=Admin1234
+
+# Generate correlated log-to-trace pairs into Loki and Tempo
+make seed-correlated
 ```
 
 #### Stop
@@ -203,15 +216,6 @@ Regardless of which path you choose, datasource services use the same local port
 | VictoriaMetrics | http://localhost:8428 |
 | Victoria Logs | http://localhost:9428 |
 | Tempo | http://localhost:3200 |
-
-## Seed Correlated Data
-
-Generate correlated logs and traces for testing log-to-trace correlation:
-
-```bash
-make seed-correlated
-# defaults: LOKI_URL=http://localhost:3100 TEMPO_URL=http://localhost:3200 COUNT=20
-```
 
 ## Testing
 
