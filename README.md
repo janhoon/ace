@@ -54,6 +54,7 @@ A local Kubernetes cluster is also required. Recommended options:
 **Colima (recommended on macOS):**
 ```bash
 colima start --kubernetes --cpu 4 --memory 8
+colima kubernetes reset   # one-time: ensures k3s starts cleanly
 ```
 
 **kind:**

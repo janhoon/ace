@@ -24,24 +24,15 @@ for name in optional_resources:
 
 config.set_enabled_resources(enabled_resources)
 
-# Detect k3s-based clusters (Colima) where the Docker daemon is separate from
-# the container runtime. Images must be explicitly imported into k3s containerd.
-k8s_context = str(local('kubectl config current-context', quiet=True)).strip()
+# Colima with k3s shares the Docker daemon, so images built locally are already
+# available to the cluster. allow_k8s_contexts permits Tilt to deploy to it.
+allow_k8s_contexts('colima')
 
-if k8s_context == 'colima':
-    custom_build(
-        'ace-backend',
-        'docker build -t $EXPECTED_REF -f backend/Dockerfile . && docker save $EXPECTED_REF | colima ssh -- sudo k3s ctr images import -',
-        deps=['backend/'],
-        skips_local_docker=True,
-        disable_push=True,
-    )
-else:
-    docker_build(
-        'ace-backend',
-        '.',
-        dockerfile='backend/Dockerfile',
-    )
+docker_build(
+    'ace-backend',
+    '.',
+    dockerfile='backend/Dockerfile',
+)
 
 local_resource(
     'namespace',
