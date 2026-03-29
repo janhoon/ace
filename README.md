@@ -32,24 +32,90 @@ A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
 
 ### Prerequisites
 
-| Tool | Version | Install |
-|------|---------|---------|
-| Go | 1.25+ | [go.dev](https://go.dev/dl/) or `mise install` |
-| Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
-| Docker | latest | [docker.com](https://docs.docker.com/get-docker/) |
-| kubectl | latest | [kubernetes.io](https://kubernetes.io/docs/tasks/tools/) |
-| Helm | latest | [helm.sh](https://helm.sh/docs/intro/install/) |
-| Tilt | latest | [tilt.dev](https://docs.tilt.dev/install.html) |
-
-A local Kubernetes cluster is also required. Recommended options:
-
-- **[Colima](https://github.com/abiosoft/colima)** (macOS, Linux) — lightweight, k3s-based
-- **[kind](https://kind.sigs.k8s.io/)** (all platforms) — Kubernetes in Docker
-- **Docker Desktop** (macOS, Windows) — enable Kubernetes in settings
+| Tool | Version | Required for | Install |
+|------|---------|-------------|---------|
+| Go | 1.25+ | Backend | [go.dev](https://go.dev/dl/) or `mise install` |
+| Node.js | 18+ | Frontend | [nodejs.org](https://nodejs.org/) |
+| Docker | latest | Both paths | [docker.com](https://docs.docker.com/get-docker/) |
 
 > **Tip:** This project includes a [`mise.toml`](mise.toml) that pins tool versions. If you use [mise](https://mise.jdx.dev/), run `mise install` to get the correct versions.
 
-### 1. Start a local Kubernetes cluster
+There are two ways to run the local dev environment. Pick whichever suits you:
+
+| | Docker Compose | Tilt + Kubernetes |
+|---|---|---|
+| **Infra** | Docker only | Local k8s cluster (Colima, kind, or Docker Desktop) |
+| **Backend** | Runs on host (`make backend`) | Built and deployed as a container |
+| **Frontend** | Runs on host (`make frontend`) | Managed by Tilt |
+| **Hot reload** | Backend via air, frontend via Vite | Backend rebuilds container, frontend via Vite |
+| **Extra tools** | None | `kubectl`, `helm`, `tilt` |
+| **Best for** | Quick start, lightweight | Full orchestration, closer to production |
+
+---
+
+### Option A: Docker Compose
+
+The simplest way to get started. Docker Compose runs the infrastructure (postgres, valkey, datasource backends) and you run the backend and frontend on the host.
+
+#### 1. Start infrastructure
+
+```bash
+# Core services (postgres + valkey)
+make compose-up
+
+# Or with datasource backends
+make compose-up PROFILES=victoria
+```
+
+Available profiles: `victoria`, `lgtm`, `elk`, `clickhouse`
+
+#### 2. Start backend and frontend
+
+```bash
+# Terminal 1 — backend (hot reload with air, or plain go run)
+make backend
+
+# Terminal 2 — frontend (Vite dev server)
+make frontend
+```
+
+#### 3. Seed test data
+
+```bash
+make seed
+# defaults: EMAIL=admin@admin.com PASSWORD=Admin1234
+```
+
+#### 4. Open the app
+
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8080
+
+#### Stop
+
+```bash
+make compose-down
+
+# Or tear down and delete volumes
+make compose-reset
+```
+
+---
+
+### Option B: Tilt + Kubernetes
+
+Tilt orchestrates everything in a local Kubernetes cluster — infrastructure, backend container builds, and the frontend dev server. This is closer to how Ace runs in production.
+
+#### Additional prerequisites
+
+| Tool | Install |
+|------|---------|
+| kubectl | [kubernetes.io](https://kubernetes.io/docs/tasks/tools/) |
+| Helm | [helm.sh](https://helm.sh/docs/intro/install/) |
+| Tilt | [tilt.dev](https://docs.tilt.dev/install.html) |
+| Local k8s cluster | See below |
+
+#### 1. Start a local Kubernetes cluster
 
 **Colima (recommended on macOS):**
 ```bash
@@ -64,13 +130,13 @@ kind create cluster
 
 **Docker Desktop:** Enable Kubernetes in Docker Desktop settings and restart.
 
-### 2. Start the dev environment
+#### 2. Start the dev environment
 
 ```bash
 make tilt-up
 ```
 
-This launches Tilt, which deploys the core services to your local cluster:
+This deploys core services to your local cluster:
 - **postgres** — metadata database (localhost:5432)
 - **valkey** — cache/session store (localhost:6379)
 - **backend** — Go API (http://localhost:8080)
@@ -78,7 +144,7 @@ This launches Tilt, which deploys the core services to your local cluster:
 
 Open the Tilt UI (URL shown in terminal output) to monitor service health.
 
-### 3. Enable datasource backends
+#### 3. Enable datasource backends
 
 Datasource backends are disabled by default. Enable them at startup:
 
@@ -89,10 +155,7 @@ make tilt-up ENABLE="victoria-metrics victoria-logs"
 Or enable any combination:
 
 ```bash
-# All Victoria stack
-make tilt-up ENABLE="victoria-metrics victoria-logs"
-
-# Prometheus + Loki + Tempo (LGTM minus Grafana)
+# Prometheus + Loki + Tempo
 make tilt-up ENABLE="prometheus loki tempo"
 
 # Everything
@@ -109,69 +172,37 @@ You can also enable services from the Tilt UI after startup.
 | Victoria Logs | http://localhost:9428 | `victoria-logs` |
 | Tempo | http://localhost:3200 | `tempo` |
 
-### 4. Seed test data
-
-Create an admin user and seed datasource configurations:
+#### 4. Seed test data
 
 ```bash
 make seed
 # defaults: EMAIL=admin@admin.com PASSWORD=Admin1234
 ```
 
-Override the defaults:
-
-```bash
-make seed EMAIL=admin@example.com PASSWORD='MyPass123'
-```
-
-This creates the admin user, four organizations, and configures datasources pointing to the local service ports.
-
-### 5. Stop everything
+#### Stop
 
 ```bash
 make tilt-down
-```
 
-To also stop Colima:
-```bash
+# To also stop Colima:
 colima stop
 ```
 
-## Alternative: Docker Compose
+---
 
-For a simpler setup without Kubernetes, use Docker Compose directly. This starts only the infrastructure services (you run the backend and frontend on the host).
+## Datasource Ports
 
-```bash
-# Core services (postgres + valkey)
-make compose-up
+Regardless of which path you choose, datasource services use the same local ports:
 
-# With Victoria stack
-make compose-up PROFILES=victoria
-
-# With telemetry generators
-make telemetrygen PROFILES=victoria
-
-# View logs
-make compose-logs
-
-# Tear down
-make compose-down
-
-# Tear down and delete volumes
-make compose-reset
-```
-
-Available profiles: `victoria`, `lgtm`, `elk`, `clickhouse`
-
-When using Docker Compose, run the backend and frontend separately:
-
-```bash
-# Terminal 1 — backend (hot reload with air, or plain go run)
-make backend
-
-# Terminal 2 — frontend (Vite dev server)
-make frontend
-```
+| Service | Port |
+|---------|------|
+| PostgreSQL | localhost:5432 |
+| Valkey | localhost:6379 |
+| Prometheus | http://localhost:9090 |
+| Loki | http://localhost:3100 |
+| VictoriaMetrics | http://localhost:8428 |
+| Victoria Logs | http://localhost:9428 |
+| Tempo | http://localhost:3200 |
 
 ## Seed Correlated Data
 
