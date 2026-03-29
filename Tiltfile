@@ -24,11 +24,24 @@ for name in optional_resources:
 
 config.set_enabled_resources(enabled_resources)
 
-docker_build(
-    'ace-backend',
-    '.',
-    dockerfile='backend/Dockerfile',
-)
+# Detect k3s-based clusters (Colima) where the Docker daemon is separate from
+# the container runtime. Images must be explicitly imported into k3s containerd.
+k8s_context = str(local('kubectl config current-context', quiet=True)).strip()
+
+if k8s_context == 'colima':
+    custom_build(
+        'ace-backend',
+        'docker build -t $EXPECTED_REF -f backend/Dockerfile . && docker save $EXPECTED_REF | colima ssh -- sudo k3s ctr images import -',
+        deps=['backend/'],
+        skips_local_docker=True,
+        disable_push=True,
+    )
+else:
+    docker_build(
+        'ace-backend',
+        '.',
+        dockerfile='backend/Dockerfile',
+    )
 
 local_resource(
     'namespace',

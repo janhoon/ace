@@ -67,12 +67,22 @@ Tag strategy:
 - Node.js 18+
 - Go 1.25+
 - Docker (for image builds and local security tooling)
-- A local Kubernetes cluster (for example: kind, minikube, or Docker Desktop Kubernetes)
+- A local Kubernetes cluster (for example: Colima, kind, minikube, or Docker Desktop Kubernetes)
 - `kubectl`, `helm`, and `tilt`
 
 ### Setup
 
 1. Start your local Kubernetes cluster.
+
+   **Colima (recommended on macOS):**
+   ```bash
+   colima start --kubernetes --cpu 4 --memory 8
+   ```
+
+   **kind:**
+   ```bash
+   kind create cluster
+   ```
 
 2. Start Tilt from the repo root:
    ```bash
@@ -84,7 +94,7 @@ Tag strategy:
    - External test services disabled by default: `prometheus`, `loki`, `victoria-metrics`, `victoria-logs`, `tempo`
 
    Open the Tilt UI (shown in the `tilt up` output), then enable optional services from the UI when needed.
-   You can also pre-enable them at startup, for example: `tilt up -- --enable=prometheus --enable=loki`.
+   You can also pre-enable them at startup, for example: `tilt up -- prometheus loki`.
 
 3. Access local endpoints:
    - Postgres: localhost:5432

@@ -99,8 +99,10 @@ seed-correlated:
 	fi; \
 	cd backend && "$$GO_BIN" run ./cmd/seed-correlated --loki-url $(LOKI_URL) --tempo-url $(TEMPO_URL) --count $(COUNT)
 
+ENABLE ?=
+
 tilt-up:
-	@tilt up
+	@tilt up -- $(ENABLE)
 
 tilt-down:
 	@tilt down
