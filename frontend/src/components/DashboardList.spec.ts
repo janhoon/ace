@@ -214,7 +214,12 @@ describe('DashboardList', () => {
 
     await starBtn.trigger('click')
 
-    expect(mockToggleFavorite).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174000')
+    expect(mockToggleFavorite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        type: 'dashboard',
+      }),
+    )
   })
 
   it('renders folder chips as filters', async () => {

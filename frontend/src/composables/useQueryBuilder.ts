@@ -1,6 +1,10 @@
 import { computed, ref, watch } from 'vue'
+import {
+  fetchDataSourceLabels,
+  fetchDataSourceLabelValues,
+  fetchDataSourceMetricNames,
+} from '../api/datasources'
 import { trackEvent } from '../analytics'
-import { fetchLabels, fetchLabelValues, fetchMetrics } from './useProm'
 
 // Supported aggregation functions
 export const AGGREGATION_FUNCTIONS = [
@@ -53,10 +57,11 @@ function generateFilterId(): string {
   return `filter-${++filterIdCounter}`
 }
 
-export function useQueryBuilder(initialQuery = '') {
+export function useQueryBuilder(initialQuery = '', datasourceId = '') {
   // State
   const mode = ref<'builder' | 'code'>('builder')
   const codeQuery = ref(initialQuery)
+  const currentDatasourceId = ref(datasourceId)
 
   // Builder state
   const metric = ref('')
@@ -129,13 +134,23 @@ export function useQueryBuilder(initialQuery = '') {
     return mode.value === 'builder' ? generatedQuery.value : codeQuery.value
   })
 
+  // Update datasource and clear caches
+  function setDatasourceId(id: string) {
+    if (id === currentDatasourceId.value) return
+    currentDatasourceId.value = id
+    metricsCache.value = []
+    labelsCache.value = []
+    labelValuesCache.value = new Map()
+  }
+
   // Load metrics from API
   async function loadMetrics() {
+    if (!currentDatasourceId.value) return []
     if (metricsCache.value.length > 0) return metricsCache.value
 
     loadingMetrics.value = true
     try {
-      metricsCache.value = await fetchMetrics()
+      metricsCache.value = await fetchDataSourceMetricNames(currentDatasourceId.value)
       trackEvent('query_builder_metrics_loaded', {
         metric_count: metricsCache.value.length,
       })
@@ -150,11 +165,12 @@ export function useQueryBuilder(initialQuery = '') {
 
   // Load labels from API
   async function loadLabels() {
+    if (!currentDatasourceId.value) return []
     if (labelsCache.value.length > 0) return labelsCache.value
 
     loadingLabels.value = true
     try {
-      labelsCache.value = await fetchLabels()
+      labelsCache.value = await fetchDataSourceLabels(currentDatasourceId.value)
       trackEvent('query_builder_labels_loaded', {
         label_count: labelsCache.value.length,
       })
@@ -169,13 +185,14 @@ export function useQueryBuilder(initialQuery = '') {
 
   // Load label values for a specific label
   async function loadLabelValues(labelName: string) {
+    if (!currentDatasourceId.value) return []
     if (labelValuesCache.value.has(labelName)) {
       return labelValuesCache.value.get(labelName) || []
     }
 
     loadingLabelValues.value = labelName
     try {
-      const values = await fetchLabelValues(labelName)
+      const values = await fetchDataSourceLabelValues(currentDatasourceId.value, labelName)
       labelValuesCache.value.set(labelName, values)
       trackEvent('query_builder_label_values_loaded', {
         label: labelName,
@@ -296,6 +313,7 @@ export function useQueryBuilder(initialQuery = '') {
     loadingLabelValues,
 
     // Methods
+    setDatasourceId,
     loadMetrics,
     loadLabels,
     loadLabelValues,

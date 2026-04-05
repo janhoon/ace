@@ -9,6 +9,9 @@ export type { RawQueryResult }
 
 export type PanelCategory = 'charts' | 'stats' | 'observability' | 'widgets'
 
+/** Describes what data a panel needs from the editor. */
+export type PanelQueryMode = 'metrics' | 'logs' | 'traces' | 'none'
+
 export interface PanelRegistration {
   /** Unique identifier, e.g. 'heatmap' */
   type: string
@@ -23,6 +26,8 @@ export interface PanelRegistration {
   label: string
   /** Lucide icon component */
   icon: Component
+  /** What data/signal this panel requires. Defaults to 'metrics' when omitted. */
+  queryMode?: PanelQueryMode
 }
 
 // ---------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Check, Keyboard, LogOut } from 'lucide-vue-next'
-import { onMounted, onUnmounted } from 'vue'
+import { Keyboard, LogOut } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import { useClickOutside } from '../composables/useClickOutside'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
-import { useOrganization } from '../composables/useOrganization'
 
 const props = defineProps<{
   isOpen: boolean
@@ -15,12 +15,11 @@ const emit = defineEmits<{
 
 const { user, logout } = useAuth()
 const { showHelp } = useKeyboardShortcuts()
-const { organizations, currentOrg, selectOrganization } = useOrganization()
 
-function handleSelectOrg(orgId: string) {
-  selectOrganization(orgId)
-  emit('close')
-}
+const menuRef = computed(() => props.isOpen ? menuElement.value : null)
+const menuElement = ref<HTMLDivElement | null>(null)
+
+useClickOutside(menuRef, () => emit('close'))
 
 function handleLogout() {
   logout()
@@ -37,19 +36,12 @@ function handleKeydown(e: KeyboardEvent) {
     emit('close')
   }
 }
-
-onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-})
 </script>
 
 <template>
   <div
     v-if="isOpen"
+    ref="menuElement"
     data-testid="user-menu"
     class="fixed z-[60] overflow-hidden animate-fade-in"
     :style="{
@@ -59,13 +51,14 @@ onUnmounted(() => {
       backgroundColor: 'var(--color-surface-bright)',
       borderRadius: '8px',
       boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-      border: '1px solid var(--color-outline-variant)',
+      border: '1px solid var(--color-stroke-subtle)',
     }"
+    @keydown="handleKeydown"
   >
     <!-- User info header -->
     <div
       class="px-4 py-3"
-      :style="{ borderBottom: '1px solid var(--color-outline-variant)' }"
+      :style="{ borderBottom: '1px solid var(--color-stroke-subtle)' }"
     >
       <div
         class="text-sm font-medium"
@@ -76,30 +69,6 @@ onUnmounted(() => {
         class="text-xs mt-0.5"
         :style="{ color: 'var(--color-outline)', fontFamily: 'var(--font-mono)' }"
       >{{ user.email }}</div>
-    </div>
-
-    <!-- Org switcher -->
-    <div
-      class="py-1"
-      :style="{ borderBottom: '1px solid var(--color-outline-variant)' }"
-    >
-      <div
-        class="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide"
-        :style="{ color: 'var(--color-outline)', fontSize: '10px' }"
-      >Organizations</div>
-      <button
-        v-for="org in organizations"
-        :key="org.id"
-        :data-testid="`user-menu-org-${org.id}`"
-        class="flex w-full items-center gap-2 px-4 py-2 text-sm cursor-pointer border-none bg-transparent transition-colors"
-        :style="{
-          color: currentOrg?.id === org.id ? 'var(--color-primary)' : 'var(--color-on-surface)',
-        }"
-        @click="handleSelectOrg(org.id)"
-      >
-        <span class="flex-1 truncate text-left">{{ org.name }}</span>
-        <Check v-if="currentOrg?.id === org.id" :size="14" />
-      </button>
     </div>
 
     <!-- Actions -->

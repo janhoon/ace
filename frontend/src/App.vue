@@ -16,7 +16,7 @@ import { useSidebar } from './composables/useSidebar'
 const route = useRoute()
 const router = useRouter()
 const { isAuthenticated } = useAuth()
-const { pinnedSection } = useSidebar()
+const { expandedSection, isPinned } = useSidebar()
 const { register } = useKeyboardShortcuts()
 const { currentOrg, fetchOrganizations } = useOrganization()
 const { fetchDatasources } = useDatasource()
@@ -28,8 +28,11 @@ const showSidebar = computed(() => {
 
 const mainMargin = computed(() => {
   if (!showSidebar.value) return {}
-  if (pinnedSection.value) return { marginLeft: '292px' }
-  return { marginLeft: '52px' }
+  const isExpanded = isPinned.value || (expandedSection.value !== null && expandedSection.value !== 'home')
+  return {
+    marginLeft: isExpanded ? 'var(--sidebar-flyout-width)' : 'var(--sidebar-rail-width)',
+    transition: 'margin-left 200ms ease',
+  }
 })
 
 // Cmd+K modal state

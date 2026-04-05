@@ -18,7 +18,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'exit-chat': [] }>()
 
-const { sendChatRequest, chatMessages, models, selectedModel, fetchModels, isLoading, error, providers } =
+const { sendChatRequest, chatMessages, models, selectedModel, selectedProviderId, fetchModels, isLoading, error, providers } =
   useAIProvider()
 
 const { currentOrg } = useOrganization()
@@ -186,7 +186,7 @@ watch(chatMessages, scrollToBottom, { deep: true })
 
 onMounted(async () => {
   await initMarkdown()
-  fetchModels()
+  await fetchModels(selectedProviderId.value || undefined)
   handleSend(props.initialQuery)
 })
 

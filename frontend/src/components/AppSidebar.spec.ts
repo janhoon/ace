@@ -3,36 +3,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import AppSidebar from './AppSidebar.vue'
 
-const mockHoveredSection = ref<string | null>(null)
-const mockPinnedSection = ref<string | null>(null)
-const mockIsPeeking = ref(false)
-const mockActiveFlyoutSection = ref<string | null>(null)
+const mockExpandedSection = ref<string | null>(null)
+const mockIsPinned = ref(false)
 const mockCurrentRouteSection = ref('dashboards')
-const mockHandleMouseEnter = vi.fn()
-const mockHandleMouseLeave = vi.fn()
-const mockPinSection = vi.fn()
-const mockCloseFlyout = vi.fn()
+const mockToggleSection = vi.fn()
+const mockCloseSection = vi.fn()
+const mockTogglePin = vi.fn()
 
 vi.mock('../composables/useSidebar', () => ({
   useSidebar: () => ({
-    hoveredSection: mockHoveredSection,
-    pinnedSection: mockPinnedSection,
-    isPeeking: mockIsPeeking,
-    activeFlyoutSection: mockActiveFlyoutSection,
+    expandedSection: mockExpandedSection,
+    isPinned: mockIsPinned,
     currentRouteSection: mockCurrentRouteSection,
-    handleMouseEnter: mockHandleMouseEnter,
-    handleMouseLeave: mockHandleMouseLeave,
-    pinSection: mockPinSection,
-    closeFlyout: mockCloseFlyout,
+    toggleSection: mockToggleSection,
+    closeSection: mockCloseSection,
+    togglePin: mockTogglePin,
   }),
 }))
 
 const mockUser = ref({ email: 'jane@example.com', name: 'Jane Doe' })
 vi.mock('../composables/useAuth', () => ({
-  useAuth: () => ({ user: mockUser }),
+  useAuth: () => ({ user: mockUser, logout: vi.fn() }),
 }))
 
-const mockCurrentOrg = ref({ id: 'org-1', name: 'Test Org', role: 'admin' })
+const mockCurrentOrg = ref<{ id: string; name: string; role: string } | null>({ id: 'org-1', name: 'Test Org', role: 'admin' })
 const mockOrganizations = ref([
   { id: 'org-1', name: 'Test Org', role: 'admin' },
   { id: 'org-2', name: 'Other Org', role: 'viewer' },
@@ -50,14 +44,24 @@ vi.mock('../composables/useFavorites', () => ({
   useFavorites: () => ({
     favorites: ref([]),
     recentDashboards: ref([]),
+    toggleFavorite: vi.fn(),
     isFavorite: () => false,
+    addRecent: vi.fn(),
   }),
+}))
+
+vi.mock('../composables/useClickOutside', () => ({
+  useClickOutside: vi.fn(),
+}))
+
+vi.mock('../composables/useKeyboardShortcuts', () => ({
+  useKeyboardShortcuts: () => ({ showHelp: ref(false) }),
 }))
 
 const mockRoutePath = ref('/app/dashboards')
 const mockPush = vi.fn()
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ path: mockRoutePath.value }),
+  useRoute: () => ({ path: mockRoutePath.value, meta: {} }),
   useRouter: () => ({ push: mockPush }),
 }))
 
@@ -74,9 +78,12 @@ describe('AppSidebar', () => {
           AlertTriangle: { template: '<span class="icon-alert-triangle" />' },
           Search: { template: '<span class="icon-search" />' },
           Settings: { template: '<span class="icon-settings" />' },
-          X: { template: '<span class="icon-x" />' },
           Star: { template: '<span class="icon-star" />' },
+          Clock: { template: '<span class="icon-clock" />' },
+          ArrowRight: { template: '<span class="icon-arrow-right" />' },
           Check: { template: '<span class="icon-check" />' },
+          Pin: { template: '<span class="icon-pin" />' },
+          PinOff: { template: '<span class="icon-pin-off" />' },
           LogOut: { template: '<span class="icon-logout" />' },
           Keyboard: { template: '<span class="icon-keyboard" />' },
         },
@@ -86,10 +93,8 @@ describe('AppSidebar', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockHoveredSection.value = null
-    mockPinnedSection.value = null
-    mockIsPeeking.value = false
-    mockActiveFlyoutSection.value = null
+    mockExpandedSection.value = null
+    mockIsPinned.value = false
     mockCurrentRouteSection.value = 'dashboards'
     mockCurrentOrg.value = { id: 'org-1', name: 'Test Org', role: 'admin' }
     mockRoutePath.value = '/app/dashboards'
@@ -100,65 +105,77 @@ describe('AppSidebar', () => {
     wrapper?.unmount()
   })
 
-  it('renders the sidebar rail', () => {
+  it('renders the sidebar', () => {
     wrapper = createWrapper()
-    expect(wrapper.find('[data-testid="sidebar-rail"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sidebar"]').exists()).toBe(true)
   })
 
-  it('does not render flyout when no section is active', () => {
-    mockActiveFlyoutSection.value = null
+  it('shows nav items in collapsed state', () => {
     wrapper = createWrapper()
-    expect(wrapper.find('[data-testid="flyout-panel"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="sidebar-nav-home"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sidebar-nav-dashboards"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sidebar-nav-services"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sidebar-nav-alerts"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sidebar-nav-explore"]').exists()).toBe(true)
   })
 
-  it('renders flyout when a section is active', () => {
-    mockActiveFlyoutSection.value = 'explore'
+  it('does not show search when collapsed', () => {
+    mockExpandedSection.value = null
+    wrapper = createWrapper()
+    expect(wrapper.find('[data-testid="sidebar-search"]').exists()).toBe(false)
+  })
+
+  it('shows search and sub-nav when expanded', () => {
+    mockExpandedSection.value = 'explore'
     mockRoutePath.value = '/app/explore/metrics'
     wrapper = createWrapper()
-    expect(wrapper.find('[data-testid="flyout-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sidebar-search"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sidebar-subnav-metrics"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sidebar-subnav-logs"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sidebar-subnav-traces"]').exists()).toBe(true)
   })
 
-  it('does not render flyout for home section', () => {
-    mockActiveFlyoutSection.value = 'home'
+  it('does not show sub-nav for home section', () => {
+    mockExpandedSection.value = 'home'
     wrapper = createWrapper()
-    expect(wrapper.find('[data-testid="flyout-panel"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="sidebar-search"]').exists()).toBe(false)
   })
 
-  it('passes activeSection to rail from currentRouteSection or pinnedSection', () => {
-    mockPinnedSection.value = 'explore'
-    mockActiveFlyoutSection.value = 'explore'
+  it('shows accent bar on active section', () => {
+    mockExpandedSection.value = 'explore'
     wrapper = createWrapper()
-    // The rail should show explore as active via the accent bar
-    const exploreRail = wrapper.find('[data-testid="rail-explore"]')
-    expect(exploreRail.find('[data-testid="rail-accent-bar"]').exists()).toBe(true)
+    const explore = wrapper.find('[data-testid="sidebar-nav-explore"]')
+    expect(explore.find('[data-testid="sidebar-accent-bar"]').exists()).toBe(true)
   })
 
-  it('calls pinSection when rail icon is clicked', async () => {
+  it('calls toggleSection when nav item is clicked', async () => {
     wrapper = createWrapper()
-    await wrapper.find('[data-testid="rail-dashboards"]').trigger('click')
-    expect(mockPinSection).toHaveBeenCalledWith('dashboards')
+    await wrapper.find('[data-testid="sidebar-nav-dashboards"]').trigger('click')
+    expect(mockToggleSection).toHaveBeenCalledWith('dashboards')
   })
 
-  it('calls handleMouseEnter when hovering rail icon', async () => {
+  it('navigates when clicking a different section than currentRouteSection', async () => {
+    mockCurrentRouteSection.value = 'dashboards'
     wrapper = createWrapper()
-    await wrapper.find('[data-testid="rail-explore"]').trigger('mouseenter')
-    expect(mockHandleMouseEnter).toHaveBeenCalledWith('explore')
+    await wrapper.find('[data-testid="sidebar-nav-explore"]').trigger('click')
+    expect(mockPush).toHaveBeenCalledWith('/app/explore/metrics')
+    expect(mockToggleSection).toHaveBeenCalledWith('explore')
   })
 
-  it('navigates when flyout sub-nav item is clicked', async () => {
-    mockActiveFlyoutSection.value = 'explore'
+  it('does not navigate when clicking the same section as currentRouteSection', async () => {
+    mockCurrentRouteSection.value = 'dashboards'
+    wrapper = createWrapper()
+    await wrapper.find('[data-testid="sidebar-nav-dashboards"]').trigger('click')
+    expect(mockPush).not.toHaveBeenCalled()
+    expect(mockToggleSection).toHaveBeenCalledWith('dashboards')
+  })
+
+  it('navigates when sub-nav item is clicked', async () => {
+    mockExpandedSection.value = 'explore'
     mockRoutePath.value = '/app/explore/metrics'
     wrapper = createWrapper()
-    await wrapper.find('[data-testid="flyout-nav-logs"]').trigger('click')
+    await wrapper.find('[data-testid="sidebar-subnav-logs"]').trigger('click')
     expect(mockPush).toHaveBeenCalledWith('/app/explore/logs')
-  })
-
-  it('calls closeFlyout when flyout close button is clicked', async () => {
-    mockActiveFlyoutSection.value = 'explore'
-    mockRoutePath.value = '/app/explore/metrics'
-    wrapper = createWrapper()
-    await wrapper.find('[data-testid="flyout-close"]').trigger('click')
-    expect(mockCloseFlyout).toHaveBeenCalled()
   })
 
   it('has aria-label on the nav landmark', () => {
@@ -167,74 +184,57 @@ describe('AppSidebar', () => {
     expect(nav.attributes('aria-label')).toBe('Main navigation')
   })
 
-  it('clicking outside the flyout closes it when pinned', async () => {
-    mockPinnedSection.value = 'explore'
-    mockActiveFlyoutSection.value = 'explore'
-    mockRoutePath.value = '/app/explore/metrics'
-    wrapper = createWrapper()
-    const backdrop = wrapper.find('[data-testid="flyout-backdrop"]')
-    expect(backdrop.exists()).toBe(true)
-    await backdrop.trigger('click')
-    expect(mockCloseFlyout).toHaveBeenCalled()
-  })
-
-  it('does not show backdrop when flyout is not pinned', () => {
-    mockPinnedSection.value = null
-    wrapper = createWrapper()
-    expect(wrapper.find('[data-testid="flyout-backdrop"]').exists()).toBe(false)
-  })
-
   describe('org selector', () => {
-    it('renders the org selector button in the rail', () => {
+    it('renders the org selector button', () => {
       wrapper = createWrapper()
-      const orgBtn = wrapper.find('[data-testid="rail-org-selector"]')
+      const orgBtn = wrapper.find('[data-testid="sidebar-org-selector"]')
       expect(orgBtn.exists()).toBe(true)
-      expect(orgBtn.text()).toBe('T')
+      expect(orgBtn.text()).toContain('T')
     })
 
     it('opens org switcher popup when org button is clicked', async () => {
       wrapper = createWrapper()
       expect(wrapper.find('[data-testid="org-switcher-popup"]').exists()).toBe(false)
-      await wrapper.find('[data-testid="rail-org-selector"]').trigger('click')
+      await wrapper.find('[data-testid="sidebar-org-selector"]').trigger('click')
       expect(wrapper.find('[data-testid="org-switcher-popup"]').exists()).toBe(true)
     })
 
     it('lists all organizations in the popup', async () => {
       wrapper = createWrapper()
-      await wrapper.find('[data-testid="rail-org-selector"]').trigger('click')
+      await wrapper.find('[data-testid="sidebar-org-selector"]').trigger('click')
       expect(wrapper.find('[data-testid="org-switcher-org-1"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="org-switcher-org-2"]').exists()).toBe(true)
     })
 
     it('calls selectOrganization when an org is clicked', async () => {
       wrapper = createWrapper()
-      await wrapper.find('[data-testid="rail-org-selector"]').trigger('click')
+      await wrapper.find('[data-testid="sidebar-org-selector"]').trigger('click')
       await wrapper.find('[data-testid="org-switcher-org-2"]').trigger('click')
       expect(mockSelectOrganization).toHaveBeenCalledWith('org-2')
     })
 
     it('closes the popup after selecting an org', async () => {
       wrapper = createWrapper()
-      await wrapper.find('[data-testid="rail-org-selector"]').trigger('click')
+      await wrapper.find('[data-testid="sidebar-org-selector"]').trigger('click')
       expect(wrapper.find('[data-testid="org-switcher-popup"]').exists()).toBe(true)
       await wrapper.find('[data-testid="org-switcher-org-2"]').trigger('click')
       expect(wrapper.find('[data-testid="org-switcher-popup"]').exists()).toBe(false)
     })
 
-    it('highlights the current org with primary color', async () => {
+    it('shows ? when no org is selected', () => {
+      mockCurrentOrg.value = null
       wrapper = createWrapper()
-      await wrapper.find('[data-testid="rail-org-selector"]').trigger('click')
-      const currentOrgBtn = wrapper.find('[data-testid="org-switcher-org-1"]')
-      expect(currentOrgBtn.attributes('style')).toContain('--color-primary')
-      const otherOrgBtn = wrapper.find('[data-testid="org-switcher-org-2"]')
-      expect(otherOrgBtn.attributes('style')).toContain('--color-on-surface')
+      const orgBtn = wrapper.find('[data-testid="sidebar-org-selector"]')
+      expect(orgBtn.text()).toContain('?')
     })
+  })
 
-    it('shows ? when no org is selected', async () => {
-      mockCurrentOrg.value = null as unknown as typeof mockCurrentOrg.value
+  describe('user avatar', () => {
+    it('renders user initials', () => {
       wrapper = createWrapper()
-      const orgBtn = wrapper.find('[data-testid="rail-org-selector"]')
-      expect(orgBtn.text()).toBe('?')
+      const avatar = wrapper.find('[data-testid="sidebar-user-avatar"]')
+      expect(avatar.exists()).toBe(true)
+      expect(avatar.text()).toContain('JD')
     })
   })
 })

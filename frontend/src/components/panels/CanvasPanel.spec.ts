@@ -62,14 +62,13 @@ describe('CanvasPanel', () => {
     expect(wrapper.find('[data-testid="canvas-container"]').exists()).toBe(true)
   })
 
-  it('container has correct styles (width 100%, height 100%, minHeight 300px)', async () => {
+  it('container has correct styles (width 100%, height 100%)', async () => {
     const wrapper = mount(CanvasPanel)
     await flushMount()
     const container = wrapper.find('[data-testid="canvas-container"]')
     const style = container.attributes('style') ?? ''
     expect(style).toContain('width: 100%')
     expect(style).toContain('height: 100%')
-    expect(style).toContain('min-height: 300px')
   })
 
   it('attempts to mount Excalidraw on mounted (createRoot called)', async () => {

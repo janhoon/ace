@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useFavorites } from './useFavorites'
-import type { RecentDashboard } from './useFavorites'
+import type { FavoriteItem, RecentDashboard } from './useFavorites'
 
 describe('useFavorites', () => {
   beforeEach(() => {
@@ -14,35 +14,41 @@ describe('useFavorites', () => {
   })
 
   describe('toggleFavorite', () => {
-    it('adds an id to favorites when not already favorited', () => {
+    it('adds an item to favorites when not already favorited', () => {
       const { favorites, toggleFavorite } = useFavorites()
-      toggleFavorite('dash-1')
-      expect(favorites.value).toContain('dash-1')
+      toggleFavorite({ id: 'dash-1', title: 'Dashboard 1' })
+      expect(favorites.value).toEqual([
+        { id: 'dash-1', title: 'Dashboard 1', type: 'dashboard' },
+      ])
     })
 
-    it('removes an id from favorites when already favorited', () => {
+    it('removes an item from favorites when already favorited', () => {
       const { favorites, toggleFavorite } = useFavorites()
-      toggleFavorite('dash-1')
-      expect(favorites.value).toContain('dash-1')
+      toggleFavorite({ id: 'dash-1', title: 'Dashboard 1' })
+      expect(favorites.value).toHaveLength(1)
 
-      toggleFavorite('dash-1')
-      expect(favorites.value).not.toContain('dash-1')
+      toggleFavorite({ id: 'dash-1', title: 'Dashboard 1' })
+      expect(favorites.value).toHaveLength(0)
     })
 
     it('handles multiple favorites', () => {
       const { favorites, toggleFavorite } = useFavorites()
-      toggleFavorite('dash-1')
-      toggleFavorite('dash-2')
-      toggleFavorite('dash-3')
+      toggleFavorite({ id: 'dash-1', title: 'Dashboard 1' })
+      toggleFavorite({ id: 'dash-2', title: 'Dashboard 2' })
+      toggleFavorite({ id: 'dash-3', title: 'Dashboard 3', type: 'service' })
 
-      expect(favorites.value).toEqual(['dash-1', 'dash-2', 'dash-3'])
+      expect(favorites.value).toEqual([
+        { id: 'dash-1', title: 'Dashboard 1', type: 'dashboard' },
+        { id: 'dash-2', title: 'Dashboard 2', type: 'dashboard' },
+        { id: 'dash-3', title: 'Dashboard 3', type: 'service' },
+      ])
     })
   })
 
   describe('isFavorite', () => {
     it('returns true for favorited id', () => {
       const { isFavorite, toggleFavorite } = useFavorites()
-      toggleFavorite('dash-1')
+      toggleFavorite({ id: 'dash-1', title: 'Dashboard 1' })
       expect(isFavorite('dash-1')).toBe(true)
     })
 
@@ -103,11 +109,14 @@ describe('useFavorites', () => {
   describe('localStorage persistence', () => {
     it('persists favorites to localStorage', () => {
       const { toggleFavorite } = useFavorites()
-      toggleFavorite('dash-1')
-      toggleFavorite('dash-2')
+      toggleFavorite({ id: 'dash-1', title: 'Dashboard 1' })
+      toggleFavorite({ id: 'dash-2', title: 'Dashboard 2' })
 
       const stored = JSON.parse(localStorage.getItem('ace-favorites') ?? '[]')
-      expect(stored).toEqual(['dash-1', 'dash-2'])
+      expect(stored).toEqual([
+        { id: 'dash-1', title: 'Dashboard 1', type: 'dashboard' },
+        { id: 'dash-2', title: 'Dashboard 2', type: 'dashboard' },
+      ])
     })
 
     it('persists recents to localStorage', () => {
@@ -124,11 +133,15 @@ describe('useFavorites', () => {
     })
 
     it('reads favorites from localStorage on init', () => {
-      localStorage.setItem('ace-favorites', JSON.stringify(['dash-a', 'dash-b']))
+      const items: FavoriteItem[] = [
+        { id: 'dash-a', title: 'Dash A', type: 'dashboard' },
+        { id: 'dash-b', title: 'Dash B', type: 'service' },
+      ]
+      localStorage.setItem('ace-favorites', JSON.stringify(items))
       const { _reset } = useFavorites()
       _reset()
       const { favorites } = useFavorites()
-      expect(favorites.value).toEqual(['dash-a', 'dash-b'])
+      expect(favorites.value).toEqual(items)
     })
 
     it('reads recents from localStorage on init', () => {
@@ -140,6 +153,27 @@ describe('useFavorites', () => {
       _reset()
       const { recentDashboards } = useFavorites()
       expect(recentDashboards.value).toEqual(recents)
+    })
+  })
+
+  describe('migration from bare strings', () => {
+    it('converts bare string favorites to FavoriteItem objects', () => {
+      localStorage.setItem('ace-favorites', JSON.stringify(['id-1', 'id-2']))
+      const { _reset } = useFavorites()
+      _reset()
+      const { favorites } = useFavorites()
+
+      expect(favorites.value).toEqual([
+        { id: 'id-1', title: '(untitled)', type: 'dashboard' },
+        { id: 'id-2', title: '(untitled)', type: 'dashboard' },
+      ])
+
+      // Should also persist the migrated format back to localStorage
+      const stored = JSON.parse(localStorage.getItem('ace-favorites') ?? '[]')
+      expect(stored).toEqual([
+        { id: 'id-1', title: '(untitled)', type: 'dashboard' },
+        { id: 'id-2', title: '(untitled)', type: 'dashboard' },
+      ])
     })
   })
 })

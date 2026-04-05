@@ -35,7 +35,18 @@
             <span class="text-xs text-[var(--color-outline)] whitespace-nowrap overflow-hidden text-ellipsis">{{ ds.url }}</span>
           </div>
           <div class="flex items-center gap-1 shrink-0">
-            <button @click="testDatasource(ds.id)" :data-testid="`ds-panel-test-${ds.id}`" class="inline-flex items-center justify-center w-[30px] h-[30px] p-0 bg-transparent border border-transparent rounded-sm text-[var(--color-on-surface-variant)] cursor-pointer transition-all no-underline hover:bg-[var(--color-surface-container-high)] hover:-strong hover:text-[var(--color-on-surface)]" title="Test connection">
+            <Transition name="fade">
+              <span v-if="testStatus[ds.id] === 'testing'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium text-[var(--color-on-surface-variant)]">
+                <Loader2 :size="12" class="animate-spin" /> Testing…
+              </span>
+              <span v-else-if="testStatus[ds.id] === 'ok'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                <CheckCircle2 :size="12" /> Connected
+              </span>
+              <span v-else-if="testStatus[ds.id] === 'error'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-[var(--color-error)]/10 text-[var(--color-error)]">
+                <XCircle :size="12" /> Failed
+              </span>
+            </Transition>
+            <button @click="testDatasource(ds.id)" :data-testid="`ds-panel-test-${ds.id}`" :disabled="testStatus[ds.id] === 'testing'" class="inline-flex items-center justify-center w-[30px] h-[30px] p-0 bg-transparent border border-transparent rounded-sm text-[var(--color-on-surface-variant)] cursor-pointer transition-all no-underline hover:bg-[var(--color-surface-container-high)] hover:-strong hover:text-[var(--color-on-surface)] disabled:opacity-50 disabled:cursor-not-allowed" title="Test connection">
               <Zap :size="14" />
             </button>
             <RouterLink :to="`/app/datasources/${ds.id}/edit`" :data-testid="`ds-panel-edit-${ds.id}`" class="inline-flex items-center justify-center w-[30px] h-[30px] p-0 bg-transparent border border-transparent rounded-sm text-[var(--color-on-surface-variant)] cursor-pointer transition-all no-underline hover:bg-[var(--color-surface-container-high)] hover:-strong hover:text-[var(--color-on-surface)]" title="Edit">
@@ -49,22 +60,12 @@
       </div>
     </div>
 
-    <!-- Test result toast -->
-    <div
-      v-if="testResult"
-      class="fixed bottom-6 right-6 px-4 py-2.5 rounded-sm text-sm font-medium z-[1000] animate-slide-up"
-      :class="testResult.ok
-        ? 'bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)]'
-        : 'bg-[var(--color-error)]/10 text-[var(--color-error)]'"
-    >
-      {{ testResult.message }}
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { Database, Edit2, Trash2, Zap } from 'lucide-vue-next'
+import { CheckCircle2, Database, Edit2, Loader2, Trash2, XCircle, Zap } from 'lucide-vue-next'
 import { listDataSources, deleteDataSource, testDataSourceConnection } from '../api/datasources'
 import type { DataSource } from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
@@ -74,7 +75,7 @@ const props = defineProps<{ orgId: string }>()
 
 const datasources = ref<DataSource[]>([])
 const loading = ref(true)
-const testResult = ref<{ ok: boolean; message: string } | null>(null)
+const testStatus = ref<Record<string, 'testing' | 'ok' | 'error'>>({})
 
 async function fetchDatasources() {
   loading.value = true
@@ -94,14 +95,14 @@ async function deleteDatasource(id: string) {
 }
 
 async function testDatasource(id: string) {
-  testResult.value = null
+  testStatus.value[id] = 'testing'
   try {
     await testDataSourceConnection(id)
-    testResult.value = { ok: true, message: 'Connection successful' }
+    testStatus.value[id] = 'ok'
   } catch {
-    testResult.value = { ok: false, message: 'Connection failed' }
+    testStatus.value[id] = 'error'
   }
-  setTimeout(() => { testResult.value = null }, 3000)
+  setTimeout(() => { delete testStatus.value[id] }, 4000)
 }
 
 watch(() => props.orgId, fetchDatasources)

@@ -15,6 +15,7 @@ import {
   type CreateProviderRequest,
   createAIProvider,
   deleteAIProvider,
+  listAIModels,
   listAIProviders,
   testAIProvider,
   type UpdateProviderRequest,
@@ -29,6 +30,9 @@ const emit = defineEmits<{ 'provider-count': [count: number] }>()
 const providers = ref<AIProviderInfo[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+// Model counts fetched from the API
+const modelCounts = ref<Record<string, number>>({})
 
 // Form state
 const showForm = ref(false)
@@ -62,13 +66,14 @@ const urlHints: Record<string, string> = {
 
 // --- Helpers ---
 
-function truncateUrl(url: string, max = 40): string {
+function truncateUrl(url: string | undefined, max = 40): string {
+  if (!url) return ''
   if (url.length <= max) return url
   return `${url.slice(0, max)}...`
 }
 
 function modelCount(provider: AIProviderInfo): number {
-  return provider.models_override?.length ?? 0
+  return modelCounts.value[provider.id] ?? provider.models_override?.length ?? 0
 }
 
 // --- Data loading ---
@@ -80,6 +85,20 @@ async function loadProviders() {
   try {
     providers.value = await listAIProviders(props.orgId)
     emit('provider-count', providers.value.length)
+
+    // Fetch actual model counts per provider in parallel
+    const counts: Record<string, number> = {}
+    await Promise.all(
+      providers.value.map(async (p) => {
+        try {
+          const models = await listAIModels(props.orgId, p.id)
+          counts[p.id] = models.length
+        } catch {
+          // Fall back to models_override count
+        }
+      }),
+    )
+    modelCounts.value = counts
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load providers'
   } finally {

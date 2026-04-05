@@ -12,17 +12,13 @@ vi.mock('../composables/useAuth', () => ({
   }),
 }))
 
-const mockOrganizations = ref([
-  { id: 'org-1', name: 'Acme Corp', role: 'admin' },
-  { id: 'org-2', name: 'Side Project', role: 'member' },
-])
-const mockCurrentOrg = ref({ id: 'org-1', name: 'Acme Corp', role: 'admin' })
-const mockSelectOrganization = vi.fn()
-vi.mock('../composables/useOrganization', () => ({
-  useOrganization: () => ({
-    organizations: mockOrganizations,
-    currentOrg: mockCurrentOrg,
-    selectOrganization: mockSelectOrganization,
+vi.mock('../composables/useClickOutside', () => ({
+  useClickOutside: vi.fn(),
+}))
+
+vi.mock('../composables/useKeyboardShortcuts', () => ({
+  useKeyboardShortcuts: () => ({
+    showHelp: ref(false),
   }),
 }))
 
@@ -34,7 +30,6 @@ describe('SidebarUserMenu', () => {
       props: { isOpen: true },
       global: {
         stubs: {
-          Check: { template: '<span class="icon-check" />' },
           LogOut: { template: '<span class="icon-logout" />' },
           Keyboard: { template: '<span class="icon-keyboard" />' },
         },
@@ -45,7 +40,6 @@ describe('SidebarUserMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUser.value = { email: 'jane@example.com', name: 'Jane Doe' }
-    mockCurrentOrg.value = { id: 'org-1', name: 'Acme Corp', role: 'admin' }
   })
 
   afterEach(() => {
@@ -57,36 +51,6 @@ describe('SidebarUserMenu', () => {
     const text = wrapper.text()
     expect(text).toContain('Jane Doe')
     expect(text).toContain('jane@example.com')
-  })
-
-  it('renders organization list', () => {
-    wrapper = createWrapper()
-    expect(wrapper.find('[data-testid="user-menu-org-org-1"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="user-menu-org-org-2"]').exists()).toBe(true)
-  })
-
-  it('shows checkmark on current org', () => {
-    wrapper = createWrapper()
-    const orgItem = wrapper.find('[data-testid="user-menu-org-org-1"]')
-    expect(orgItem.find('.lucide-check').exists()).toBe(true)
-  })
-
-  it('does not show checkmark on non-current org', () => {
-    wrapper = createWrapper()
-    const orgItem = wrapper.find('[data-testid="user-menu-org-org-2"]')
-    expect(orgItem.find('.lucide-check').exists()).toBe(false)
-  })
-
-  it('calls selectOrganization when clicking an org', async () => {
-    wrapper = createWrapper()
-    await wrapper.find('[data-testid="user-menu-org-org-2"]').trigger('click')
-    expect(mockSelectOrganization).toHaveBeenCalledWith('org-2')
-  })
-
-  it('emits close when org is selected', async () => {
-    wrapper = createWrapper()
-    await wrapper.find('[data-testid="user-menu-org-org-2"]').trigger('click')
-    expect(wrapper.emitted('close')).toBeTruthy()
   })
 
   it('calls logout when logout button is clicked', async () => {
@@ -110,8 +74,6 @@ describe('SidebarUserMenu', () => {
   it('closes on Escape key', async () => {
     wrapper = createWrapper()
     await wrapper.find('[data-testid="user-menu"]').trigger('keydown', { key: 'Escape' })
-    // The component listens on document, so dispatch there
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     expect(wrapper.emitted('close')).toBeTruthy()
   })
 })

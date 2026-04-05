@@ -48,6 +48,7 @@ vi.mock('../composables/useAIProvider', () => ({
     chatMessages: ref([]),
     models: ref([]),
     selectedModel: ref(''),
+    selectedProviderId: ref(''),
     fetchModels: vi.fn(),
     isLoading: ref(false),
     error: ref(null),

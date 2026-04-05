@@ -3,18 +3,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import App from './App.vue'
 
-const mockPinnedSection = ref<string | null>(null)
 vi.mock('./composables/useSidebar', () => ({
   useSidebar: () => ({
-    hoveredSection: ref(null),
-    pinnedSection: mockPinnedSection,
-    isPeeking: ref(false),
-    activeFlyoutSection: ref(null),
+    expandedSection: ref(null),
+    isPinned: ref(false),
     currentRouteSection: ref('dashboards'),
-    handleMouseEnter: vi.fn(),
-    handleMouseLeave: vi.fn(),
-    pinSection: vi.fn(),
-    closeFlyout: vi.fn(),
+    toggleSection: vi.fn(),
+    closeSection: vi.fn(),
+    togglePin: vi.fn(),
     _reset: vi.fn(),
   }),
 }))
@@ -140,8 +136,7 @@ describe('App', () => {
     expect(wrapper.findComponent({ name: 'CmdKModal' }).exists()).toBe(true)
   })
 
-  it('applies 52px left margin when sidebar is shown and flyout is not pinned', () => {
-    mockPinnedSection.value = null
+  it('applies sidebar-rail-width margin when sidebar is shown and collapsed', () => {
     const wrapper = mount(App, {
       global: {
         stubs: {
@@ -155,24 +150,6 @@ describe('App', () => {
       },
     })
     const main = wrapper.find('main')
-    expect(main.element.style.marginLeft).toBe('52px')
-  })
-
-  it('applies 292px left margin when flyout is pinned', () => {
-    mockPinnedSection.value = 'explore'
-    const wrapper = mount(App, {
-      global: {
-        stubs: {
-          RouterView: true,
-          AppSidebar: true,
-          CmdKModal: true,
-          ShortcutsOverlay: true,
-          ToastNotification: true,
-          CookieConsentBanner: true,
-        },
-      },
-    })
-    const main = wrapper.find('main')
-    expect(main.element.style.marginLeft).toBe('292px')
+    expect(main.element.style.marginLeft).toBe('var(--sidebar-rail-width)')
   })
 })

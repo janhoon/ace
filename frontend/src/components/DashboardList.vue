@@ -380,7 +380,7 @@ defineExpose({ fetchDashboards })
               :style="{
                 color: isFavorite(dashboard.id) ? 'var(--color-primary)' : 'var(--color-outline)',
               }"
-              @click.stop="toggleFavorite(dashboard.id)"
+              @click.stop="toggleFavorite({ id: dashboard.id, title: dashboard.title, type: 'dashboard' })"
             >
               <Star :size="16" :fill="isFavorite(dashboard.id) ? 'currentColor' : 'none'" />
             </button>

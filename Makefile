@@ -1,21 +1,24 @@
-.PHONY: help backend seed seed-correlated frontend backend-test frontend-test test backend-lint frontend-lint lint security-local check tilt-up tilt-down compose-up compose-down compose-reset compose-logs telemetrygen
+.PHONY: help dev backend seed seed-correlated frontend backend-test frontend-test test backend-lint frontend-lint lint security-local check tilt-up tilt-down compose-up compose-down compose-reset compose-logs telemetrygen
 
 EMAIL ?= admin@admin.com
 PASSWORD ?= Admin1234
 PROFILES ?=
-LOKI_URL ?= http://localhost:3100
-TEMPO_URL ?= http://localhost:3200
-COUNT ?= 20
+OTLP_URL ?= http://localhost:4318
+COUNT ?= 100
+SPREAD ?= 30m
 COMPOSE_FILE := deploy/docker/docker-compose.yml
 
 comma := ,
 
 help:
 	@printf "Available targets:\n"
+	@printf "  make dev       Start backend and frontend concurrently\n"
 	@printf "  make backend   Start Go backend (hot reload with air if installed)\n"
 	@printf "  make backend-lint Run backend lint checks with golangci-lint\n"
 	@printf "  make seed [EMAIL=...] [PASSWORD=...]\n"
 	@printf "                 Seed 4 orgs with stack datasources. Defaults: EMAIL=admin@admin.com PASSWORD=Admin1234\n"
+	@printf "  make seed-correlated [OTLP_URL=...] [COUNT=...] [SPREAD=...]\n"
+	@printf "                 Generate realistic web app telemetry (traces, logs, metrics) via OTLP\n"
 	@printf "  make compose-up [PROFILES=...]  Start Docker Compose infra (core + profiles)\n"
 	@printf "  make compose-down              Tear down all Docker Compose services\n"
 	@printf "  make compose-logs              Follow Docker Compose logs\n"
@@ -28,6 +31,12 @@ help:
 	@printf "  make lint      Run backend and frontend lint checks\n"
 	@printf "  make security-local Run local security checks (govulncheck + gitleaks)\n"
 	@printf "  make check     Run tests, lint, security and print summary table\n"
+
+dev:
+	@trap 'kill 0' EXIT; \
+	$(MAKE) backend & \
+	$(MAKE) frontend & \
+	wait
 
 backend:
 	@set -e; \
@@ -97,7 +106,7 @@ seed-correlated:
 		printf "Install Go 1.25+ and retry make seed-correlated.\n"; \
 		exit 1; \
 	fi; \
-	cd backend && "$$GO_BIN" run ./cmd/seed-correlated --loki-url $(LOKI_URL) --tempo-url $(TEMPO_URL) --count $(COUNT)
+	cd backend && "$$GO_BIN" run ./cmd/seed-correlated --otlp-url $(OTLP_URL) --count $(COUNT) --spread $(SPREAD)
 
 tilt-up:
 	@tilt up
@@ -106,13 +115,13 @@ tilt-down:
 	@tilt down
 
 frontend:
-	@cd frontend && npm run dev
+	@cd frontend && bun run dev
 
 backend-test:
 	@cd backend && go test ./...
 
 frontend-test:
-	@cd frontend && npm run test
+	@cd frontend && bun run test
 
 test: backend-test frontend-test
 
@@ -126,7 +135,7 @@ backend-lint:
 	cd backend && golangci-lint run ./...
 
 frontend-lint:
-	@cd frontend && npm run lint && npm run lint:dead-code
+	@cd frontend && bun run lint && bun run lint:dead-code
 
 lint: backend-lint frontend-lint
 
@@ -155,7 +164,7 @@ compose-logs:
 	docker compose -f $(COMPOSE_FILE) logs -f
 
 telemetrygen:
-	docker compose -f $(COMPOSE_FILE) $(if $(PROFILES),$(foreach p,$(subst $(comma), ,$(PROFILES)),--profile $(p) --profile gen-$(p)),$(error PROFILES required, e.g. make telemetrygen PROFILES=victoria)) up -d
+	docker compose -f $(COMPOSE_FILE) $(if $(PROFILES),$(foreach p,$(subst $(comma), ,$(PROFILES)),--profile $(p) --profile gen-$(p)),$(error PROFILES required, e.g. make telemetrygen PROFILES=victoria)) up -d --build
 
 check:
 	@set +e; \

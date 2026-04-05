@@ -2,6 +2,7 @@
 import { AlertCircle, BarChart3, Pencil, Trash2 } from 'lucide-vue-next'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { queryDataSource, searchDataSourceTraces } from '../api/datasources'
+import { updatePanel } from '../api/panels'
 import { useProm } from '../composables/useProm'
 import { useTimeRange } from '../composables/useTimeRange'
 import type { LogEntry, TraceSpan, TraceSummary } from '../types/datasource'
@@ -525,8 +526,9 @@ const hasQuery = computed(() => {
     return !!datasourceId.value
   }
 
-  // Registry panels: check if datasource or query is configured
+  // Registry panels: standalone panels (queryMode: 'none') are always ready
   if (isRegistryPanel.value) {
+    if (registryPanel.value?.queryMode === 'none') return true
     return !!datasourceId.value || !!queryExpr.value
   }
 
@@ -542,6 +544,23 @@ function handleOpenTrace(traceId: string) {
     datasourceId: datasourceId.value,
     traceId,
   })
+}
+
+// Auto-save for standalone panels (e.g. canvas) that emit 'change'
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function handleRegistryPanelChange(data: Record<string, unknown>) {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    const query = { ...props.panel.query }
+    // Merge changed data into the panel's query (e.g. canvasData for canvas panels)
+    if (props.panel.type === 'canvas') {
+      query.canvasData = data
+    }
+    updatePanel(props.panel.id, { query }).catch(() => {
+      // Silent fail — avoid disrupting the drawing experience
+    })
+  }, 1000)
 }
 </script>
 
@@ -677,8 +696,8 @@ function handleOpenTrace(traceId: string) {
       <div v-else-if="isTraceHeatmapPanel && traceSummaries.length > 0" class="flex-1 min-h-0">
         <TraceHeatmapPanel :traces="traceSummaries" @open-trace="handleOpenTrace" />
       </div>
-      <div v-else-if="isRegistryPanel && registryComponent" class="flex-1 min-h-0">
-        <component :is="registryComponent" v-bind="registryProps" />
+      <div v-else-if="isRegistryPanel && registryComponent" class="flex-1 min-h-0 overflow-hidden relative">
+        <component :is="registryComponent" v-bind="registryProps" @change="handleRegistryPanelChange" />
       </div>
       <div
         v-else-if="chartSeries.length === 0 && logEntries.length === 0 && traceSummaries.length === 0"

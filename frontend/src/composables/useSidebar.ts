@@ -1,70 +1,50 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-const HOVER_DELAY = 200
-const CLOSE_DELAY = 150
-const AUTO_CLOSE_DELAY = 2000
+const PINNED_KEY = 'ace-sidebar-pinned'
 
-const hoveredSection = ref<string | null>(null)
-const pinnedSection = ref<string | null>(null)
-
-let hoverTimer: ReturnType<typeof setTimeout> | null = null
-let closeTimer: ReturnType<typeof setTimeout> | null = null
-let autoCloseTimer: ReturnType<typeof setTimeout> | null = null
-
-const isPeeking = computed(() => {
-  return hoveredSection.value !== null && pinnedSection.value === null
-})
-
-const activeFlyoutSection = computed(() => {
-  if (pinnedSection.value) return pinnedSection.value
-  return hoveredSection.value
-})
-
-function clearTimers() {
-  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null }
-  if (closeTimer) { clearTimeout(closeTimer); closeTimer = null }
-}
-
-function clearAutoCloseTimer() {
-  if (autoCloseTimer) { clearTimeout(autoCloseTimer); autoCloseTimer = null }
-}
-
-function handleMouseEnter(sectionId: string) {
-  if (closeTimer) { clearTimeout(closeTimer); closeTimer = null }
-  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null }
-
-  hoverTimer = setTimeout(() => {
-    hoveredSection.value = sectionId
-    hoverTimer = null
-  }, HOVER_DELAY)
-}
-
-function handleMouseLeave() {
-  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null }
-
-  closeTimer = setTimeout(() => {
-    hoveredSection.value = null
-    closeTimer = null
-  }, CLOSE_DELAY)
-}
-
-function pinSection(sectionId: string) {
-  clearTimers()
-  clearAutoCloseTimer()
-  if (pinnedSection.value === sectionId) {
-    pinnedSection.value = null
-  } else {
-    pinnedSection.value = sectionId
+function readPinned(): boolean {
+  try {
+    return localStorage.getItem(PINNED_KEY) === 'true'
+  } catch {
+    return false
   }
-  hoveredSection.value = null
 }
 
-function closeFlyout() {
-  clearTimers()
-  clearAutoCloseTimer()
-  pinnedSection.value = null
-  hoveredSection.value = null
+const expandedSection = ref<string | null>(null)
+const isPinned = ref(readPinned())
+
+function toggleSection(sectionId: string) {
+  if (isPinned.value) {
+    // When pinned, just switch which section's sub-nav is shown
+    expandedSection.value = sectionId === 'home' ? null : sectionId
+    return
+  }
+  if (expandedSection.value === sectionId) {
+    expandedSection.value = null
+  } else {
+    expandedSection.value = sectionId
+  }
+}
+
+function closeSection() {
+  if (isPinned.value) return // Can't close when pinned
+  expandedSection.value = null
+}
+
+function togglePin() {
+  isPinned.value = !isPinned.value
+  localStorage.setItem(PINNED_KEY, String(isPinned.value))
+  if (isPinned.value && !expandedSection.value) {
+    // When pinning, expand the current route section
+    if (cachedRoutePath) {
+      const section = routeToSection(cachedRoutePath.value)
+      if (section !== 'home') expandedSection.value = section
+    }
+  }
+  if (!isPinned.value) {
+    expandedSection.value = null
+  }
 }
 
 const ROUTE_SECTION_MAP: [string, string][] = [
@@ -97,16 +77,17 @@ let router: { push: (path: string) => void } | null = null
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
-    closeFlyout()
+    if (isPinned.value) {
+      togglePin() // Unpin + collapse
+    } else {
+      closeSection()
+    }
     return
   }
 
   if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
     e.preventDefault()
-    if (cachedRoutePath) {
-      const section = routeToSection(cachedRoutePath.value)
-      pinSection(section)
-    }
+    togglePin()
     return
   }
 
@@ -115,37 +96,26 @@ function handleKeydown(e: KeyboardEvent) {
     const { section, route: targetRoute } = SHORTCUT_NAV[e.key]
     router?.push(targetRoute)
 
-    if (section === 'home') return
-
-    clearAutoCloseTimer()
-    pinnedSection.value = section
-    hoveredSection.value = null
-
-    autoCloseTimer = setTimeout(() => {
-      if (pinnedSection.value === section) {
-        pinnedSection.value = null
-      }
-      autoCloseTimer = null
-    }, AUTO_CLOSE_DELAY)
+    if (section !== 'home') {
+      expandedSection.value = section
+    }
   }
 }
 
 let listenerRegistered = false
 
 function _reset() {
-  clearTimers()
-  clearAutoCloseTimer()
-  hoveredSection.value = null
-  pinnedSection.value = null
+  expandedSection.value = null
+  isPinned.value = false
   cachedRoutePath = null
   router = null
+  try { localStorage.removeItem(PINNED_KEY) } catch { /* noop */ }
 }
 
 export function useSidebar() {
   const route = useRoute()
   const routerInstance = useRouter()
 
-  // Initialise router/route cache once — prevents silent overwrite from multiple callers
   if (!cachedRoutePath) {
     cachedRoutePath = { get value() { return route.path } }
     router = routerInstance
@@ -158,16 +128,26 @@ export function useSidebar() {
 
   const currentRouteSection = computed(() => routeToSection(route.path))
 
+  // When pinned, auto-switch expanded section to match route navigation
+  watch(currentRouteSection, (section) => {
+    if (isPinned.value && section !== 'home') {
+      expandedSection.value = section
+    }
+  })
+
+  // On init, if pinned, expand current route section
+  if (isPinned.value) {
+    const section = routeToSection(route.path)
+    if (section !== 'home') expandedSection.value = section
+  }
+
   return {
-    hoveredSection,
-    pinnedSection,
-    isPeeking,
-    activeFlyoutSection,
+    expandedSection,
+    isPinned,
     currentRouteSection,
-    handleMouseEnter,
-    handleMouseLeave,
-    pinSection,
-    closeFlyout,
+    toggleSection,
+    closeSection,
+    togglePin,
     _reset,
   }
 }

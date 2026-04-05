@@ -15,7 +15,7 @@ vi.mock('../composables/useCommandContext', () => ({
   }),
 }))
 
-const mockFavorites = ref<string[]>([])
+const mockFavorites = ref<{ id: string; title: string; type: string }[]>([])
 const mockRecentDashboards = ref<{ id: string; title: string; visitedAt: number }[]>([])
 
 vi.mock('../composables/useFavorites', () => ({
@@ -195,7 +195,10 @@ describe('HomeView', () => {
 
   // --- 6. Pinned Dashboards ---
   it('shows "Pinned Dashboards" section when favorites exist', () => {
-    mockFavorites.value = ['dash-1', 'dash-2']
+    mockFavorites.value = [
+      { id: 'dash-1', title: 'Dashboard 1', type: 'dashboard' },
+      { id: 'dash-2', title: 'Dashboard 2', type: 'dashboard' },
+    ]
     wrapper = createWrapper()
 
     expect(wrapper.text()).toContain('Pinned Dashboards')

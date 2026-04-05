@@ -153,9 +153,9 @@ onUnmounted(() => {
       </h2>
       <div class="flex gap-3 overflow-x-auto pb-2">
         <router-link
-          v-for="favId in favorites"
-          :key="favId"
-          :to="`/app/dashboards/${favId}`"
+          v-for="fav in favorites"
+          :key="typeof fav === 'object' ? fav.id : fav"
+          :to="`/app/dashboards/${typeof fav === 'object' ? fav.id : fav}`"
           class="shrink-0 rounded-lg px-4 py-3 text-sm font-medium transition-colors hover:opacity-90 no-underline"
           :style="{
             backgroundColor: 'var(--color-surface-container)',
@@ -164,7 +164,7 @@ onUnmounted(() => {
             minWidth: '160px',
           }"
         >
-          {{ favId }}
+          {{ typeof fav === 'object' ? fav.title : fav }}
         </router-link>
       </div>
     </section>

@@ -6,6 +6,9 @@ import { useDatasource } from '../composables/useDatasource'
 import { useOrganization } from '../composables/useOrganization'
 import { isTracingType } from '../types/datasource'
 import type { Panel } from '../types/panel'
+import { getAllPanels, lookupPanel } from '../utils/panelRegistry'
+import type { PanelQueryMode } from '../utils/panelRegistry'
+import './panels/index' // Side-effect: registers all panel types
 import ClickHouseSQLEditor from './ClickHouseSQLEditor.vue'
 import CloudWatchQueryEditor from './CloudWatchQueryEditor.vue'
 import ElasticsearchQueryEditor from './ElasticsearchQueryEditor.vue'
@@ -46,6 +49,12 @@ const { currentOrg } = useOrganization()
 const { datasources, fetchDatasources } = useDatasource()
 
 const isEditing = computed(() => !!props.panel)
+
+// Built-in panel types that are not in the registry
+const builtinTypes = new Set([
+  'line_chart', 'bar_chart', 'pie', 'gauge', 'stat', 'table', 'logs', 'trace_list', 'trace_heatmap',
+])
+const registeredPanels = computed(() => getAllPanels().filter((p) => !builtinTypes.has(p.type)))
 
 const title = ref(props.panel?.title || '')
 const panelType = ref(props.panel?.type || 'line_chart')
@@ -119,9 +128,20 @@ const error = ref<string | null>(null)
 const isGaugeType = computed(() => panelType.value === 'gauge')
 const isPieType = computed(() => panelType.value === 'pie')
 const isStatType = computed(() => panelType.value === 'stat')
-const isTracePanelType = computed(
-  () => panelType.value === 'trace_list' || panelType.value === 'trace_heatmap',
-)
+
+// Resolve the query mode for the current panel type (builtin + registry)
+const currentQueryMode = computed<PanelQueryMode>(() => {
+  // Built-in types
+  if (panelType.value === 'logs') return 'logs'
+  if (panelType.value === 'trace_list' || panelType.value === 'trace_heatmap') return 'traces'
+  if (builtinTypes.has(panelType.value)) return 'metrics'
+  // Registry types
+  const reg = lookupPanel(panelType.value)
+  return reg?.queryMode ?? 'metrics'
+})
+
+const needsDatasource = computed(() => currentQueryMode.value !== 'none')
+const isTracePanelType = computed(() => currentQueryMode.value === 'traces')
 const selectedDatasource = computed(() => {
   return (
     datasources.value.find((datasource) => datasource.id === selectedDatasourceId.value) || null
@@ -231,39 +251,47 @@ async function handleSubmit() {
   // Build query config
   const query: Record<string, unknown> = {}
 
-  if (selectedDatasourceId.value) {
-    query.datasource_id = selectedDatasourceId.value
-  }
-
-  const trimmedQuery = promqlQuery.value.trim()
-  if (trimmedQuery) {
+  // Standalone panels (queryMode: 'none') use the registry's defaultQuery
+  if (!needsDatasource.value) {
+    const reg = lookupPanel(panelType.value)
+    if (reg) {
+      Object.assign(query, reg.defaultQuery)
+    }
+  } else {
     if (selectedDatasourceId.value) {
-      query.expr = trimmedQuery
-    } else {
-      query.promql = trimmedQuery
+      query.datasource_id = selectedDatasourceId.value
     }
-  }
 
-  if (isSignalDatasource.value) {
-    if (
-      (isCloudWatchDatasource.value || isElasticsearchDatasource.value) &&
-      querySignal.value === 'traces'
-    ) {
-      query.signal = panelType.value === 'logs' ? 'logs' : 'metrics'
-    } else {
-      query.signal = querySignal.value
+    const trimmedQuery = promqlQuery.value.trim()
+    if (trimmedQuery) {
+      if (selectedDatasourceId.value) {
+        query.expr = trimmedQuery
+      } else {
+        query.promql = trimmedQuery
+      }
     }
-  }
 
-  if (isTracePanelType.value) {
-    const trimmedService = traceService.value.trim()
-    if (trimmedService) {
-      query.service = trimmedService
+    if (isSignalDatasource.value) {
+      if (
+        (isCloudWatchDatasource.value || isElasticsearchDatasource.value) &&
+        querySignal.value === 'traces'
+      ) {
+        query.signal = panelType.value === 'logs' ? 'logs' : 'metrics'
+      } else {
+        query.signal = querySignal.value
+      }
     }
-    const normalizedTraceLimit = Number.isFinite(traceLimit.value)
-      ? Math.max(1, Math.min(200, Math.floor(traceLimit.value)))
-      : 50
-    query.limit = normalizedTraceLimit
+
+    if (isTracePanelType.value) {
+      const trimmedService = traceService.value.trim()
+      if (trimmedService) {
+        query.service = trimmedService
+      }
+      const normalizedTraceLimit = Number.isFinite(traceLimit.value)
+        ? Math.max(1, Math.min(200, Math.floor(traceLimit.value)))
+        : 50
+      query.limit = normalizedTraceLimit
+    }
   }
 
   // Add gauge-specific config if gauge type is selected
@@ -414,11 +442,16 @@ const selectClass = 'w-full rounded-lg px-3 py-2.5 text-sm transition cursor-poi
               <option value="logs">Logs</option>
               <option value="trace_list">Trace List</option>
               <option value="trace_heatmap">Trace Heatmap</option>
+              <option
+                v-for="reg in registeredPanels"
+                :key="reg.type"
+                :value="reg.type"
+              >{{ reg.label }}</option>
             </select>
           </div>
         </div>
 
-        <div v-if="datasources.length > 0" class="mb-5">
+        <div v-if="needsDatasource && datasources.length > 0" class="mb-5">
           <label
             for="datasource"
             class="block mb-2 text-sm font-medium"
@@ -445,6 +478,7 @@ const selectClass = 'w-full rounded-lg px-3 py-2.5 text-sm transition cursor-poi
         </div>
 
         <div
+          v-if="needsDatasource"
           class="mb-5 pt-5"
           :style="{ borderTop: '1px solid var(--color-outline-variant)' }"
         >

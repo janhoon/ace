@@ -269,160 +269,54 @@ services:
         condition: service_healthy
 
   # ─── Telemetry generators (on-demand via gen-* profiles) ───────────────────
+  # Custom generator producing realistic web app telemetry (traces + logs + metrics)
+  # via OTLP HTTP. One service per stack, replacing the generic telemetrygen containers.
 
-  telemetrygen-traces-victoria:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
+  telemetrygen-victoria:
+    build:
+      context: ../../backend
+      dockerfile: cmd/seed-correlated/Dockerfile
     profiles: [gen-victoria]
     command:
-      - traces
-      - --otlp-endpoint=otel-collector-victoria:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-victoria
+      - --continuous
+      - --rate=3
+      - --otlp-url=http://otel-collector-victoria:4318
     depends_on:
       - otel-collector-victoria
 
-  telemetrygen-metrics-victoria:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
-    profiles: [gen-victoria]
-    command:
-      - metrics
-      - --otlp-endpoint=otel-collector-victoria:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-victoria
-    depends_on:
-      - otel-collector-victoria
-
-  telemetrygen-logs-victoria:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
-    profiles: [gen-victoria]
-    command:
-      - logs
-      - --otlp-endpoint=otel-collector-victoria:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-victoria
-    depends_on:
-      - otel-collector-victoria
-
-  telemetrygen-traces-lgtm:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
+  telemetrygen-lgtm:
+    build:
+      context: ../../backend
+      dockerfile: cmd/seed-correlated/Dockerfile
     profiles: [gen-lgtm]
     command:
-      - traces
-      - --otlp-endpoint=otel-collector-lgtm:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-lgtm
+      - --continuous
+      - --rate=3
+      - --otlp-url=http://otel-collector-lgtm:4318
     depends_on:
       - otel-collector-lgtm
 
-  telemetrygen-metrics-lgtm:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
-    profiles: [gen-lgtm]
-    command:
-      - metrics
-      - --otlp-endpoint=otel-collector-lgtm:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-lgtm
-    depends_on:
-      - otel-collector-lgtm
-
-  telemetrygen-logs-lgtm:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
-    profiles: [gen-lgtm]
-    command:
-      - logs
-      - --otlp-endpoint=otel-collector-lgtm:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-lgtm
-    depends_on:
-      - otel-collector-lgtm
-
-  telemetrygen-traces-elk:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
+  telemetrygen-elk:
+    build:
+      context: ../../backend
+      dockerfile: cmd/seed-correlated/Dockerfile
     profiles: [gen-elk]
     command:
-      - traces
-      - --otlp-endpoint=otel-collector-elk:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-elk
+      - --continuous
+      - --rate=3
+      - --otlp-url=http://otel-collector-elk:4318
     depends_on:
       - otel-collector-elk
 
-  telemetrygen-metrics-elk:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
-    profiles: [gen-elk]
-    command:
-      - metrics
-      - --otlp-endpoint=otel-collector-elk:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-elk
-    depends_on:
-      - otel-collector-elk
-
-  telemetrygen-logs-elk:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
-    profiles: [gen-elk]
-    command:
-      - logs
-      - --otlp-endpoint=otel-collector-elk:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-elk
-    depends_on:
-      - otel-collector-elk
-
-  telemetrygen-traces-clickhouse:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
+  telemetrygen-clickhouse:
+    build:
+      context: ../../backend
+      dockerfile: cmd/seed-correlated/Dockerfile
     profiles: [gen-clickhouse]
     command:
-      - traces
-      - --otlp-endpoint=otel-collector-clickhouse:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-clickhouse
-    depends_on:
-      - otel-collector-clickhouse
-
-  telemetrygen-metrics-clickhouse:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
-    profiles: [gen-clickhouse]
-    command:
-      - metrics
-      - --otlp-endpoint=otel-collector-clickhouse:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-clickhouse
-    depends_on:
-      - otel-collector-clickhouse
-
-  telemetrygen-logs-clickhouse:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:${TELEMETRYGEN_VERSION:-latest}
-    profiles: [gen-clickhouse]
-    command:
-      - logs
-      - --otlp-endpoint=otel-collector-clickhouse:4317
-      - --otlp-insecure
-      - --rate=5
-      - --duration=inf
-      - --service=synthetic-clickhouse
+      - --continuous
+      - --rate=3
+      - --otlp-url=http://otel-collector-clickhouse:4318
     depends_on:
       - otel-collector-clickhouse
 

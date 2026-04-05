@@ -579,7 +579,7 @@ watch(selectedDatasourceId, (newId) => {
         <ClickHouseSQLEditor v-if="isClickHouseDatasource" v-model="query" signal="metrics" :disabled="loading || !hasMetricsDatasources" />
         <CloudWatchQueryEditor v-else-if="isCloudWatchDatasource" v-model="query" signal="metrics" :show-signal-selector="false" :disabled="loading || !hasMetricsDatasources" />
         <ElasticsearchQueryEditor v-else-if="isElasticsearchDatasource" v-model="query" signal="metrics" :show-signal-selector="false" :disabled="loading || !hasMetricsDatasources" />
-        <QueryBuilder v-else v-model="query" :disabled="loading || !hasMetricsDatasources" />
+        <QueryBuilder v-else v-model="query" :disabled="loading || !hasMetricsDatasources" :datasource-id="selectedDatasourceId" />
 
         <div v-if="queryHistory.length > 0" class="relative">
           <button

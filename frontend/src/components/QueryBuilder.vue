@@ -12,6 +12,7 @@ import MonacoQueryEditor from './MonacoQueryEditor.vue'
 const props = defineProps<{
   modelValue: string
   disabled?: boolean
+  datasourceId?: string
 }>()
 
 const emit = defineEmits<{
@@ -34,6 +35,7 @@ const {
   labelValuesCache,
   loadingMetrics,
   loadingLabelValues,
+  setDatasourceId,
   loadMetrics,
   loadLabels,
   loadLabelValues,
@@ -42,7 +44,7 @@ const {
   updateLabelFilter,
   toggleGroupByLabel,
   setQuery,
-} = useQueryBuilder(props.modelValue)
+} = useQueryBuilder(props.modelValue, props.datasourceId)
 
 // Track when we're emitting to avoid reacting to our own changes
 const isEmitting = ref(false)
@@ -93,8 +95,21 @@ const builderAvailable = computed(() => {
 
 // Load metadata on mount
 onMounted(async () => {
-  await Promise.all([loadMetrics(), loadLabels()])
+  if (props.datasourceId) {
+    await Promise.all([loadMetrics(), loadLabels()])
+  }
 })
+
+// Reload metadata when datasource changes
+watch(
+  () => props.datasourceId,
+  async (newId) => {
+    if (newId) {
+      setDatasourceId(newId)
+      await Promise.all([loadMetrics(), loadLabels()])
+    }
+  },
+)
 
 // Sync with v-model
 watch(

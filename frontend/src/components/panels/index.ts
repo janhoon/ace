@@ -30,6 +30,7 @@ registerPanel({
   category: 'widgets',
   label: 'Text',
   icon: FileText,
+  queryMode: 'none',
 })
 
 // Register Heatmap
@@ -132,6 +133,7 @@ registerPanel({
   category: 'widgets',
   label: 'Alert List',
   icon: Bell,
+  queryMode: 'none',
 })
 
 // Register State Timeline
@@ -240,6 +242,7 @@ registerPanel({
   category: 'observability',
   label: 'Flame Graph',
   icon: Flame,
+  queryMode: 'traces',
 })
 
 // Register Node Graph
@@ -255,6 +258,7 @@ registerPanel({
   category: 'observability',
   label: 'Node Graph',
   icon: Network,
+  queryMode: 'traces',
 })
 
 // Register Candlestick
@@ -300,6 +304,7 @@ registerPanel({
   category: 'observability',
   label: 'Trace Detail',
   icon: GitBranch,
+  queryMode: 'traces',
 })
 
 // Register Annotation List
@@ -314,6 +319,7 @@ registerPanel({
   category: 'widgets',
   label: 'Annotation List',
   icon: StickyNote,
+  queryMode: 'none',
 })
 
 // Register Dashboard List
@@ -328,6 +334,7 @@ registerPanel({
   category: 'widgets',
   label: 'Dashboard List',
   icon: LayoutDashboard,
+  queryMode: 'none',
 })
 
 // Register Geomap
@@ -363,4 +370,5 @@ registerPanel({
   category: 'widgets',
   label: 'Canvas',
   icon: PenTool,
+  queryMode: 'none',
 })

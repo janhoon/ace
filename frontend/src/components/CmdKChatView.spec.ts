@@ -17,6 +17,7 @@ const mockSelectedModel = ref('')
 const mockIsLoading = ref(false)
 const mockError = ref<string | null>(null)
 const mockProviders = ref<Array<{ id: string; display_name: string }>>([])
+const mockSelectedProviderId = ref('')
 
 vi.mock('../composables/useAIProvider', () => ({
   useAIProvider: () => ({
@@ -24,6 +25,7 @@ vi.mock('../composables/useAIProvider', () => ({
     chatMessages: mockChatMessages,
     models: mockModels,
     selectedModel: mockSelectedModel,
+    selectedProviderId: mockSelectedProviderId,
     fetchModels: mockFetchModels,
     isLoading: mockIsLoading,
     error: mockError,

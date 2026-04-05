@@ -131,5 +131,6 @@ export async function listAIModels(orgId: string, providerId?: string): Promise<
   if (!response.ok) {
     throw new Error('Failed to fetch AI models')
   }
-  return response.json()
+  const data = await response.json()
+  return data.models ?? []
 }
