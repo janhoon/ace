@@ -1,0 +1,139 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "vm-overview",
+    "title": "VictoriaMetrics Overview",
+    "description": "Key health metrics for VictoriaMetrics: ingestion, queries, storage, and resource usage.",
+    "tags": ["victoriametrics", "overview"],
+    "schemaVersion": 39,
+    "refresh": "30s",
+    "time": { "from": "now-1h", "to": "now" },
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "label": "Instance",
+          "query": "label_values(vm_app_version, instance)",
+          "definition": "label_values(vm_app_version, instance)",
+          "multi": false,
+          "includeAll": true,
+          "current": { "text": "All", "value": "$__all" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "title": "Active Time Series",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "vm_cache_entries{type=\"storage/metricName\",instance=~\"$instance\"}" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "short" },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Ingestion Rate",
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum(rate(vm_rows_inserted_total{instance=~\"$instance\"}[5m]))" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "rowsps" },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Query Rate",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum(rate(vm_http_requests_total{instance=~\"$instance\"}[5m]))" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "reqps" },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Storage Used",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum(vm_data_size_bytes{instance=~\"$instance\"}) / 1024 / 1024 / 1024" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "decgbytes" },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Ingestion Rate Over Time",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum(rate(vm_rows_inserted_total{instance=~\"$instance\"}[5m]))", "legendFormat": "rows/sec" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "rowsps" },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "rows/sec" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            }
+          ]
+        }
+      },
+      {
+        "title": "Query Latency (p99)",
+        "type": "timeseries",
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "histogram_quantile(0.99, sum(rate(vm_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))", "legendFormat": "p99" }
+        ]
+      },
+      {
+        "title": "Memory Usage",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "process_resident_memory_bytes{instance=~\"$instance\"} / 1024 / 1024", "legendFormat": "RSS (MB)" }
+        ]
+      },
+      {
+        "title": "CPU Usage",
+        "type": "gauge",
+        "gridPos": { "x": 12, "y": 12, "w": 6, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "rate(process_cpu_seconds_total{instance=~\"$instance\"}[5m]) * 100" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "percent", "max": 100, "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 60, "color": "yellow" }, { "value": 80, "color": "red" }] } },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Goroutines",
+        "type": "timeseries",
+        "gridPos": { "x": 18, "y": 12, "w": 6, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "go_goroutines{instance=~\"$instance\"}", "legendFormat": "goroutines" }
+        ]
+      }
+    ]
+  },
+  "overwrite": true
+}

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import AiFab from './components/AiFab.vue'
+import AiSidebar from './components/AiSidebar.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import CmdKModal from './components/CmdKModal.vue'
 import CookieConsentBanner from './components/CookieConsentBanner.vue'
@@ -11,12 +13,14 @@ import { useDatasource } from './composables/useDatasource'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 import { useOrgBranding } from './composables/useOrgBranding'
 import { useOrganization } from './composables/useOrganization'
+import { useAiSidebar } from './composables/useAiSidebar'
 import { useSidebar } from './composables/useSidebar'
 
 const route = useRoute()
 const router = useRouter()
 const { isAuthenticated } = useAuth()
 const { expandedSection, isPinned } = useSidebar()
+const { isOpen: aiSidebarOpen } = useAiSidebar()
 const { register } = useKeyboardShortcuts()
 const { currentOrg, fetchOrganizations } = useOrganization()
 const { fetchDatasources } = useDatasource()
@@ -31,7 +35,8 @@ const mainMargin = computed(() => {
   const isExpanded = isPinned.value || (expandedSection.value !== null && expandedSection.value !== 'home')
   return {
     marginLeft: isExpanded ? 'var(--sidebar-flyout-width)' : 'var(--sidebar-rail-width)',
-    transition: 'margin-left 200ms ease',
+    marginRight: aiSidebarOpen.value ? '340px' : '0',
+    transition: 'margin-left 200ms ease, margin-right 200ms ease',
   }
 })
 
@@ -106,6 +111,10 @@ onUnmounted(() => {
     >
       <RouterView />
     </main>
+
+    <!-- AI Sidebar + FAB -->
+    <AiSidebar v-if="showSidebar" />
+    <AiFab v-if="showSidebar" />
 
     <!-- Modals & overlays -->
     <CmdKModal :is-open="cmdKOpen" @close="closeCmdK" />

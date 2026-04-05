@@ -26,7 +26,7 @@ import { useCommandContext } from '../composables/useCommandContext'
 import { useDatasource } from '../composables/useDatasource'
 import { useOrganization } from '../composables/useOrganization'
 import { fetchAlerts, fetchGroups } from '../composables/useVMAlert'
-import AiInsightCard from '../components/AiInsightCard.vue'
+import AiAlertTriage from '../components/AiAlertTriage.vue'
 import StatusDot from '../components/StatusDot.vue'
 import type {
   AMAlert,
@@ -572,13 +572,11 @@ onUnmounted(() => {
 
       <!-- Active Alerts tab — Dense Table -->
       <div v-if="activeTab === 'alerts'">
-        <!-- AI Insight Card for firing alerts -->
-        <AiInsightCard
+        <!-- AI Triage for firing alerts -->
+        <AiAlertTriage
           v-if="firingAlerts.length > 0"
-          title="AI Root Cause Analysis (placeholder)"
-          :description="`${firingAlerts.length} alert${firingAlerts.length > 1 ? 's' : ''} firing. Root cause analysis pending — connect an AI provider in Settings to enable live diagnostics.`"
-          :timestamp="formattedLastRefreshed || 'just now'"
-          type="anomaly"
+          :alert-count="firingAlerts.length"
+          :alert-names="firingAlerts.map(a => a.name).filter((v, i, arr) => arr.indexOf(v) === i).slice(0, 5)"
           class="mb-4"
         />
 

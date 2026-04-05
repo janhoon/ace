@@ -1,0 +1,155 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "node-exporter",
+    "title": "Node Exporter Full",
+    "description": "System metrics: CPU, memory, disk I/O, network, and filesystem from node_exporter.",
+    "tags": ["node-exporter", "infrastructure"],
+    "schemaVersion": 39,
+    "refresh": "30s",
+    "time": { "from": "now-1h", "to": "now" },
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "label": "Instance",
+          "query": "label_values(node_uname_info, instance)",
+          "definition": "label_values(node_uname_info, instance)",
+          "multi": false,
+          "includeAll": true,
+          "current": { "text": "All", "value": "$__all" }
+        },
+        {
+          "name": "disk",
+          "type": "query",
+          "label": "Disk",
+          "query": "label_values(node_disk_io_now{instance=~\"$instance\"}, device)",
+          "definition": "label_values(node_disk_io_now{instance=~\"$instance\"}, device)",
+          "multi": true,
+          "includeAll": true,
+          "current": { "text": "All", "value": "$__all" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "title": "CPU Usage",
+        "type": "gauge",
+        "gridPos": { "x": 0, "y": 0, "w": 4, "h": 6 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"$instance\"}[5m])) * 100)" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "percent", "max": 100, "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 70, "color": "yellow" }, { "value": 90, "color": "red" }] } },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Memory Usage",
+        "type": "gauge",
+        "gridPos": { "x": 4, "y": 0, "w": 4, "h": 6 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "100 * (1 - node_memory_MemAvailable_bytes{instance=~\"$instance\"} / node_memory_MemTotal_bytes{instance=~\"$instance\"})" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "percent", "max": 100, "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 70, "color": "yellow" }, { "value": 90, "color": "red" }] } },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Disk Usage /",
+        "type": "gauge",
+        "gridPos": { "x": 8, "y": 0, "w": 4, "h": 6 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/\",instance=~\"$instance\"} / node_filesystem_size_bytes{mountpoint=\"/\",instance=~\"$instance\"} * 100)" }
+        ]
+      },
+      {
+        "title": "System Load",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 0, "w": 4, "h": 6 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "node_load1{instance=~\"$instance\"}" },
+          { "refId": "B", "expr": "node_load5{instance=~\"$instance\"}" },
+          { "refId": "C", "expr": "node_load15{instance=~\"$instance\"}" }
+        ]
+      },
+      {
+        "title": "Uptime",
+        "type": "stat",
+        "gridPos": { "x": 16, "y": 0, "w": 4, "h": 6 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "time() - node_boot_time_seconds{instance=~\"$instance\"}" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "s" },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Open File Descriptors",
+        "type": "bargauge",
+        "gridPos": { "x": 20, "y": 0, "w": 4, "h": 6 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "node_filefd_allocated{instance=~\"$instance\"}" }
+        ]
+      },
+      {
+        "title": "CPU Usage by Core",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "100 - (avg by (cpu)(rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"$instance\"}[5m])) * 100)", "legendFormat": "CPU {{cpu}}" }
+        ]
+      },
+      {
+        "title": "Memory Breakdown",
+        "type": "timeseries",
+        "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "node_memory_MemTotal_bytes{instance=~\"$instance\"} - node_memory_MemAvailable_bytes{instance=~\"$instance\"}", "legendFormat": "Used" },
+          { "refId": "B", "expr": "node_memory_Cached_bytes{instance=~\"$instance\"}", "legendFormat": "Cached" },
+          { "refId": "C", "expr": "node_memory_Buffers_bytes{instance=~\"$instance\"}", "legendFormat": "Buffers" }
+        ]
+      },
+      {
+        "title": "Network Received",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "rate(node_network_receive_bytes_total{device!=\"lo\",instance=~\"$instance\"}[5m])", "legendFormat": "{{device}} rx" }
+        ]
+      },
+      {
+        "title": "Disk I/O",
+        "type": "timeseries",
+        "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "rate(node_disk_read_bytes_total{device=~\"$disk\",instance=~\"$instance\"}[5m])", "legendFormat": "{{device}} read" },
+          { "refId": "B", "expr": "rate(node_disk_written_bytes_total{device=~\"$disk\",instance=~\"$instance\"}[5m])", "legendFormat": "{{device}} write" }
+        ]
+      },
+      {
+        "title": "Filesystem Usage",
+        "type": "table",
+        "gridPos": { "x": 0, "y": 22, "w": 24, "h": 6 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "node_filesystem_size_bytes{instance=~\"$instance\",fstype!=\"tmpfs\"} - node_filesystem_avail_bytes{instance=~\"$instance\",fstype!=\"tmpfs\"}", "format": "table", "instant": true }
+        ]
+      }
+    ]
+  },
+  "overwrite": true
+}

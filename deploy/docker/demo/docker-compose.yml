@@ -1,0 +1,147 @@
+# Ace VM Migration Demo
+# All-in-one environment: Ace + VictoriaMetrics + VictoriaLogs + VictoriaTraces + Grafana
+# Usage: docker compose up -d
+# Ace UI: http://localhost:5173
+# Grafana: http://localhost:3000 (source of dashboards to migrate)
+# Backend API: http://localhost:8080
+
+name: ace-demo
+
+services:
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dash
+      POSTGRES_PASSWORD: dash
+      POSTGRES_DB: dash
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dash"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:7
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── VictoriaMetrics Stack ──────────────────────────────────────────────────
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.101.0
+    ports:
+      - "8428:8428"
+    volumes:
+      - victoriametrics_data:/victoria-metrics-data
+    command:
+      - "--storageDataPath=/victoria-metrics-data"
+      - "--httpListenAddr=:8428"
+      - "--retentionPeriod=30d"
+
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.3.1-victorialogs
+    ports:
+      - "9428:9428"
+    volumes:
+      - victorialogs_data:/victoria-logs-data
+    command:
+      - "--storageDataPath=/victoria-logs-data"
+      - "--httpListenAddr=:9428"
+      - "--retentionPeriod=30d"
+
+  victoriatraces:
+    image: victoriametrics/victoria-traces:v0.7.0
+    ports:
+      - "10428:10428"
+    volumes:
+      - victoriatraces_data:/victoria-traces-data
+
+  # ── Grafana (source instance for migration demo) ───────────────────────────
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - victoriametrics
+
+  # ── OpenTelemetry Collector ────────────────────────────────────────────────
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ../config/victoria/otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      - victoriametrics
+      - victorialogs
+      - victoriatraces
+
+  # ── Sample App (generates correlated metrics/logs/traces) ──────────────────
+
+  sample-app:
+    build:
+      context: ../../../backend
+      dockerfile: cmd/seed-correlated/Dockerfile
+    command:
+      - --continuous
+      - --rate=3
+      - --otlp-url=http://otel-collector:4318
+    depends_on:
+      - otel-collector
+
+  # ── Ace Backend ────────────────────────────────────────────────────────────
+
+  ace-backend:
+    build:
+      context: ../../../backend
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://dash:dash@postgres:5432/dash?sslmode=disable
+      VALKEY_URL: valkey://valkey:6379
+      JWT_SECRET: demo-secret-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+
+  # ── Ace Frontend ───────────────────────────────────────────────────────────
+
+  ace-frontend:
+    build:
+      context: ../../../frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - ace-backend
+
+volumes:
+  postgres_data:
+  valkey_data:
+  victoriametrics_data:
+  victorialogs_data:
+  victoriatraces_data:
+  grafana_data:

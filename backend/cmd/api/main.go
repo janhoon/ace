@@ -283,9 +283,22 @@ func main() {
 	mux.HandleFunc("DELETE /api/orgs/{id}/ai/providers/{pid}", auth.RequireAuth(jwtManager, auth.RequireOrgMember(pool, aiHandler.DeleteProvider)))
 	mux.HandleFunc("POST /api/orgs/{id}/ai/providers/{pid}/test", auth.RequireAuth(jwtManager, auth.RequireOrgMember(pool, aiHandler.TestProvider)))
 
+	// Dashboard variable routes
+	variableHandler := handlers.NewVariableHandler(pool)
+	mux.HandleFunc("GET /api/dashboards/{id}/variables", auth.RequireAuth(jwtManager, variableHandler.List))
+	mux.HandleFunc("POST /api/dashboards/{id}/variables", auth.RequireAuth(jwtManager, variableHandler.BulkCreate))
+	mux.HandleFunc("PUT /api/variables/{varId}", auth.RequireAuth(jwtManager, variableHandler.Update))
+	mux.HandleFunc("DELETE /api/variables/{varId}", auth.RequireAuth(jwtManager, variableHandler.Delete))
+
 	// Grafana conversion route
 	grafanaConverterHandler := handlers.NewGrafanaConverterHandler()
 	mux.HandleFunc("POST /api/convert/grafana", auth.RequireAuth(jwtManager, grafanaConverterHandler.Convert))
+
+	// Grafana auto-discovery routes
+	grafanaDiscoveryHandler := handlers.NewGrafanaDiscoveryHandler()
+	mux.HandleFunc("POST /api/grafana/connect", auth.RequireAuth(jwtManager, grafanaDiscoveryHandler.Connect))
+	mux.HandleFunc("GET /api/grafana/dashboards", auth.RequireAuth(jwtManager, grafanaDiscoveryHandler.ListDashboards))
+	mux.HandleFunc("GET /api/grafana/dashboards/{uid}", auth.RequireAuth(jwtManager, grafanaDiscoveryHandler.GetDashboard))
 
 	// Apply middleware (httplog inside otelhttp so trace_id is available in context)
 	handler := httplog.NewMiddleware(logger)(mux)

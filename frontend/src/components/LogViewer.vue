@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { LogEntry } from '../types/datasource'
+import AiLogPopover from './AiLogPopover.vue'
 
 const router = useRouter()
 
@@ -40,7 +41,8 @@ function extractTraceId(entry: LogEntry): string | null {
 
 function navigateToTrace(traceId: string) {
   router.push({
-    name: 'explore-traces',
+    name: 'explore',
+    params: { type: 'traces' },
     query: {
       datasourceId: props.linkedTraceDatasourceId,
       traceId: traceId,
@@ -224,6 +226,18 @@ const detectedFieldsByRow = computed(() => displayLogs.value.map((log) => getMes
 watch(displayLogs, () => {
   expandedRows.value = new Set<number>()
 })
+
+const aiPopoverIndex = ref<number | null>(null)
+
+function toggleAiPopover(index: number, log: LogEntry) {
+  if (log.level === 'error' || log.level === 'warn' || log.level === 'warning') {
+    if (aiPopoverIndex.value === index) {
+      aiPopoverIndex.value = null
+    } else {
+      aiPopoverIndex.value = index
+    }
+  }
+}
 </script>
 
 <template>
@@ -243,7 +257,7 @@ watch(displayLogs, () => {
       <template v-for="(log, i) in displayLogs" :key="i">
         <div
           :class="[
-            'flex items-start gap-4 px-4 py-2 text-xs font-mono hover:bg-[var(--color-surface-container-high)] cursor-pointer transition',
+            'group flex items-start gap-4 px-4 py-2 text-xs font-mono hover:bg-[var(--color-surface-container-high)] cursor-pointer transition',
             isExpanded(i) ? 'bg-[var(--color-surface-container-high)]' : '',
             isHighlighted(log) ? 'animate-[row-highlight-fade_2.4s_ease-out]' : '',
           ]"
@@ -279,7 +293,16 @@ watch(displayLogs, () => {
           <div class="flex-1 text-[var(--color-on-surface)] break-all">
             <div class="flex items-start gap-1.5">
               <span class="shrink-0 text-[var(--color-outline)] text-[0.72rem] leading-[1.35] mt-px">{{ isExpanded(i) ? 'v' : '>' }}</span>
-              <span class="whitespace-pre-wrap">{{ log.line }}</span>
+              <span class="whitespace-pre-wrap flex-1">{{ log.line }}</span>
+              <button
+                v-if="log.level === 'error' || log.level === 'warn' || log.level === 'warning'"
+                class="shrink-0 flex items-center justify-center h-5 w-5 rounded border-none bg-transparent cursor-pointer opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity"
+                :style="{ color: 'var(--color-primary)' }"
+                title="AI Analysis"
+                @click.stop="toggleAiPopover(i, log)"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              </button>
             </div>
             <div v-if="log.labels && Object.keys(log.labels).length > 0" class="mt-1 flex flex-wrap gap-1">
               <span
@@ -291,6 +314,16 @@ watch(displayLogs, () => {
               </span>
             </div>
           </div>
+        </div>
+
+        <!-- AI Analysis Popover -->
+        <div v-if="aiPopoverIndex === i" class="px-4 py-2">
+          <AiLogPopover
+            :log-line="log.line"
+            :log-level="log.level"
+            :timestamp="log.timestamp"
+            @close="aiPopoverIndex = null"
+          />
         </div>
 
         <!-- Expanded detail row -->

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/janhoon/dash/backend/internal/converter"
@@ -10,10 +11,11 @@ import (
 type GrafanaConverterHandler struct{}
 
 type GrafanaConvertResponse struct {
-	Format   string                      `json:"format"`
-	Content  string                      `json:"content"`
-	Document converter.DashboardDocument `json:"document"`
-	Warnings []string                    `json:"warnings"`
+	Format   string                        `json:"format"`
+	Content  string                        `json:"content"`
+	Document converter.DashboardDocument   `json:"document"`
+	Warnings []string                      `json:"warnings"`
+	Report   *converter.ConversionReport   `json:"report,omitempty"`
 }
 
 func NewGrafanaConverterHandler() *GrafanaConverterHandler {
@@ -32,10 +34,18 @@ func (h *GrafanaConverterHandler) Convert(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	doc, warnings, err := converter.ConvertGrafanaDashboard(data)
+	doc, report, err := converter.ConvertGrafanaDashboardWithReport(data)
 	if err != nil {
 		http.Error(w, `{"error":"invalid grafana dashboard JSON"}`, http.StatusBadRequest)
 		return
+	}
+
+	// Build flat warnings from report diagnostics for backward compatibility
+	warnings := make([]string, 0)
+	for _, d := range report.PanelDiagnostics {
+		if d.Warning != "" {
+			warnings = append(warnings, fmt.Sprintf("panel[%d] %s", d.Index, d.Warning))
+		}
 	}
 
 	encoded, err := converter.EncodeDashboardDocument(doc, format)
@@ -50,5 +60,6 @@ func (h *GrafanaConverterHandler) Convert(w http.ResponseWriter, r *http.Request
 		Content:  string(encoded),
 		Document: doc,
 		Warnings: warnings,
+		Report:   &report,
 	})
 }

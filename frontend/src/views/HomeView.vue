@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { Sparkles } from 'lucide-vue-next'
 import EmptyState from '../components/EmptyState.vue'
+import SetupWizard from '../components/SetupWizard.vue'
 import StatusDot from '../components/StatusDot.vue'
 import AiInsightCard from '../components/AiInsightCard.vue'
 import OnboardingBanner from '../components/OnboardingBanner.vue'
@@ -14,6 +15,7 @@ const { datasources } = useDatasource()
 const { favorites, recentDashboards } = useFavorites()
 
 const hasDataSources = computed(() => datasources.value.length > 0)
+const showWizard = computed(() => !hasDataSources.value && localStorage.getItem('ace-setup-wizard-dismissed') !== 'true')
 
 // Onboarding banner visibility — check if user dismissed it
 const onboardingDismissed = computed(() => {
@@ -66,8 +68,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Empty state when no data sources -->
-  <div v-if="!hasDataSources" class="flex items-center justify-center min-h-[60vh]">
+  <!-- Setup wizard when no data sources (first visit) -->
+  <SetupWizard v-if="showWizard" />
+
+  <!-- Empty state when no data sources (wizard dismissed) -->
+  <div v-else-if="!hasDataSources" class="flex items-center justify-center min-h-[60vh]">
     <EmptyState
       :icon="Sparkles"
       title="Welcome to Ace"

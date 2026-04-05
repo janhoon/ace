@@ -95,6 +95,75 @@ victoriaLogs:
     enabled: false
     size: 5Gi
 
+victoriaTraces:
+  enabled: false
+  image: victoriametrics/victoria-traces:v0.7.0
+  persistence:
+    enabled: false
+    size: 5Gi
+
+otelCollector:
+  enabled: false
+  image: otel/opentelemetry-collector-contrib:0.120.0
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        send_batch_size: 1024
+        timeout: 5s
+
+    exporters:
+      prometheusremotewrite:
+        endpoint: http://victoria-metrics:8428/api/v1/write
+
+      otlphttp/victorialogs:
+        logs_endpoint: http://victoria-logs:9428/insert/opentelemetry/v1/logs
+
+      otlphttp/victoriatraces:
+        traces_endpoint: http://victoria-traces:10428/insert/opentelemetry/v1/traces
+
+    service:
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheusremotewrite]
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlphttp/victorialogs]
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlphttp/victoriatraces]
+
+grafana:
+  enabled: false
+  image: grafana/grafana:11.4.0
+  datasourcesConfig: |
+    apiVersion: 1
+    datasources:
+      - name: VictoriaMetrics
+        type: prometheus
+        access: proxy
+        url: http://victoria-metrics:8428
+        isDefault: true
+        editable: true
+  dashboards: {}
+
+telemetrygen:
+  enabled: false
+  image: ace-telemetrygen
+  rate: 3
+  otlpURL: http://otel-collector:4318
+
 tempo:
   enabled: false
   image: grafana/tempo:2.7.2

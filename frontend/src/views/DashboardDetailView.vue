@@ -10,10 +10,12 @@ import Panel from '../components/Panel.vue'
 import PanelEditModal from '../components/PanelEditModal.vue'
 import RefreshIndicator from '../components/RefreshIndicator.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
+import VariableBar from '../components/VariableBar.vue'
 import { useCommandContext } from '../composables/useCommandContext'
 import { useFavorites } from '../composables/useFavorites'
 import { useOrganization } from '../composables/useOrganization'
 import { useTimeRange } from '../composables/useTimeRange'
+import { useVariables } from '../composables/useVariables'
 import type { Dashboard } from '../types/dashboard'
 import type { Panel as PanelType } from '../types/panel'
 
@@ -34,6 +36,14 @@ const showDeleteConfirm = ref(false)
 const deletingPanel = ref<PanelType | null>(null)
 
 const dashboardId = route.params.id as string
+
+// Template variables
+const {
+  variables: dashboardVariables,
+  hasVariables,
+  fetchVariables,
+  setVariableValue,
+} = useVariables(() => dashboardId)
 
 interface DashboardViewSettings {
   timeRangePreset: string
@@ -177,7 +187,7 @@ async function loadData() {
   await fetchDashboard()
   if (!error.value) {
     loadDashboardViewSettings()
-    await fetchPanels()
+    await Promise.all([fetchPanels(), fetchVariables()])
   }
   loading.value = false
   lastRefreshed.value = new Date()
@@ -473,6 +483,14 @@ onUnmounted(() => {
         </button>
       </div>
     </header>
+
+    <!-- Template variable dropdowns -->
+    <VariableBar
+      v-if="hasVariables && !loading && !error"
+      :variables="dashboardVariables"
+      class="mb-3 rounded-lg"
+      @update:value="({ name, value }) => setVariableValue(name, value)"
+    />
 
     <div
       v-if="loading"

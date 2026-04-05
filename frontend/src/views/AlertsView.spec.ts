@@ -125,10 +125,10 @@ describe('AlertsView', () => {
     expect(detail.exists()).toBe(true)
   })
 
-  it('renders AI insight card when firing alerts exist', async () => {
+  it('renders AI alert triage when firing alerts exist', async () => {
     const wrapper = await createWrapper()
-    const aiCard = wrapper.findComponent({ name: 'AiInsightCard' })
-    expect(aiCard.exists()).toBe(true)
+    const aiTriage = wrapper.findComponent({ name: 'AiAlertTriage' })
+    expect(aiTriage.exists()).toBe(true)
   })
 
   it('registers command context on mount', async () => {

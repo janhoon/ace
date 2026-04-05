@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { X } from 'lucide-vue-next'
+import { Globe, Loader2, Upload, X } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { convertGrafanaDashboard } from '../api/converter'
+import { connectToGrafana, listGrafanaDashboards, getGrafanaDashboard } from '../api/grafanaDiscovery'
+import type { GrafanaDashboardSummary } from '../api/grafanaDiscovery'
 import { createDashboard, importDashboardYaml } from '../api/dashboards'
+import { bulkCreateVariables } from '../api/variables'
+import { useDatasource } from '../composables/useDatasource'
 import { useOrganization } from '../composables/useOrganization'
+import type { ConversionReport } from '../types/converter'
 
 type CreationMode = 'create' | 'import' | 'grafana'
 type ModalStep = 'choice' | 'form'
+type GrafanaSubTab = 'upload' | 'connect'
 
 const props = withDefaults(
   defineProps<{
@@ -38,6 +44,23 @@ const grafanaFileName = ref('')
 const grafanaSource = ref('')
 const grafanaWarnings = ref<string[]>([])
 const convertingGrafana = ref(false)
+const grafanaSubTab = ref<GrafanaSubTab>('upload')
+const conversionReport = ref<ConversionReport | null>(null)
+
+// Grafana auto-discovery state
+const grafanaUrl = ref('')
+const grafanaApiKey = ref('')
+const grafanaConnecting = ref(false)
+const grafanaConnected = ref(false)
+const grafanaVersion = ref('')
+const remoteDashboards = ref<GrafanaDashboardSummary[]>([])
+const loadingRemoteDashboard = ref(false)
+
+// Datasource mapping state
+const { datasources: aceDatasources } = useDatasource()
+const grafanaDatasourceNames = ref<string[]>([])
+const datasourceMapping = ref<Record<string, string>>({})
+const convertedVariables = ref<Array<{ name: string; type: string; label?: string; query?: string; multi: boolean; include_all: boolean }>>([])
 
 interface ImportPreview {
   title: string
@@ -204,6 +227,63 @@ async function handleGrafanaFileChange(event: Event) {
   }
 }
 
+async function handleGrafanaConnect() {
+  if (!grafanaUrl.value.trim()) {
+    error.value = 'Grafana URL is required'
+    return
+  }
+  grafanaConnecting.value = true
+  error.value = null
+  try {
+    const resp = await connectToGrafana(grafanaUrl.value, grafanaApiKey.value)
+    if (!resp.ok) {
+      error.value = resp.error || 'Failed to connect to Grafana'
+      return
+    }
+    grafanaConnected.value = true
+    grafanaVersion.value = resp.version || ''
+    remoteDashboards.value = await listGrafanaDashboards(grafanaUrl.value, grafanaApiKey.value)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Connection failed'
+  } finally {
+    grafanaConnecting.value = false
+  }
+}
+
+async function importRemoteDashboard(uid: string) {
+  loadingRemoteDashboard.value = true
+  error.value = null
+  try {
+    const dashJson = await getGrafanaDashboard(uid, grafanaUrl.value, grafanaApiKey.value)
+    grafanaSource.value = dashJson
+    grafanaFileName.value = `${uid}.json`
+    await convertGrafana()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to fetch dashboard'
+  } finally {
+    loadingRemoteDashboard.value = false
+  }
+}
+
+function extractGrafanaDatasources(jsonContent: string) {
+  try {
+    const parsed = JSON.parse(jsonContent)
+    const panels = parsed.dashboard?.panels ?? parsed.panels ?? []
+    const names = new Set<string>()
+    for (const panel of panels) {
+      if (panel.datasource) {
+        const name = typeof panel.datasource === 'string'
+          ? panel.datasource
+          : panel.datasource?.uid || panel.datasource?.type || ''
+        if (name && name !== '-- Mixed --') names.add(name)
+      }
+    }
+    grafanaDatasourceNames.value = Array.from(names)
+  } catch {
+    grafanaDatasourceNames.value = []
+  }
+}
+
 async function convertGrafana() {
   if (!currentOrgId.value) {
     error.value = 'No organization selected'
@@ -223,7 +303,22 @@ async function convertGrafana() {
     const response = await convertGrafanaDashboard(grafanaSource.value, 'yaml')
     yamlContent.value = response.content
     grafanaWarnings.value = response.warnings
+    conversionReport.value = response.report ?? null
     setImportPreviewFromDocument(response.document)
+    extractGrafanaDatasources(grafanaSource.value)
+
+    // Extract variables for persistence
+    const vars = response.document?.dashboard?.variables
+    if (vars && vars.length > 0) {
+      convertedVariables.value = vars.map(v => ({
+        name: v.name,
+        type: v.type || 'query',
+        label: v.label,
+        query: v.query,
+        multi: v.multi ?? false,
+        include_all: v.include_all ?? false,
+      }))
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to convert Grafana dashboard'
   } finally {
@@ -260,7 +355,25 @@ async function handleSubmit() {
         description: description.value.trim() || undefined,
       })
     } else {
-      await importDashboardYaml(currentOrgId.value, yamlContent.value)
+      const result = await importDashboardYaml(currentOrgId.value, yamlContent.value)
+
+      // Persist variables if this was a Grafana import with variables
+      if (mode.value === 'grafana' && convertedVariables.value.length > 0 && result?.id) {
+        try {
+          await bulkCreateVariables(result.id, convertedVariables.value.map((v, i) => ({
+            name: v.name,
+            type: v.type,
+            label: v.label,
+            query: v.query,
+            multi: v.multi,
+            include_all: v.include_all,
+            sort_order: i,
+          })))
+        } catch {
+          // Non-fatal: dashboard was created, variables failed
+          console.warn('Failed to persist imported variables')
+        }
+      }
     }
     emit('created')
   } catch (e) {
@@ -462,61 +575,214 @@ async function handleSubmit() {
         </div>
 
         <div v-else>
-          <div class="mb-5">
-            <label for="grafana-file" class="block mb-2 text-sm font-medium" :style="{ color: 'var(--color-on-surface)' }">Grafana JSON file</label>
-            <input
-              id="grafana-file"
-              type="file"
-              accept=".json,application/json"
-              :disabled="loading || convertingGrafana"
-              @change="handleGrafanaFileChange"
-              class="w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:px-4 file:py-2 file:text-sm file:font-medium file:cursor-pointer file:transition"
-              :style="{ color: 'var(--color-on-surface-variant)' }"
-            />
-            <p class="mt-2 text-xs" :style="{ color: 'var(--color-on-surface-variant)' }">
-              Upload a Grafana dashboard JSON file or paste JSON below.
-            </p>
+          <!-- Grafana sub-tabs: Upload JSON vs Connect to Grafana -->
+          <div class="flex gap-1 rounded-lg p-1 mb-4" :style="{ backgroundColor: 'var(--color-surface-container)' }">
+            <button
+              type="button"
+              class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition cursor-pointer"
+              :style="{
+                backgroundColor: grafanaSubTab === 'upload' ? 'var(--color-surface-container-highest)' : 'transparent',
+                color: grafanaSubTab === 'upload' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
+              }"
+              @click="grafanaSubTab = 'upload'"
+            >
+              <Upload :size="14" /> Upload JSON
+            </button>
+            <button
+              type="button"
+              class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition cursor-pointer"
+              :style="{
+                backgroundColor: grafanaSubTab === 'connect' ? 'var(--color-surface-container-highest)' : 'transparent',
+                color: grafanaSubTab === 'connect' ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
+              }"
+              @click="grafanaSubTab = 'connect'"
+            >
+              <Globe :size="14" /> Connect to Grafana
+            </button>
           </div>
 
-          <div class="mb-5">
-            <label for="grafana-source" class="block mb-2 text-sm font-medium" :style="{ color: 'var(--color-on-surface)' }">
-              Grafana JSON <span :style="{ color: 'var(--color-error)' }">*</span>
-            </label>
-            <textarea
-              id="grafana-source"
-              v-model="grafanaSource"
-              rows="6"
-              :disabled="loading || convertingGrafana"
-              placeholder="Paste Grafana dashboard JSON here"
-              data-testid="grafana-source"
-              class="w-full rounded-lg border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2 resize-vertical min-h-[80px]"
+          <!-- Sub-tab: Upload JSON -->
+          <div v-if="grafanaSubTab === 'upload'">
+            <div class="mb-5">
+              <label for="grafana-file" class="block mb-2 text-sm font-medium" :style="{ color: 'var(--color-on-surface)' }">Grafana JSON file</label>
+              <input
+                id="grafana-file"
+                type="file"
+                accept=".json,application/json"
+                :disabled="loading || convertingGrafana"
+                @change="handleGrafanaFileChange"
+                class="w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:px-4 file:py-2 file:text-sm file:font-medium file:cursor-pointer file:transition"
+                :style="{ color: 'var(--color-on-surface-variant)' }"
+              />
+            </div>
+
+            <div class="mb-5">
+              <label for="grafana-source" class="block mb-2 text-sm font-medium" :style="{ color: 'var(--color-on-surface)' }">
+                Grafana JSON <span :style="{ color: 'var(--color-error)' }">*</span>
+              </label>
+              <textarea
+                id="grafana-source"
+                v-model="grafanaSource"
+                rows="5"
+                :disabled="loading || convertingGrafana"
+                placeholder="Paste Grafana dashboard JSON here"
+                data-testid="grafana-source"
+                class="w-full rounded-lg border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2 resize-vertical min-h-[80px]"
+                :style="{
+                  borderColor: 'var(--color-outline-variant)',
+                  backgroundColor: 'var(--color-surface-container-low)',
+                  color: 'var(--color-on-surface)',
+                }"
+              ></textarea>
+              <p v-if="grafanaFileName" class="mt-2 text-xs" :style="{ color: 'var(--color-outline)' }">
+                File: {{ grafanaFileName }}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="mb-3 rounded-lg border px-5 py-2.5 text-sm font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               :style="{
                 borderColor: 'var(--color-outline-variant)',
-                backgroundColor: 'var(--color-surface-container-low)',
                 color: 'var(--color-on-surface)',
               }"
-            ></textarea>
-            <p v-if="grafanaFileName" class="mt-2 text-xs" :style="{ color: 'var(--color-outline)' }">
-              File: {{ grafanaFileName }}
-            </p>
+              :disabled="!canConvertGrafana"
+              data-testid="grafana-convert"
+              @click="convertGrafana"
+            >
+              {{ convertingGrafana ? 'Converting...' : 'Convert to Ace' }}
+            </button>
           </div>
 
-          <button
-            type="button"
-            class="mb-3 rounded-lg border px-5 py-2.5 text-sm font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            :style="{
-              borderColor: 'var(--color-outline-variant)',
-              color: 'var(--color-on-surface)',
-            }"
-            :disabled="!canConvertGrafana"
-            data-testid="grafana-convert"
-            @click="convertGrafana"
-          >
-            {{ convertingGrafana ? 'Converting...' : 'Convert to Ace YAML' }}
-          </button>
+          <!-- Sub-tab: Connect to Grafana -->
+          <div v-else>
+            <div v-if="!grafanaConnected" class="space-y-4 mb-4">
+              <div>
+                <label class="block mb-1.5 text-sm font-medium" :style="{ color: 'var(--color-on-surface)' }">
+                  Grafana URL <span :style="{ color: 'var(--color-error)' }">*</span>
+                </label>
+                <input
+                  v-model="grafanaUrl"
+                  type="url"
+                  placeholder="https://grafana.example.com"
+                  :disabled="grafanaConnecting"
+                  class="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
+                  :style="{
+                    borderColor: 'var(--color-outline-variant)',
+                    backgroundColor: 'var(--color-surface-container-low)',
+                    color: 'var(--color-on-surface)',
+                  }"
+                />
+              </div>
+              <div>
+                <label class="block mb-1.5 text-sm font-medium" :style="{ color: 'var(--color-on-surface)' }">
+                  API Key <span class="text-xs font-normal" :style="{ color: 'var(--color-on-surface-variant)' }">(optional)</span>
+                </label>
+                <input
+                  v-model="grafanaApiKey"
+                  type="password"
+                  placeholder="glsa_..."
+                  :disabled="grafanaConnecting"
+                  class="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
+                  :style="{
+                    borderColor: 'var(--color-outline-variant)',
+                    backgroundColor: 'var(--color-surface-container-low)',
+                    color: 'var(--color-on-surface)',
+                  }"
+                />
+              </div>
+              <button
+                type="button"
+                class="flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-semibold transition cursor-pointer disabled:opacity-50"
+                :style="{
+                  borderColor: 'var(--color-outline-variant)',
+                  color: 'var(--color-on-surface)',
+                }"
+                :disabled="grafanaConnecting || !grafanaUrl.trim()"
+                @click="handleGrafanaConnect"
+              >
+                <Loader2 v-if="grafanaConnecting" :size="14" class="animate-spin" />
+                {{ grafanaConnecting ? 'Connecting...' : 'Connect' }}
+              </button>
+            </div>
 
+            <!-- Connected: show dashboard list -->
+            <div v-else class="mb-4">
+              <div class="flex items-center gap-2 mb-3 text-xs" :style="{ color: 'var(--color-secondary)' }">
+                Connected to Grafana {{ grafanaVersion }}
+              </div>
+              <div
+                v-if="remoteDashboards.length === 0"
+                class="text-sm py-4 text-center"
+                :style="{ color: 'var(--color-on-surface-variant)' }"
+              >
+                No dashboards found
+              </div>
+              <div v-else class="max-h-48 overflow-y-auto space-y-1">
+                <button
+                  v-for="dash in remoteDashboards"
+                  :key="dash.uid"
+                  type="button"
+                  class="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition cursor-pointer"
+                  :style="{
+                    backgroundColor: 'var(--color-surface-container)',
+                    color: 'var(--color-on-surface)',
+                    border: '1px solid var(--color-outline-variant)',
+                  }"
+                  :disabled="loadingRemoteDashboard"
+                  @click="importRemoteDashboard(dash.uid)"
+                >
+                  <span class="flex-1 truncate">{{ dash.title }}</span>
+                  <span v-if="dash.tags?.length" class="text-[10px] shrink-0" :style="{ color: 'var(--color-on-surface-variant)' }">
+                    {{ dash.tags.slice(0, 2).join(', ') }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fidelity report -->
+          <div
+            v-if="conversionReport"
+            class="mb-4 rounded-lg p-3"
+            :style="{
+              backgroundColor: 'var(--color-surface-container)',
+              border: '1px solid var(--color-outline-variant)',
+            }"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <span
+                class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                :style="{
+                  backgroundColor: conversionReport.fidelity_percent >= 80
+                    ? 'rgba(79,175,120,0.12)'
+                    : conversionReport.fidelity_percent >= 50
+                      ? 'rgba(212,161,30,0.12)'
+                      : 'rgba(217,92,84,0.12)',
+                  color: conversionReport.fidelity_percent >= 80
+                    ? 'var(--color-secondary)'
+                    : conversionReport.fidelity_percent >= 50
+                      ? 'var(--color-tertiary)'
+                      : 'var(--color-error)',
+                }"
+              >
+                {{ conversionReport.fidelity_percent }}% fidelity
+              </span>
+              <span class="text-xs" :style="{ color: 'var(--color-on-surface-variant)' }">
+                {{ conversionReport.mapped_panels }}/{{ conversionReport.total_panels }} panels mapped
+              </span>
+              <span v-if="conversionReport.variables_found > 0" class="text-xs" :style="{ color: 'var(--color-on-surface-variant)' }">
+                {{ conversionReport.variables_found }} variables
+              </span>
+            </div>
+            <div v-if="conversionReport.unsupported_panels > 0" class="text-xs" :style="{ color: 'var(--color-tertiary)' }">
+              {{ conversionReport.unsupported_panels }} unsupported panel{{ conversionReport.unsupported_panels > 1 ? 's' : '' }} mapped to line chart
+            </div>
+          </div>
+
+          <!-- Warnings -->
           <ul
-            v-if="grafanaWarnings.length"
+            v-if="grafanaWarnings.length && !conversionReport"
             class="mb-4 pl-5 text-[0.8rem] list-disc"
             data-testid="grafana-warnings"
             :style="{ color: 'var(--color-warning)' }"
@@ -524,6 +790,41 @@ async function handleSubmit() {
             <li v-for="warning in grafanaWarnings" :key="warning">{{ warning }}</li>
           </ul>
 
+          <!-- Datasource mapping -->
+          <div
+            v-if="grafanaDatasourceNames.length > 0 && importPreview"
+            class="mb-4 rounded-lg p-3"
+            :style="{
+              backgroundColor: 'var(--color-surface-container)',
+              border: '1px solid var(--color-outline-variant)',
+            }"
+          >
+            <p class="text-xs font-semibold mb-2" :style="{ color: 'var(--color-on-surface)' }">
+              Datasource Mapping
+            </p>
+            <div class="space-y-2">
+              <div v-for="dsName in grafanaDatasourceNames" :key="dsName" class="flex items-center gap-2">
+                <span class="text-xs truncate w-1/3" :style="{ color: 'var(--color-on-surface-variant)' }">{{ dsName }}</span>
+                <span class="text-xs" :style="{ color: 'var(--color-outline)' }">→</span>
+                <select
+                  v-model="datasourceMapping[dsName]"
+                  class="flex-1 rounded border px-2 py-1 text-xs focus:outline-none"
+                  :style="{
+                    borderColor: 'var(--color-outline-variant)',
+                    backgroundColor: 'var(--color-surface-container-low)',
+                    color: 'var(--color-on-surface)',
+                  }"
+                >
+                  <option value="">Auto-detect</option>
+                  <option v-for="ds in aceDatasources" :key="ds.id" :value="ds.id">
+                    {{ ds.name }} ({{ ds.type }})
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Import preview -->
           <div
             v-if="importPreview"
             class="mb-5 rounded-lg p-3"
@@ -541,9 +842,6 @@ async function handleSubmit() {
             </p>
             <p class="mt-1 text-[0.8125rem]" :style="{ color: 'var(--color-on-surface-variant)' }">
               {{ importPreview.panelCount }} panel{{ importPreview.panelCount === 1 ? '' : 's' }}
-            </p>
-            <p class="mt-1 text-[0.8125rem]" :style="{ color: 'var(--color-outline)' }">
-              Converted from Grafana JSON
             </p>
           </div>
         </div>

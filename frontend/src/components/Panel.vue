@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { AlertCircle, BarChart3, Pencil, Trash2 } from 'lucide-vue-next'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import { useAiSidebar } from '../composables/useAiSidebar'
 import { queryDataSource, searchDataSourceTraces } from '../api/datasources'
 import { updatePanel } from '../api/panels'
 import { useProm } from '../composables/useProm'
@@ -12,6 +13,7 @@ import './panels/index' // Side-effect: registers all panel types
 import BarChart from './BarChart.vue'
 import GaugeChart, { type Threshold } from './GaugeChart.vue'
 import LineChart from './LineChart.vue'
+import AiPanelInsight from './AiPanelInsight.vue'
 import LogViewer from './LogViewer.vue'
 import PieChart, { type PieDataItem } from './PieChart.vue'
 import StatPanel, { type DataPoint } from './StatPanel.vue'
@@ -29,6 +31,9 @@ const emit = defineEmits<{
   delete: [panel: Panel]
   'open-trace': [payload: { datasourceId: string; traceId: string }]
 }>()
+
+const { highlightedPanelId } = useAiSidebar()
+const isHighlighted = computed(() => highlightedPanelId.value === props.panel.id)
 
 const { timeRange, onRefresh } = useTimeRange()
 
@@ -566,9 +571,10 @@ function handleRegistryPanelChange(data: Record<string, unknown>) {
 
 <template>
   <div
-    class="relative flex h-full flex-col rounded-lg overflow-hidden"
+    class="relative flex h-full flex-col rounded-lg overflow-hidden transition-shadow duration-300"
     :style="{
       backgroundColor: 'var(--color-surface-container-low)',
+      boxShadow: isHighlighted ? '0 0 0 1px rgba(201, 150, 15, 0.4), 0 0 20px rgba(201, 150, 15, 0.08)' : 'none',
     }"
   >
     <!-- Anomaly badge -->
@@ -708,6 +714,13 @@ function handleRegistryPanelChange(data: Record<string, unknown>) {
         <p class="text-sm m-0">No data available</p>
       </div>
     </div>
+
+    <!-- AI Insight (shown when panel has anomaly) -->
+    <AiPanelInsight
+      v-if="anomaly"
+      :panel-title="panel.title"
+      :insight="anomaly"
+    />
   </div>
 </template>
 

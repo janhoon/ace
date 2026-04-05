@@ -1,4 +1,4 @@
-.PHONY: help dev backend seed seed-correlated frontend backend-test frontend-test test backend-lint frontend-lint lint security-local check tilt-up tilt-down compose-up compose-down compose-reset compose-logs telemetrygen
+.PHONY: help dev backend seed seed-correlated frontend backend-test frontend-test test backend-lint frontend-lint lint security-local check tilt-up tilt-down compose-up compose-down compose-reset compose-logs telemetrygen demo demo-down
 
 EMAIL ?= admin@admin.com
 PASSWORD ?= Admin1234
@@ -113,6 +113,13 @@ tilt-up:
 
 tilt-down:
 	@tilt down
+
+demo:
+	@deploy/docker/demo/demo-k8s.sh
+
+demo-down:
+	@tilt down -f Tiltfile.demo
+	@k3d cluster delete ace-demo 2>/dev/null || true
 
 frontend:
 	@cd frontend && bun run dev
