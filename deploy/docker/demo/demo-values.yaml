@@ -1,0 +1,210 @@
+# Values for the Ace VM Migration Demo (k3d + Tilt)
+# Enables the full stack: Ace, VictoriaMetrics, Grafana, telemetry generator.
+
+postgres:
+  enabled: true
+
+valkey:
+  enabled: true
+
+backend:
+  enabled: true
+
+victoriaMetrics:
+  enabled: true
+
+victoriaLogs:
+  enabled: true
+
+victoriaTraces:
+  enabled: true
+
+otelCollector:
+  enabled: true
+
+telemetrygen:
+  enabled: true
+
+grafana:
+  enabled: true
+  datasourcesConfig: |
+    apiVersion: 1
+    datasources:
+      - name: VictoriaMetrics
+        type: prometheus
+        access: proxy
+        url: http://victoria-metrics:8428
+        isDefault: true
+        editable: true
+  dashboards:
+    vm-overview.json: |
+      {
+        "dashboard": {
+          "uid": "vm-overview",
+          "title": "VictoriaMetrics Overview",
+          "description": "Key health metrics for VictoriaMetrics: ingestion, queries, storage, and resource usage.",
+          "tags": ["victoriametrics", "overview"],
+          "schemaVersion": 39,
+          "refresh": "30s",
+          "time": { "from": "now-1h", "to": "now" },
+          "templating": {
+            "list": [
+              {
+                "name": "instance",
+                "type": "query",
+                "label": "Instance",
+                "query": "label_values(vm_app_version, instance)",
+                "definition": "label_values(vm_app_version, instance)",
+                "multi": false,
+                "includeAll": true,
+                "current": { "text": "All", "value": "$__all" }
+              }
+            ]
+          },
+          "panels": [
+            {
+              "title": "Active Time Series",
+              "type": "stat",
+              "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+              "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+              "targets": [{ "refId": "A", "expr": "vm_cache_entries{type=\"storage/metricName\",instance=~\"$instance\"}" }]
+            },
+            {
+              "title": "Ingestion Rate",
+              "type": "stat",
+              "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+              "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+              "targets": [{ "refId": "A", "expr": "sum(rate(vm_rows_inserted_total{instance=~\"$instance\"}[5m]))" }]
+            },
+            {
+              "title": "Query Rate",
+              "type": "stat",
+              "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+              "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+              "targets": [{ "refId": "A", "expr": "sum(rate(vm_http_requests_total{instance=~\"$instance\"}[5m]))" }]
+            },
+            {
+              "title": "Storage Used",
+              "type": "stat",
+              "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+              "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+              "targets": [{ "refId": "A", "expr": "sum(vm_data_size_bytes{instance=~\"$instance\"}) / 1024 / 1024 / 1024" }]
+            },
+            {
+              "title": "Ingestion Rate Over Time",
+              "type": "timeseries",
+              "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+              "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+              "targets": [{ "refId": "A", "expr": "sum(rate(vm_rows_inserted_total{instance=~\"$instance\"}[5m]))", "legendFormat": "rows/sec" }],
+              "fieldConfig": { "defaults": {}, "overrides": [{ "matcher": { "id": "byName", "options": "rows/sec" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }] }
+            },
+            {
+              "title": "Query Latency (p99)",
+              "type": "timeseries",
+              "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+              "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+              "targets": [{ "refId": "A", "expr": "histogram_quantile(0.99, sum(rate(vm_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))", "legendFormat": "p99" }]
+            },
+            {
+              "title": "Memory Usage",
+              "type": "timeseries",
+              "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+              "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+              "targets": [{ "refId": "A", "expr": "process_resident_memory_bytes{instance=~\"$instance\"} / 1024 / 1024", "legendFormat": "RSS (MB)" }]
+            },
+            {
+              "title": "CPU Usage",
+              "type": "gauge",
+              "gridPos": { "x": 12, "y": 12, "w": 6, "h": 8 },
+              "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+              "targets": [{ "refId": "A", "expr": "rate(process_cpu_seconds_total{instance=~\"$instance\"}[5m]) * 100" }]
+            },
+            {
+              "title": "Goroutines",
+              "type": "timeseries",
+              "gridPos": { "x": 18, "y": 12, "w": 6, "h": 8 },
+              "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+              "targets": [{ "refId": "A", "expr": "go_goroutines{instance=~\"$instance\"}", "legendFormat": "goroutines" }]
+            }
+          ]
+        },
+        "overwrite": true
+      }
+    node-exporter.json: |
+      {
+        "dashboard": {
+          "uid": "node-exporter",
+          "title": "Node Exporter Full",
+          "description": "System metrics: CPU, memory, disk I/O, network from node_exporter.",
+          "tags": ["node-exporter", "infrastructure"],
+          "schemaVersion": 39,
+          "refresh": "30s",
+          "time": { "from": "now-1h", "to": "now" },
+          "templating": {
+            "list": [
+              {
+                "name": "instance",
+                "type": "query",
+                "label": "Instance",
+                "query": "label_values(node_uname_info, instance)",
+                "definition": "label_values(node_uname_info, instance)",
+                "multi": false,
+                "includeAll": true
+              },
+              {
+                "name": "disk",
+                "type": "query",
+                "label": "Disk",
+                "query": "label_values(node_disk_io_now{instance=~\"$instance\"}, device)",
+                "definition": "label_values(node_disk_io_now{instance=~\"$instance\"}, device)",
+                "multi": true,
+                "includeAll": true
+              }
+            ]
+          },
+          "panels": [
+            { "title": "CPU Usage", "type": "gauge", "gridPos": { "x": 0, "y": 0, "w": 4, "h": 6 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"$instance\"}[5m])) * 100)" }] },
+            { "title": "Memory Usage", "type": "gauge", "gridPos": { "x": 4, "y": 0, "w": 4, "h": 6 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "100 * (1 - node_memory_MemAvailable_bytes{instance=~\"$instance\"} / node_memory_MemTotal_bytes{instance=~\"$instance\"})" }] },
+            { "title": "Disk Usage /", "type": "gauge", "gridPos": { "x": 8, "y": 0, "w": 4, "h": 6 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/\",instance=~\"$instance\"} / node_filesystem_size_bytes{mountpoint=\"/\",instance=~\"$instance\"} * 100)" }] },
+            { "title": "System Load", "type": "stat", "gridPos": { "x": 12, "y": 0, "w": 4, "h": 6 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "node_load1{instance=~\"$instance\"}" }] },
+            { "title": "Uptime", "type": "stat", "gridPos": { "x": 16, "y": 0, "w": 4, "h": 6 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "time() - node_boot_time_seconds{instance=~\"$instance\"}" }] },
+            { "title": "Open File Descriptors", "type": "bargauge", "gridPos": { "x": 20, "y": 0, "w": 4, "h": 6 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "node_filefd_allocated{instance=~\"$instance\"}" }] },
+            { "title": "CPU Usage by Core", "type": "timeseries", "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "100 - (avg by (cpu)(rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"$instance\"}[5m])) * 100)", "legendFormat": "CPU {{cpu}}" }] },
+            { "title": "Memory Breakdown", "type": "timeseries", "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "node_memory_MemTotal_bytes{instance=~\"$instance\"} - node_memory_MemAvailable_bytes{instance=~\"$instance\"}", "legendFormat": "Used" }, { "refId": "B", "expr": "node_memory_Cached_bytes{instance=~\"$instance\"}", "legendFormat": "Cached" }] },
+            { "title": "Network Received", "type": "timeseries", "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "rate(node_network_receive_bytes_total{device!=\"lo\",instance=~\"$instance\"}[5m])", "legendFormat": "{{device}} rx" }] },
+            { "title": "Disk I/O", "type": "timeseries", "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "rate(node_disk_read_bytes_total{device=~\"$disk\",instance=~\"$instance\"}[5m])", "legendFormat": "{{device}} read" }] },
+            { "title": "Filesystem Usage", "type": "table", "gridPos": { "x": 0, "y": 22, "w": 24, "h": 6 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "node_filesystem_size_bytes{instance=~\"$instance\",fstype!=\"tmpfs\"} - node_filesystem_avail_bytes{instance=~\"$instance\",fstype!=\"tmpfs\"}", "format": "table", "instant": true }] }
+          ]
+        },
+        "overwrite": true
+      }
+    http-overview.json: |
+      {
+        "dashboard": {
+          "uid": "http-overview",
+          "title": "HTTP Service Overview",
+          "description": "Request rate, error rate, latency percentiles, and status code breakdown.",
+          "tags": ["http", "services", "red-method"],
+          "schemaVersion": 39,
+          "refresh": "15s",
+          "time": { "from": "now-30m", "to": "now" },
+          "templating": {
+            "list": [
+              { "name": "job", "type": "query", "label": "Service", "query": "label_values(http_requests_total, job)", "multi": false, "includeAll": false },
+              { "name": "handler", "type": "query", "label": "Handler", "query": "label_values(http_requests_total{job=\"$job\"}, handler)", "multi": true, "includeAll": true }
+            ]
+          },
+          "panels": [
+            { "title": "Request Rate", "type": "stat", "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "sum(rate(http_requests_total{job=\"$job\",handler=~\"$handler\"}[5m]))" }] },
+            { "title": "Error Rate", "type": "stat", "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "sum(rate(http_requests_total{job=\"$job\",handler=~\"$handler\",code=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"$job\",handler=~\"$handler\"}[5m])) * 100" }] },
+            { "title": "p50 Latency", "type": "stat", "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[5m])) by (le))" }] },
+            { "title": "p99 Latency", "type": "stat", "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[5m])) by (le))" }] },
+            { "title": "Request Rate by Handler", "type": "timeseries", "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "sum by (handler)(rate(http_requests_total{job=\"$job\",handler=~\"$handler\"}[5m]))", "legendFormat": "{{handler}}" }] },
+            { "title": "Latency Percentiles", "type": "timeseries", "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[5m])) by (le))", "legendFormat": "p50" }, { "refId": "B", "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[5m])) by (le))", "legendFormat": "p99" }] },
+            { "title": "Status Code Distribution", "type": "piechart", "gridPos": { "x": 0, "y": 12, "w": 8, "h": 8 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "sum by (code)(increase(http_requests_total{job=\"$job\",handler=~\"$handler\"}[5m]))", "legendFormat": "{{code}}" }] },
+            { "title": "Error Rate Over Time", "type": "timeseries", "gridPos": { "x": 8, "y": 12, "w": 16, "h": 8 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "sum by (code)(rate(http_requests_total{job=\"$job\",handler=~\"$handler\",code=~\"5..\"}[5m]))", "legendFormat": "{{code}}" }] },
+            { "title": "Request Duration Heatmap", "type": "heatmap", "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 }, "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" }, "targets": [{ "refId": "A", "expr": "sum(increase(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[1m])) by (le)", "format": "heatmap" }] }
+          ]
+        },
+        "overwrite": true
+      }

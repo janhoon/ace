@@ -136,6 +136,12 @@ interface UsePromOptions {
   end: Ref<number>
   step?: Ref<number>
   autoFetch?: boolean
+  /**
+   * Optional function to interpolate template variables (e.g. $job, ${instance})
+   * into the query string before execution. Typically provided by the
+   * useVariables composable's `interpolate` method at the dashboard level.
+   */
+  interpolate?: (query: string) => string
 }
 
 interface UsePromReturn {
@@ -165,8 +171,14 @@ export function useProm(options: UsePromOptions): UsePromReturn {
     error.value = null
 
     try {
+      // Apply template variable interpolation if an interpolate function is provided.
+      // This replaces $var and ${var} patterns with their current dashboard variable values.
+      const resolvedQuery = options.interpolate
+        ? options.interpolate(options.query.value)
+        : options.query.value
+
       const result = await queryPrometheus(
-        options.query.value,
+        resolvedQuery,
         options.start.value,
         options.end.value,
         options.step?.value ?? defaultStep.value,

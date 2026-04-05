@@ -216,6 +216,8 @@ describe('HomeView', () => {
 
   // --- 7. Empty state ---
   it('shows empty state with Sparkles icon and "Welcome to Ace" when no data sources connected', () => {
+    // Dismiss wizard so EmptyState shows instead
+    localStorage.setItem('ace-setup-wizard-dismissed', 'true')
     wrapper = createWrapper({ hasDataSources: false })
 
     const emptyState = wrapper.find('[data-testid="empty-state"]')
@@ -225,6 +227,7 @@ describe('HomeView', () => {
       'Connect your first data source',
     )
     expect(wrapper.find('[data-testid="empty-state-action"]').text()).toBe('Add Data Source')
+    localStorage.removeItem('ace-setup-wizard-dismissed')
   })
 
   it('does NOT show empty state when data sources are connected', () => {

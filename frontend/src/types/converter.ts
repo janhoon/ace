@@ -1,4 +1,4 @@
-interface DashboardVariable {
+export interface DashboardVariable {
   name: string
   type: string
   label?: string
@@ -32,9 +32,31 @@ export interface DashboardDocument {
   }
 }
 
+export interface PanelDiagnostic {
+  index: number
+  title: string
+  original_type: string
+  mapped_type: string
+  status: 'mapped' | 'unsupported' | 'partial'
+  warning?: string
+  has_query: boolean
+  field_overrides_dropped?: number
+}
+
+export interface ConversionReport {
+  total_panels: number
+  mapped_panels: number
+  unsupported_panels: number
+  partial_panels: number
+  variables_found: number
+  fidelity_percent: number
+  panel_diagnostics: PanelDiagnostic[]
+}
+
 export interface GrafanaConvertResponse {
   format: 'json' | 'yaml'
   content: string
   document: DashboardDocument
   warnings: string[]
+  report?: ConversionReport
 }

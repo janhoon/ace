@@ -314,6 +314,22 @@ $$ LANGUAGE plpgsql`,
 		`ALTER TABLE organization_memberships ADD CONSTRAINT organization_memberships_role_source_check CHECK (role_source IN ('manual', 'sso'))`,
 		// Fix pre-existing bug: ON CONFLICT (user_id, provider) has no matching unique index
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_auth_methods_user_provider ON user_auth_methods(user_id, provider)`,
+		// 012: Template variables table for imported/user-defined dashboard variables
+		`CREATE TABLE IF NOT EXISTS dashboard_variables (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			dashboard_id UUID NOT NULL REFERENCES dashboards(id) ON DELETE CASCADE,
+			name VARCHAR(255) NOT NULL,
+			type VARCHAR(50) NOT NULL CHECK (type IN ('query', 'custom', 'constant', 'textbox')),
+			label VARCHAR(255),
+			query TEXT,
+			multi BOOLEAN DEFAULT false,
+			include_all BOOLEAN DEFAULT false,
+			sort_order INTEGER DEFAULT 0,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW(),
+			UNIQUE(dashboard_id, name)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_dashboard_variables_dashboard_id ON dashboard_variables(dashboard_id)`,
 	}
 
 	for _, migration := range migrations {

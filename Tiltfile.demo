@@ -1,0 +1,85 @@
+"""
+Ace VM Migration Demo — Tiltfile
+
+Brings up the full demo stack on a local k3d cluster:
+  - Ace (backend + frontend dev server)
+  - VictoriaMetrics + VictoriaLogs + VictoriaTraces
+  - OpenTelemetry Collector
+  - Grafana with 3 pre-installed dashboards
+  - Telemetry generator (correlated metrics/logs/traces)
+
+Usage:
+  ./deploy/docker/demo/demo-k8s.sh        # Creates k3d cluster + runs tilt
+  tilt up -f Tiltfile.demo                 # If cluster already exists
+"""
+
+NAMESPACE = 'ace-demo'
+CHART_PATH = './deploy/charts/ace-local-infra'
+DEMO_VALUES = './deploy/docker/demo/demo-values.yaml'
+
+# --- Docker builds -----------------------------------------------------------
+
+docker_build(
+    'ace-backend',
+    '.',
+    dockerfile='backend/Dockerfile',
+)
+
+docker_build(
+    'ace-telemetrygen',
+    'backend',
+    dockerfile='backend/cmd/seed-correlated/Dockerfile',
+)
+
+# --- Namespace ----------------------------------------------------------------
+
+local_resource(
+    'namespace',
+    cmd='kubectl create namespace {} --dry-run=client -o yaml | kubectl apply -f -'.format(NAMESPACE),
+    labels=['infra'],
+)
+
+# --- Deploy all chart resources via single helm render with demo values -------
+
+rendered = helm(
+    CHART_PATH,
+    name='ace-demo',
+    namespace=NAMESPACE,
+    values=[DEMO_VALUES],
+)
+k8s_yaml(rendered)
+
+# --- Resource configuration ---------------------------------------------------
+
+# Infrastructure
+k8s_resource('postgres', labels=['infra'], port_forwards=['5432:5432'], resource_deps=['namespace'])
+k8s_resource('valkey', labels=['infra'], port_forwards=['6379:6379'], resource_deps=['namespace'])
+
+# VM stack
+k8s_resource('victoria-metrics', labels=['vm-stack'], port_forwards=['8428:8428'], resource_deps=['namespace'])
+k8s_resource('victoria-logs', labels=['vm-stack'], port_forwards=['9428:9428'], resource_deps=['namespace'])
+k8s_resource('victoria-traces', labels=['vm-stack'], port_forwards=['10428:10428'], resource_deps=['namespace'])
+
+# Telemetry pipeline
+k8s_resource('otel-collector', labels=['vm-stack'], port_forwards=['4317:4317', '4318:4318'],
+             resource_deps=['namespace', 'victoria-metrics', 'victoria-logs', 'victoria-traces'])
+k8s_resource('telemetrygen', labels=['telemetry'],
+             resource_deps=['namespace', 'otel-collector'])
+
+# Grafana (source for migration)
+k8s_resource('grafana', labels=['grafana'], port_forwards=['3000:3000'],
+             resource_deps=['namespace', 'victoria-metrics'])
+
+# Ace backend
+k8s_resource('backend', labels=['app'], port_forwards=['8080:8080'],
+             resource_deps=['namespace', 'postgres', 'valkey'])
+
+# --- Ace frontend (Vite dev server) ------------------------------------------
+
+local_resource(
+    'frontend',
+    serve_cmd='make frontend',
+    resource_deps=['backend'],
+    labels=['app'],
+    links=['http://localhost:5173'],
+)

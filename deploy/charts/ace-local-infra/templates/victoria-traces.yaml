@@ -1,0 +1,62 @@
+{{- if .Values.victoriaTraces.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: victoria-traces
+  labels:
+    app.kubernetes.io/name: victoria-traces
+spec:
+  selector:
+    app.kubernetes.io/name: victoria-traces
+  ports:
+    - name: http
+      port: 10428
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: victoria-traces
+  labels:
+    app.kubernetes.io/name: victoria-traces
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: victoria-traces
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: victoria-traces
+    spec:
+      containers:
+        - name: victoria-traces
+          image: {{ .Values.victoriaTraces.image | quote }}
+          ports:
+            - name: http
+              containerPort: 10428
+          volumeMounts:
+            - name: data
+              mountPath: /victoria-traces-data
+      volumes:
+        - name: data
+{{- if .Values.victoriaTraces.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: victoria-traces-data
+{{- else }}
+          emptyDir: {}
+{{- end }}
+{{- if .Values.victoriaTraces.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: victoria-traces-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.victoriaTraces.persistence.size | quote }}
+{{- end }}
+{{- end }}

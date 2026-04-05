@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "Starting Ace VM Migration Demo..."
+echo ""
+echo "This will start:"
+echo "  - Ace (frontend + backend)"
+echo "  - Grafana (with 3 pre-installed dashboards)"
+echo "  - VictoriaMetrics (metrics)"
+echo "  - VictoriaLogs (logs)"
+echo "  - VictoriaTraces (traces)"
+echo "  - OpenTelemetry Collector"
+echo "  - Sample app (generates correlated telemetry)"
+echo ""
+
+docker compose up -d --build
+
+echo ""
+echo "Demo is starting up. Services:"
+echo "  Ace UI:            http://localhost:5173"
+echo "  Grafana:           http://localhost:3000  (source dashboards)"
+echo "  Ace API:           http://localhost:8080"
+echo "  VictoriaMetrics:   http://localhost:8428"
+echo "  VictoriaLogs:      http://localhost:9428"
+echo "  VictoriaTraces:    http://localhost:10428"
+echo ""
+echo "Demo walkthrough:"
+echo "  1. Open http://localhost:5173 and register an account"
+echo "  2. Add VictoriaMetrics datasource: http://victoriametrics:8428"
+echo "  3. Import dashboards from Grafana:"
+echo "     - Click 'Import Grafana' → 'Connect to Grafana'"
+echo "     - Enter URL: http://grafana:3000"
+echo "     - Browse and import any of the 3 pre-installed dashboards"
+echo "  4. Or export JSON from http://localhost:3000 and upload to Ace"
+echo ""
+echo "To stop: docker compose down"
+echo "To stop and remove data: docker compose down -v"

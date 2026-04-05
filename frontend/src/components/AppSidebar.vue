@@ -15,6 +15,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAiSidebar } from '../composables/useAiSidebar'
 import { useAuth } from '../composables/useAuth'
 import { useFavorites } from '../composables/useFavorites'
 import { useOrganization } from '../composables/useOrganization'
@@ -27,6 +28,7 @@ const { user } = useAuth()
 const { organizations, currentOrg, selectOrganization } = useOrganization()
 const { expandedSection, isPinned, currentRouteSection, toggleSection, togglePin } = useSidebar()
 const { favorites, recentDashboards } = useFavorites()
+const { isOpen: aiSidebarOpen, toggle: toggleAiSidebar } = useAiSidebar()
 
 const userMenuOpen = ref(false)
 const orgMenuOpen = ref(false)
@@ -543,6 +545,41 @@ onUnmounted(() => {
 
     <!-- Spacer (collapsed mode) -->
     <div v-if="!isExpanded" class="flex-1" />
+
+    <!-- AI Copilot toggle -->
+    <div class="flex flex-col items-center shrink-0" :class="{ 'items-start px-2': isExpanded }">
+      <button
+        data-testid="sidebar-ai-toggle"
+        class="relative flex items-center shrink-0 cursor-pointer border-none transition-all duration-150"
+        :class="isExpanded ? 'gap-3 px-3 w-full rounded-lg' : 'justify-center rounded-lg'"
+        :style="{
+          width: isExpanded ? '100%' : '44px',
+          height: '40px',
+          margin: isExpanded ? '0' : '0 auto',
+          borderRadius: '8px',
+          backgroundColor: aiSidebarOpen ? 'var(--color-primary-muted)' : 'transparent',
+          color: aiSidebarOpen ? 'var(--color-primary)' : 'var(--color-outline)',
+        }"
+        title="AI Copilot"
+        @click="toggleAiSidebar"
+      >
+        <Sparkles :size="18" class="shrink-0" />
+        <span v-if="isExpanded" class="text-sm" :style="{ fontWeight: aiSidebarOpen ? '500' : '400' }">Copilot</span>
+        <!-- Active indicator dot -->
+        <span
+          v-if="!isExpanded && aiSidebarOpen"
+          class="absolute"
+          :style="{
+            top: '6px',
+            right: '6px',
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--color-primary)',
+          }"
+        />
+      </button>
+    </div>
 
     <!-- Bottom: Settings + Avatar -->
     <div class="flex flex-col items-center gap-1 pb-3 shrink-0" :class="{ 'items-start px-2': isExpanded }">

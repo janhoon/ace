@@ -6,7 +6,11 @@ optional_resources = [
     'loki',
     'victoria-metrics',
     'victoria-logs',
+    'victoria-traces',
     'tempo',
+    'otel-collector',
+    'grafana',
+    'telemetrygen',
 ]
 
 config.define_string_list('enable', args=True)
@@ -28,6 +32,12 @@ docker_build(
     'ace-backend',
     '.',
     dockerfile='backend/Dockerfile',
+)
+
+docker_build(
+    'ace-telemetrygen',
+    'backend',
+    dockerfile='backend/cmd/seed-correlated/Dockerfile',
 )
 
 local_resource(
@@ -66,7 +76,11 @@ deploy_chart_resource('prometheus', 'prometheus', ['9090:9090'])
 deploy_chart_resource('loki', 'loki', ['3100:3100'])
 deploy_chart_resource('victoria-metrics', 'victoriaMetrics', ['8428:8428'])
 deploy_chart_resource('victoria-logs', 'victoriaLogs', ['9428:9428'])
+deploy_chart_resource('victoria-traces', 'victoriaTraces', ['10428:10428'])
 deploy_chart_resource('tempo', 'tempo', ['3200:3200'])
+deploy_chart_resource('otel-collector', 'otelCollector', ['4317:4317', '4318:4318'])
+deploy_chart_resource('grafana', 'grafana', ['3000:3000'])
+deploy_chart_resource('telemetrygen', 'telemetrygen', [])
 deploy_chart_resource(
     'backend',
     'backend',

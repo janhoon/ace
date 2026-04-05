@@ -39,6 +39,20 @@ vi.mock('../composables/useFavorites', () => ({
   }),
 }))
 
+// Mock useVariables
+vi.mock('../composables/useVariables', () => ({
+  useVariables: () => ({
+    variables: { value: [] },
+    hasVariables: { value: false },
+    loading: { value: false },
+    error: { value: null },
+    fetchVariables: vi.fn(),
+    setVariableValue: vi.fn(),
+    interpolate: (q: string) => q,
+    detectCycles: () => [],
+  }),
+}))
+
 // Mock api functions
 const mockDashboard = {
   id: 'test-dashboard-id',

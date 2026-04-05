@@ -1,0 +1,26 @@
+{{- if .Values.telemetrygen.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telemetrygen
+  labels:
+    app.kubernetes.io/name: telemetrygen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: telemetrygen
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: telemetrygen
+    spec:
+      containers:
+        - name: telemetrygen
+          image: {{ .Values.telemetrygen.image | quote }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - --continuous
+            - --rate={{ .Values.telemetrygen.rate }}
+            - --otlp-url={{ .Values.telemetrygen.otlpURL }}
+{{- end }}

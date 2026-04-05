@@ -1,0 +1,142 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "http-overview",
+    "title": "HTTP Service Overview",
+    "description": "Request rate, error rate, latency percentiles, and status code breakdown for HTTP services.",
+    "tags": ["http", "services", "red-method"],
+    "schemaVersion": 39,
+    "refresh": "15s",
+    "time": { "from": "now-30m", "to": "now" },
+    "templating": {
+      "list": [
+        {
+          "name": "job",
+          "type": "query",
+          "label": "Service",
+          "query": "label_values(http_requests_total, job)",
+          "definition": "label_values(http_requests_total, job)",
+          "multi": false,
+          "includeAll": false,
+          "current": {}
+        },
+        {
+          "name": "handler",
+          "type": "query",
+          "label": "Handler",
+          "query": "label_values(http_requests_total{job=\"$job\"}, handler)",
+          "definition": "label_values(http_requests_total{job=\"$job\"}, handler)",
+          "multi": true,
+          "includeAll": true,
+          "current": { "text": "All", "value": "$__all" }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "title": "Request Rate",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum(rate(http_requests_total{job=\"$job\",handler=~\"$handler\"}[5m]))" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "reqps" },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Error Rate",
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum(rate(http_requests_total{job=\"$job\",handler=~\"$handler\",code=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"$job\",handler=~\"$handler\"}[5m])) * 100" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "percent", "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 1, "color": "yellow" }, { "value": 5, "color": "red" }] } },
+          "overrides": []
+        }
+      },
+      {
+        "title": "p50 Latency",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[5m])) by (le))" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "s" },
+          "overrides": []
+        }
+      },
+      {
+        "title": "p99 Latency",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[5m])) by (le))" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "s" },
+          "overrides": []
+        }
+      },
+      {
+        "title": "Request Rate by Handler",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum by (handler)(rate(http_requests_total{job=\"$job\",handler=~\"$handler\"}[5m]))", "legendFormat": "{{handler}}" }
+        ]
+      },
+      {
+        "title": "Latency Percentiles",
+        "type": "timeseries",
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[5m])) by (le))", "legendFormat": "p50" },
+          { "refId": "B", "expr": "histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[5m])) by (le))", "legendFormat": "p90" },
+          { "refId": "C", "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[5m])) by (le))", "legendFormat": "p99" }
+        ]
+      },
+      {
+        "title": "Status Code Distribution",
+        "type": "piechart",
+        "gridPos": { "x": 0, "y": 12, "w": 8, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum by (code)(increase(http_requests_total{job=\"$job\",handler=~\"$handler\"}[5m]))", "legendFormat": "{{code}}" }
+        ]
+      },
+      {
+        "title": "Error Rate Over Time",
+        "type": "timeseries",
+        "gridPos": { "x": 8, "y": 12, "w": 16, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum by (code)(rate(http_requests_total{job=\"$job\",handler=~\"$handler\",code=~\"5..\"}[5m]))", "legendFormat": "{{code}}" }
+        ],
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": []
+        }
+      },
+      {
+        "title": "Request Duration Heatmap",
+        "type": "heatmap",
+        "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
+        "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+        "targets": [
+          { "refId": "A", "expr": "sum(increase(http_request_duration_seconds_bucket{job=\"$job\",handler=~\"$handler\"}[1m])) by (le)", "format": "heatmap" }
+        ]
+      }
+    ]
+  },
+  "overwrite": true
+}
