@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0](https://github.com/aceobservability/ace/compare/v0.14.0...v0.15.0) (2026-04-06)
+
+
+### Features
+
+* 6 production-quality demo dashboards + full README revision ([#218](https://github.com/aceobservability/ace/issues/218)) ([c8c73b0](https://github.com/aceobservability/ace/commit/c8c73b090013a0ea4002a563edf19f927739f5e0))
+
+
+### Bug Fixes
+
+* route correct query editors for trace and log panel types ([#220](https://github.com/aceobservability/ace/issues/220)) ([356c819](https://github.com/aceobservability/ace/commit/356c8197505148f1cc55d29350d8a8b582cdc043))
+
 ## [0.14.0](https://github.com/aceobservability/ace/compare/v0.13.0...v0.14.0) (2026-04-06)
 
 
