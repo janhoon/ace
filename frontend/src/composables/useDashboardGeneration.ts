@@ -127,11 +127,11 @@ export function useDashboardGeneration(
         }
       }
 
-      if (!resultSpec && !abortController?.signal.aborted) {
+      if (!resultSpec) {
         error.value = 'Could not generate a dashboard. Try a more specific prompt.'
       }
     } catch (e) {
-      if (signal.aborted) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
         // Cancelled — don't set error
       } else if (e instanceof Error && e.message.includes('429')) {
         error.value = `AI request failed (429)`
