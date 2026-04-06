@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.3](https://github.com/aceobservability/ace/compare/v0.11.2...v0.11.3) (2026-04-06)
+
+
+### Bug Fixes
+
+* resolve frontend build TypeScript errors and move tests to PR CI ([#196](https://github.com/aceobservability/ace/issues/196)) ([2823313](https://github.com/aceobservability/ace/commit/2823313b6ae60aa504fb3e124fc275bebb46c87f))
+
 ## [0.11.2](https://github.com/aceobservability/ace/compare/v0.11.1...v0.11.2) (2026-04-06)
 
 
