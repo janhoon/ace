@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.5](https://github.com/aceobservability/ace/compare/v0.11.4...v0.11.5) (2026-04-06)
+
+
+### Bug Fixes
+
+* add OCI source label to Dockerfiles for GHCR access ([#200](https://github.com/aceobservability/ace/issues/200)) ([4992d9d](https://github.com/aceobservability/ace/commit/4992d9d22038efd837463bff4bf2e4d2c90ad262))
+
 ## [0.11.4](https://github.com/aceobservability/ace/compare/v0.11.3...v0.11.4) (2026-04-06)
 
 
