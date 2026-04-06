@@ -370,6 +370,8 @@ func renderMarkdown(routes []Route) string {
 		if idx := strings.IndexByte(desc, '\n'); idx >= 0 {
 			desc = desc[:idx]
 		}
+		// Escape pipe characters so they don't break the markdown table.
+		desc = strings.ReplaceAll(desc, "|", `\|`)
 
 		fmt.Fprintf(&b, "| %s | `%s` | %s | %s | %s |\n",
 			r.Method, r.Path, auth, orgMember, desc)
