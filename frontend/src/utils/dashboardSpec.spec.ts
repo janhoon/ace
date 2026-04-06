@@ -27,20 +27,23 @@ function makeValidSpec(overrides?: Partial<DashboardSpec>): DashboardSpec {
       {
         title: 'Requests per second',
         type: 'line_chart',
-        grid_pos: { x: 0, y: 0, w: 6, h: 2 },
-        query: { datasource_id: 'ds-1', expr: 'rate(http_requests_total[5m])' },
+        position: { x: 0, y: 0, w: 6, h: 2 },
+        datasource_id: 'ds-1',
+        query: { expr: 'rate(http_requests_total[5m])' },
       },
       {
         title: 'Error rate',
         type: 'stat',
-        grid_pos: { x: 6, y: 0, w: 6, h: 2 },
-        query: { datasource_id: 'ds-1', expr: 'sum(rate(errors_total[5m]))' },
+        position: { x: 6, y: 0, w: 6, h: 2 },
+        datasource_id: 'ds-1',
+        query: { expr: 'sum(rate(errors_total[5m]))' },
       },
       {
         title: 'CPU usage',
         type: 'gauge',
-        grid_pos: { x: 0, y: 2, w: 4, h: 2 },
-        query: { datasource_id: 'ds-1', expr: 'process_cpu_seconds_total' },
+        position: { x: 0, y: 2, w: 4, h: 2 },
+        datasource_id: 'ds-1',
+        query: { expr: 'process_cpu_seconds_total' },
       },
     ],
     ...overrides,
@@ -66,15 +69,16 @@ describe('validateDashboardSpec', () => {
         {
           title: 'Wide panel',
           type: 'line_chart',
-          grid_pos: { x: 8, y: 0, w: 6, h: 2 },
-          query: { datasource_id: 'ds-1', expr: 'up' },
+          position: { x: 8, y: 0, w: 6, h: 2 },
+          datasource_id: 'ds-1',
+        query: { expr: 'up' },
         },
       ],
     })
     const result = validateDashboardSpec(spec, ['ds-1'])
 
     expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('grid_pos.x + w must be <= 12'))).toBe(true)
+    expect(result.errors.some((e) => e.includes('position.x + w must be <= 12'))).toBe(true)
   })
 
   // T3: empty expr
@@ -84,8 +88,9 @@ describe('validateDashboardSpec', () => {
         {
           title: 'Empty query panel',
           type: 'line_chart',
-          grid_pos: { x: 0, y: 0, w: 6, h: 2 },
-          query: { datasource_id: 'ds-1', expr: '' },
+          position: { x: 0, y: 0, w: 6, h: 2 },
+          datasource_id: 'ds-1',
+        query: { expr: '' },
         },
       ],
     })
@@ -102,8 +107,9 @@ describe('validateDashboardSpec', () => {
         {
           title: 'Unknown ds panel',
           type: 'line_chart',
-          grid_pos: { x: 0, y: 0, w: 6, h: 2 },
-          query: { datasource_id: 'unknown-id', expr: 'up' },
+          position: { x: 0, y: 0, w: 6, h: 2 },
+          datasource_id: 'unknown-id',
+        query: { expr: 'up' },
         },
       ],
     })
@@ -120,8 +126,9 @@ describe('validateDashboardSpec', () => {
         {
           title: 'Bad type panel',
           type: 'invalid_type' as unknown as PanelType,
-          grid_pos: { x: 0, y: 0, w: 6, h: 2 },
-          query: { datasource_id: 'ds-1', expr: 'up' },
+          position: { x: 0, y: 0, w: 6, h: 2 },
+          datasource_id: 'ds-1',
+        query: { expr: 'up' },
         },
       ],
     })
@@ -150,7 +157,7 @@ describe('saveDashboardSpec', () => {
       dashboard_id: 'dash-1',
       title: 'Panel',
       type: 'line_chart',
-      grid_pos: { x: 0, y: 0, w: 6, h: 2 },
+      position: { x: 0, y: 0, w: 6, h: 2 },
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
     })
@@ -184,7 +191,7 @@ describe('saveDashboardSpec', () => {
         dashboard_id: 'dash-2',
         title: 'Panel 1',
         type: 'line_chart',
-        grid_pos: { x: 0, y: 0, w: 6, h: 2 },
+        position: { x: 0, y: 0, w: 6, h: 2 },
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
       })

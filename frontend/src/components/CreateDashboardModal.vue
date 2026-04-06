@@ -92,18 +92,12 @@ function normalizeYamlValue(value: string): string {
 }
 
 function buildYamlPreview(rawYaml: string): ImportPreview {
-  const schemaVersionMatch = rawYaml.match(/(?:^|\n)schema_version:\s*(.+)/)
-  if (!schemaVersionMatch) {
-    throw new Error('Missing schema_version')
+  const versionMatch = rawYaml.match(/(?:^|\n)version:\s*(.+)/)
+  if (!versionMatch) {
+    throw new Error('Missing version')
   }
 
-  const dashboardSectionMatch = rawYaml.match(/(?:^|\n)dashboard:\s*\n([\s\S]*)/)
-  if (!dashboardSectionMatch) {
-    throw new Error('Missing dashboard section')
-  }
-
-  const dashboardSection = dashboardSectionMatch[1]
-  const titleMatch = dashboardSection.match(/(?:^|\n)\s{2}title:\s*(.+)/)
+  const titleMatch = rawYaml.match(/(?:^|\n)title:\s*(.+)/)
   if (!titleMatch) {
     throw new Error('Missing dashboard title')
   }
@@ -113,11 +107,11 @@ function buildYamlPreview(rawYaml: string): ImportPreview {
     throw new Error('Dashboard title is empty')
   }
 
-  const descriptionMatch = dashboardSection.match(/(?:^|\n)\s{2}description:\s*(.+)/)
-  const panelsSectionMatch = dashboardSection.match(
-    /(?:^|\n)\s{2}panels:\s*\n([\s\S]*?)(?=\n\s{2}[a-zA-Z_][\w-]*:\s*|\s*$)/,
+  const descriptionMatch = rawYaml.match(/(?:^|\n)description:\s*(.+)/)
+  const panelsSectionMatch = rawYaml.match(
+    /(?:^|\n)panels:\s*\n([\s\S]*?)(?=\n[a-zA-Z_][\w-]*:\s*|\s*$)/,
   )
-  const panelCount = (panelsSectionMatch?.[1]?.match(/(?:^|\n)\s{4}-\s+/g) ?? []).length
+  const panelCount = (panelsSectionMatch?.[1]?.match(/(?:^|\n)\s{2}-\s+/g) ?? []).length
 
   return {
     title: extractedTitle,

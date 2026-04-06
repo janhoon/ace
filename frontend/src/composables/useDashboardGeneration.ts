@@ -92,7 +92,7 @@ export function useDashboardGeneration(
             }
 
             spec.panels?.forEach((p) => {
-              if (p.query) p.query.datasource_id = datasourceId()
+              p.datasource_id = datasourceId()
             })
 
             const validation = validateDashboardSpec(spec, [datasourceId()])

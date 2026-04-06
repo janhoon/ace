@@ -134,7 +134,7 @@ describe('CreateDashboardModal', () => {
     const input = wrapper.find('input#yaml-file')
     const file = new File(
       [
-        'schema_version: 1\ndashboard:\n  title: Imported Dashboard\n  panels:\n    - title: Requests\n      type: line_chart\n    - title: Errors\n      type: stat\n',
+        'version: 2\ntitle: Imported Dashboard\npanels:\n  - title: Requests\n    type: line_chart\n  - title: Errors\n    type: stat\n',
       ],
       'dashboard.yaml',
       { type: 'application/x-yaml' },
@@ -154,7 +154,7 @@ describe('CreateDashboardModal', () => {
 
     expect(api.importDashboardYaml).toHaveBeenCalledWith(
       'org-1',
-      expect.stringContaining('dashboard:'),
+      expect.stringContaining('title: Imported Dashboard'),
     )
     expect(wrapper.emitted('created')).toBeTruthy()
   })
@@ -195,7 +195,7 @@ describe('CreateDashboardModal', () => {
       ?.trigger('click')
 
     const input = wrapper.find('input#yaml-file')
-    const file = new File(['schema_version: 1\nname: invalid\n'], 'dashboard.yaml', {
+    const file = new File(['version: 2\nname: invalid\n'], 'dashboard.yaml', {
       type: 'application/x-yaml',
     })
 
@@ -206,7 +206,7 @@ describe('CreateDashboardModal', () => {
     await input.trigger('change')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Invalid YAML file. Missing dashboard section')
+    expect(wrapper.text()).toContain('Invalid YAML file. Missing dashboard title')
   })
 
   it('imports dashboard from grafana json conversion', async () => {

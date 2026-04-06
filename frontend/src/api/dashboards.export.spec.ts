@@ -18,7 +18,7 @@ describe('exportDashboardYaml', () => {
   it('downloads yaml payload from export endpoint', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      text: () => Promise.resolve('schema_version: 1\ndashboard:\n  title: Test\n'),
+      text: () => Promise.resolve('version: 2\ntitle: Test\n'),
     })
 
     const result = await exportDashboardYaml('dashboard-1')

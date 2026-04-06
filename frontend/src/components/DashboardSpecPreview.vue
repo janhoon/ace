@@ -80,7 +80,7 @@ const panelTypeIcons: Record<PanelType, Component> = {
 /** Maximum row across all panels — used to size the grid height */
 const maxGridRow = computed(() => {
   if (!props.spec.panels || props.spec.panels.length === 0) return 1
-  return Math.max(...props.spec.panels.map((p) => (p.grid_pos?.y ?? 0) + (p.grid_pos?.h ?? 1)))
+  return Math.max(...props.spec.panels.map((p) => (p.position?.y ?? 0) + (p.position?.h ?? 1)))
 })
 
 const isSaved = computed(() => savedDashboardId.value !== null)
@@ -103,7 +103,7 @@ async function runDryRuns() {
 
   const promises = props.spec.panels.map(async (panel, index) => {
     try {
-      const result = await queryDataSource(panel.query.datasource_id, {
+      const result = await queryDataSource(panel.datasource_id, {
         query: panel.query.expr,
         signal: 'metrics',
         start: now - 300,
@@ -241,8 +241,8 @@ function dryRunDotClass(status: DryRunStatus): string {
           :aria-label="`${panel.title} (${panel.type})`"
           class="bg-[var(--color-surface-container-low)] rounded flex items-center gap-1 px-1.5 py-0.5 min-w-0 relative"
           :style="{
-            gridColumn: `${(panel.grid_pos?.x ?? 0) + 1} / span ${panel.grid_pos?.w ?? 4}`,
-            gridRow: `${(panel.grid_pos?.y ?? 0) + 1} / span ${panel.grid_pos?.h ?? 1}`,
+            gridColumn: `${(panel.position?.x ?? 0) + 1} / span ${panel.position?.w ?? 4}`,
+            gridRow: `${(panel.position?.y ?? 0) + 1} / span ${panel.position?.h ?? 1}`,
           }"
         >
           <component

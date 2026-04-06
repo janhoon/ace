@@ -16,12 +16,12 @@ export interface DashboardSpec {
 export interface PanelSpec {
   title: string
   type: PanelType
-  grid_pos: GridPos
+  position: GridPos
+  datasource_id: string
   query: {
-    datasource_id: string // injected by frontend, AI omits this
     expr: string
     signal?: 'metrics' | 'logs' | 'traces'
-    legend_format?: string
+    legend?: string
   }
 }
 
@@ -63,24 +63,24 @@ export function validateDashboardSpec(
       }
 
       // Grid position validation
-      if (!panel.grid_pos) {
-        errors.push(`${prefix}: grid_pos is required`)
+      if (!panel.position) {
+        errors.push(`${prefix}: position is required`)
       } else {
-        const { x, y, w, h } = panel.grid_pos
+        const { x, y, w, h } = panel.position
         if (x < 0) {
-          errors.push(`${prefix}: grid_pos.x must be >= 0, got ${x}`)
+          errors.push(`${prefix}: position.x must be >= 0, got ${x}`)
         }
         if (y < 0) {
-          errors.push(`${prefix}: grid_pos.y must be >= 0, got ${y}`)
+          errors.push(`${prefix}: position.y must be >= 0, got ${y}`)
         }
         if (w <= 0) {
-          errors.push(`${prefix}: grid_pos.w must be > 0, got ${w}`)
+          errors.push(`${prefix}: position.w must be > 0, got ${w}`)
         }
         if (h <= 0) {
-          errors.push(`${prefix}: grid_pos.h must be > 0, got ${h}`)
+          errors.push(`${prefix}: position.h must be > 0, got ${h}`)
         }
         if (x + w > GRID_COLUMNS) {
-          errors.push(`${prefix}: grid_pos.x + w must be <= ${GRID_COLUMNS}, got ${x + w}`)
+          errors.push(`${prefix}: position.x + w must be <= ${GRID_COLUMNS}, got ${x + w}`)
         }
       }
 
@@ -90,9 +90,9 @@ export function validateDashboardSpec(
       }
 
       // Datasource ID must exist in known list
-      if (!knownDatasourceIds.includes(panel.query.datasource_id)) {
+      if (!knownDatasourceIds.includes(panel.datasource_id)) {
         errors.push(
-          `${prefix}: unknown datasource_id "${panel.query.datasource_id}"`,
+          `${prefix}: unknown datasource_id "${panel.datasource_id}"`,
         )
       }
     }
@@ -125,13 +125,13 @@ export async function saveDashboardSpec(
       await createPanel(dashboardId, {
         title: panel.title,
         type: panel.type,
-        grid_pos: panel.grid_pos,
+        grid_pos: panel.position,
         query: {
-          datasource_id: panel.query.datasource_id,
+          datasource_id: panel.datasource_id,
           expr: panel.query.expr,
           ...(panel.query.signal !== undefined ? { signal: panel.query.signal } : {}),
-          ...(panel.query.legend_format !== undefined
-            ? { legend_format: panel.query.legend_format }
+          ...(panel.query.legend !== undefined
+            ? { legend_format: panel.query.legend }
             : {}),
         },
       })
