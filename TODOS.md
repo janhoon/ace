@@ -2,21 +2,6 @@
 
 ## AI Providers
 
-### Copilot token caching
-
-**What:** Cache short-lived Copilot session tokens in a sync.Map keyed by userID with TTL = expires_at minus 60s buffer.
-
-**Why:** Eliminates one GitHub API round-trip (~200-500ms) per chat request for Copilot users. Currently fetchCopilotToken hits GitHub's API on every single chat request even though tokens are valid for ~30 minutes.
-
-**Pros:** Faster Copilot chat responses, fewer GitHub API calls.
-**Cons:** Minimal — cache invalidation is simple (TTL-based, tokens have explicit expires_at).
-
-**Context:** The CopilotProvider implementation in the multi-provider refactor is the right place to add this. The token response includes `expires_at` as a unix timestamp. Cache key is userID, eviction is TTL-based. ~20 lines of code.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** Multi-provider AI support
-
 ### Per-user rate limiting for org providers
 
 **What:** Add configurable per-user request quotas (e.g., 100 requests/hour) for org-level AI providers.
@@ -71,18 +56,6 @@
 
 **Effort:** S
 **Priority:** P3
-**Depends on:** Chat-to-dashboard MVP
-
-### Pre-built dashboard templates
-
-**What:** Ship 2-3 pre-built DashboardSpec templates (HTTP Overview, Node Exporter, Go Runtime) that the AI can reference or modify during generation.
-
-**Why:** Turns one-shot generation into guided generation. Templates give the AI concrete examples to follow, improving spec quality. Also enables a "template gallery" UX where users browse common dashboards without needing to describe them.
-
-**Context:** Templates could be JSON files in `frontend/src/utils/dashboardTemplates/` or embedded in the system prompt. The AI references them when the user's request matches a common pattern. Templates need maintenance as the DashboardSpec schema evolves.
-
-**Effort:** S
-**Priority:** P2
 **Depends on:** Chat-to-dashboard MVP
 
 ### Spec sharing via URL
@@ -149,21 +122,6 @@
 **Priority:** P2
 **Depends on:** Enterprise Auth Phase 1
 
-### Update website with enterprise auth value prop
-
-**What:** Add a section to the Ace website (separate repo) highlighting enterprise auth included free — RBAC, SSO, audit logging, no paywall.
-
-**Why:** The website is the front door for your target user. A principal platform engineer at a fintech googling "Grafana alternative RBAC" needs to land on a page that says "enterprise auth included free" within 5 seconds.
-
-**Pros:** Captures interest from the exact target user. Low effort for high marketing impact.
-
-**Cons:** Requires coordinating with the website repo. Content needs to match what's actually shipped.
-
-**Context:** The website is in a separate repo in the aceobservability org. Update when Phase 1 ships (audit logging + Auditor role). Key messaging: "Enterprise auth without the enterprise paywall. RBAC, SSO, audit logging — all included in open-source Ace."
-
-**Effort:** S
-**Priority:** P1
-**Depends on:** Enterprise Auth Phase 1
 
 ## Completed
 
@@ -172,6 +130,18 @@
 Renamed `getVictoriaMetricsTools()` to `getMetricsTools()`, removed datasource type gate, genericized tool descriptions. Both VictoriaMetrics and Prometheus datasources now get full tool support including dashboard generation.
 
 **Completed:** v0.7.0 (2026-03-23)
+
+### Update website with enterprise auth value prop
+
+Added enterprise auth value prop section to the Ace website — RBAC, SSO, audit logging included free.
+
+**Completed:** v0.12.0
+
+### Copilot token caching
+
+Implemented sync.Map-based token cache keyed by hashed GitHub token with TTL = expires_at minus 60s buffer. Eliminates redundant GitHub API round-trips for Copilot users.
+
+**Completed:** v0.10.0
 
 ### Create DESIGN.md
 
