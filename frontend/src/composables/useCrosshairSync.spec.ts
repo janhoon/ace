@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, inject } from 'vue'
+import { defineComponent } from 'vue'
 
 // Mock echarts/core before importing the composable
 vi.mock('echarts/core', () => ({
