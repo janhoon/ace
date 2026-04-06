@@ -10,7 +10,10 @@ import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import VChart from 'vue-echarts'
-import { chartPalette, chartColors } from '../utils/chartTheme'
+import { useCrosshairSync } from '../composables/useCrosshairSync'
+import { chartPalette, chartColors, crosshairPointerStyle } from '../utils/chartTheme'
+
+const { groupId } = useCrosshairSync()
 
 // Register ECharts components
 use([
@@ -121,6 +124,10 @@ const chartOption = computed(() => {
       : undefined,
     tooltip: {
       trigger: 'axis',
+      axisPointer: {
+        type: 'line' as const,
+        ...crosshairPointerStyle,
+      },
       backgroundColor: chartColors.tooltipBg,
       borderColor: chartColors.tooltipBorder,
       borderWidth: 1,
@@ -246,6 +253,7 @@ onUnmounted(() => {
       ref="chartRef"
       :option="chartOption"
       :autoresize="true"
+      :group="groupId ?? undefined"
       class="h-full w-full"
     />
   </div>
