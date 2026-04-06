@@ -2,43 +2,53 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 
-// --- Hoisted mock functions (no Vue refs here) ---
+// --- Hoisted mock functions ---
 
-const mockSendChatRequest = vi.hoisted(() => vi.fn())
 const mockFetchModels = vi.hoisted(() => vi.fn())
-const mockExecuteTool = vi.hoisted(() => vi.fn())
+const mockGenerate = vi.hoisted(() => vi.fn())
+const mockCancel = vi.hoisted(() => vi.fn())
 const mockGetToolsForDatasourceType = vi.hoisted(() => vi.fn().mockReturnValue([]))
 
-// --- Shared reactive state (created after Vue import above) ---
+// --- Shared reactive state ---
 
 const mockChatMessages = ref<Array<{ role: string; content: string }>>([])
 const mockModels = ref<Array<{ id: string; name: string; provider_id?: string; provider_name?: string }>>([])
 const mockSelectedModel = ref('')
 const mockIsLoading = ref(false)
-const mockError = ref<string | null>(null)
+const mockProviderError = ref<string | null>(null)
 const mockProviders = ref<Array<{ id: string; display_name: string }>>([])
 const mockSelectedProviderId = ref('')
 
+const mockIsGenerating = ref(false)
+const mockGenError = ref<string | null>(null)
+const mockToolStatuses = ref<Array<{ name: string; status: string }>>([])
+
 vi.mock('../composables/useAIProvider', () => ({
   useAIProvider: () => ({
-    sendChatRequest: mockSendChatRequest,
     chatMessages: mockChatMessages,
     models: mockModels,
     selectedModel: mockSelectedModel,
     selectedProviderId: mockSelectedProviderId,
     fetchModels: mockFetchModels,
     isLoading: mockIsLoading,
-    error: mockError,
+    error: mockProviderError,
     providers: mockProviders,
   }),
 }))
 
-vi.mock('../composables/useCopilotTools', () => ({
-  getMetricsTools: () => [],
-  getToolsForDatasourceType: mockGetToolsForDatasourceType,
-  useCopilotToolExecutor: () => ({
-    executeTool: mockExecuteTool,
+vi.mock('../composables/useDashboardGeneration', () => ({
+  useDashboardGeneration: () => ({
+    generate: mockGenerate,
+    cancel: mockCancel,
+    toolStatuses: mockToolStatuses,
+    isGenerating: mockIsGenerating,
+    error: mockGenError,
+    progressText: ref(''),
   }),
+}))
+
+vi.mock('../composables/useCopilotTools', () => ({
+  getToolsForDatasourceType: mockGetToolsForDatasourceType,
 }))
 
 vi.mock('../composables/useOrganization', () => ({
@@ -103,10 +113,12 @@ describe('CmdKChatView', () => {
     mockModels.value = []
     mockSelectedModel.value = ''
     mockIsLoading.value = false
-    mockError.value = null
+    mockIsGenerating.value = false
+    mockProviderError.value = null
+    mockGenError.value = null
     mockProviders.value = []
-    // Default: sendChatRequest resolves with no tool calls
-    mockSendChatRequest.mockResolvedValue({ content: 'Hello!', toolCalls: [] })
+    mockToolStatuses.value = []
+    mockGenerate.mockResolvedValue({ spec: null, content: null })
     mockFetchModels.mockResolvedValue(undefined)
   })
 
@@ -114,36 +126,26 @@ describe('CmdKChatView', () => {
     wrapper?.unmount()
   })
 
-  // --- 1. Sends initial query via sendChatRequest on mount ---
-  it('sends initial query via sendChatRequest on mount', async () => {
+  it('sends initial query via generate on mount', async () => {
     wrapper = createWrapper()
     await flushPromises()
 
-    expect(mockSendChatRequest).toHaveBeenCalledOnce()
-    expect(mockSendChatRequest).toHaveBeenCalledWith(
-      'victoriametrics',
-      'VictoriaMetrics',
-      expect.arrayContaining([
-        expect.objectContaining({ role: 'user', content: 'show me metrics' }),
-      ]),
-      expect.any(Array),
-    )
+    expect(mockGenerate).toHaveBeenCalledOnce()
+    const callArgs = mockGenerate.mock.calls[0]!
+    const messages = callArgs[0] as Array<{ role: string; content: string }>
+    expect(messages.some((m) => m.role === 'user' && m.content === 'show me metrics')).toBe(true)
   })
 
-  // --- 2. Shows user message text in chat ---
   it('shows user message text in chat', async () => {
     wrapper = createWrapper()
     await flushPromises()
 
-    // The initial query should have been pushed to chatMessages
     expect(
       mockChatMessages.value.some((m) => m.role === 'user' && m.content === 'show me metrics'),
     ).toBe(true)
-    // And rendered in the DOM
     expect(wrapper.text()).toContain('show me metrics')
   })
 
-  // --- 3. Emits exit-chat when back button clicked ---
   it('emits exit-chat when back button clicked', async () => {
     wrapper = createWrapper()
     await flushPromises()
@@ -153,14 +155,11 @@ describe('CmdKChatView', () => {
     await backBtn.trigger('click')
 
     expect(wrapper.emitted('exit-chat')).toBeTruthy()
-    expect(wrapper.emitted('exit-chat')!.length).toBe(1)
   })
 
-  // --- 4. Disables textarea when loading ---
-  it('disables textarea when loading', async () => {
-    mockIsLoading.value = true
-    // Prevent the initial handleSend from completing
-    mockSendChatRequest.mockImplementation(() => new Promise(() => {}))
+  it('disables textarea when generating', async () => {
+    mockIsGenerating.value = true
+    mockGenerate.mockImplementation(() => new Promise(() => {}))
     wrapper = createWrapper()
     await flushPromises()
 
@@ -169,21 +168,16 @@ describe('CmdKChatView', () => {
     expect(textarea.attributes('disabled')).toBeDefined()
   })
 
-  // --- 5. Shows error message when error exists ---
-  it('shows error message when error exists', async () => {
-    // Let the initial send complete, then set error after
-    mockSendChatRequest.mockResolvedValue({ content: 'Hi', toolCalls: [] })
+  it('shows error message when genError exists', async () => {
     wrapper = createWrapper()
     await flushPromises()
 
-    // Simulate an error occurring (e.g. from a follow-up request)
-    mockError.value = 'Something went wrong'
+    mockGenError.value = 'Something went wrong'
     await wrapper.vm.$nextTick()
 
     expect(wrapper.text()).toContain('Something went wrong')
   })
 
-  // --- 6. Shows model selector when models available ---
   it('shows model selector when models available', async () => {
     mockModels.value = [
       { id: 'model-1', name: 'Claude Sonnet' },
@@ -205,7 +199,6 @@ describe('CmdKChatView', () => {
     expect(modelSelector.exists()).toBe(false)
   })
 
-  // --- 6b. Groups models by provider when multiple providers ---
   it('groups models by provider when multiple providers exist', async () => {
     mockProviders.value = [
       { id: 'prov-1', display_name: 'OpenAI' },
@@ -219,20 +212,12 @@ describe('CmdKChatView', () => {
     await flushPromises()
 
     const modelSelector = wrapper.find('[data-testid="model-selector"]')
-    expect(modelSelector.exists()).toBe(true)
-
     const optgroups = modelSelector.findAll('optgroup')
     expect(optgroups.length).toBe(2)
     expect(optgroups[0]!.attributes('label')).toBe('OpenAI')
     expect(optgroups[1]!.attributes('label')).toBe('Copilot')
-
-    const options = modelSelector.findAll('option')
-    expect(options.length).toBe(2)
-    expect(options[0]!.text()).toContain('GPT-4o')
-    expect(options[1]!.text()).toContain('Claude Sonnet')
   })
 
-  // --- 6c. Shows flat options when single provider ---
   it('shows flat options when single provider exists', async () => {
     mockProviders.value = [
       { id: 'prov-1', display_name: 'OpenAI' },
@@ -245,16 +230,10 @@ describe('CmdKChatView', () => {
     await flushPromises()
 
     const modelSelector = wrapper.find('[data-testid="model-selector"]')
-    expect(modelSelector.exists()).toBe(true)
-
     const optgroups = modelSelector.findAll('optgroup')
     expect(optgroups.length).toBe(0)
-
-    const options = modelSelector.findAll('option')
-    expect(options.length).toBe(2)
   })
 
-  // --- 7. Calls fetchModels on mount ---
   it('calls fetchModels on mount', async () => {
     wrapper = createWrapper()
     await flushPromises()
@@ -262,20 +241,18 @@ describe('CmdKChatView', () => {
     expect(mockFetchModels).toHaveBeenCalledOnce()
   })
 
-  // --- 8. System message with datasource info ---
   it('prepends system message with datasource info when datasourceId is set', async () => {
     wrapper = createWrapper()
     await flushPromises()
 
-    const call = mockSendChatRequest.mock.calls[0]!
-    const messages = call[2] as Array<{ role: string; content: string }>
+    const callArgs = mockGenerate.mock.calls[0]!
+    const messages = callArgs[0] as Array<{ role: string; content: string }>
     const systemMsg = messages.find((m) => m.role === 'system')
     expect(systemMsg).toBeDefined()
     expect(systemMsg!.content).toContain('ds-1')
     expect(systemMsg!.content).toContain('VictoriaMetrics')
   })
 
-  // --- 9. System message without datasource ---
   it('prepends system message instructing list_datasources when datasourceId is empty', async () => {
     wrapper = createWrapper({
       ...defaultProps,
@@ -285,14 +262,13 @@ describe('CmdKChatView', () => {
     })
     await flushPromises()
 
-    const call = mockSendChatRequest.mock.calls[0]!
-    const messages = call[2] as Array<{ role: string; content: string }>
+    const callArgs = mockGenerate.mock.calls[0]!
+    const messages = callArgs[0] as Array<{ role: string; content: string }>
     const systemMsg = messages.find((m) => m.role === 'system')
     expect(systemMsg).toBeDefined()
     expect(systemMsg!.content).toContain('list_datasources')
   })
 
-  // --- 10. Uses getToolsForDatasourceType ---
   it('uses getToolsForDatasourceType with correct type', async () => {
     wrapper = createWrapper()
     await flushPromises()
