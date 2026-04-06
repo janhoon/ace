@@ -20,11 +20,16 @@ interface MockChartSeries {
 
 let mockChartSeries: MockChartSeries[] = []
 
+const mockZoomToRange = vi.hoisted(() => vi.fn())
+const mockResetZoom = vi.hoisted(() => vi.fn())
+
 // Mock the composables
 vi.mock('../composables/useTimeRange', () => ({
   useTimeRange: () => ({
     timeRange: computed(() => ({ start: Date.now() - 3600000, end: Date.now() })),
     onRefresh: vi.fn(() => () => {}),
+    zoomToRange: mockZoomToRange,
+    resetZoom: mockResetZoom,
   }),
 }))
 
@@ -56,7 +61,12 @@ vi.mock('./LineChart.vue', () => ({
   default: {
     name: 'LineChart',
     props: ['series'],
-    template: '<div class="mock-line-chart">LineChart Mock</div>',
+    emits: ['brush-zoom', 'reset-zoom'],
+    template: `<div class="mock-line-chart">
+      LineChart Mock
+      <button class="mock-brush-zoom" type="button" @click="$emit('brush-zoom', 1700000000000, 1700003600000)">Brush Zoom</button>
+      <button class="mock-reset-zoom" type="button" @click="$emit('reset-zoom')">Reset Zoom</button>
+    </div>`,
   },
 }))
 
@@ -120,6 +130,8 @@ describe('Panel', () => {
     // Default: not a registry panel
     mockIsRegisteredPanel.mockReturnValue(false)
     mockLookupPanel.mockReturnValue(null)
+    mockZoomToRange.mockReset()
+    mockResetZoom.mockReset()
     vi.clearAllMocks()
   })
 
@@ -678,6 +690,54 @@ describe('Panel', () => {
 
       // Should NOT show "No query configured" — hasQuery should be true
       expect(wrapper.text()).not.toContain('No query configured')
+    })
+  })
+
+  describe('brush-to-zoom', () => {
+    it('brush-zoom from LineChart calls zoomToRange with timestamps', async () => {
+      mockChartSeries = [
+        {
+          name: 'up',
+          data: [{ timestamp: 1704067200, value: 1 }],
+          labels: { __name__: 'up' },
+        },
+      ]
+
+      const panelWithQuery = {
+        ...mockPanel,
+        query: { promql: 'up' },
+      }
+
+      const wrapper = mount(Panel, {
+        props: { panel: panelWithQuery },
+      })
+
+      await wrapper.find('.mock-brush-zoom').trigger('click')
+
+      expect(mockZoomToRange).toHaveBeenCalledWith(1700000000000, 1700003600000)
+    })
+
+    it('reset-zoom from LineChart calls resetZoom', async () => {
+      mockChartSeries = [
+        {
+          name: 'up',
+          data: [{ timestamp: 1704067200, value: 1 }],
+          labels: { __name__: 'up' },
+        },
+      ]
+
+      const panelWithQuery = {
+        ...mockPanel,
+        query: { promql: 'up' },
+      }
+
+      const wrapper = mount(Panel, {
+        props: { panel: panelWithQuery },
+      })
+
+      await wrapper.find('.mock-reset-zoom').trigger('click')
+
+      expect(mockResetZoom).toHaveBeenCalledTimes(1)
     })
   })
 })

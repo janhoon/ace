@@ -35,7 +35,15 @@ const emit = defineEmits<{
 const { highlightedPanelId } = useAiSidebar()
 const isHighlighted = computed(() => highlightedPanelId.value === props.panel.id)
 
-const { timeRange, onRefresh } = useTimeRange()
+const { timeRange, onRefresh, zoomToRange, resetZoom } = useTimeRange()
+
+function handleBrushZoom(startMs: number, endMs: number) {
+  zoomToRange(startMs, endMs)
+}
+
+function handleResetZoom() {
+  resetZoom()
+}
 
 type QuerySignal = 'logs' | 'metrics' | 'traces'
 
@@ -654,10 +662,10 @@ function handleRegistryPanelChange(data: Record<string, unknown>) {
         <p class="text-xs p-2 m-0" :style="{ color: 'var(--color-error)' }">{{ error }}</p>
       </div>
       <div v-else-if="isLineChart && chartSeries.length > 0" class="flex-1 min-h-0">
-        <LineChart :series="chartSeries" />
+        <LineChart :series="chartSeries" @brush-zoom="handleBrushZoom" @reset-zoom="handleResetZoom" />
       </div>
       <div v-else-if="isBarChart && chartSeries.length > 0" class="flex-1 min-h-0">
-        <BarChart :series="chartSeries" />
+        <BarChart :series="chartSeries" @brush-zoom="handleBrushZoom" @reset-zoom="handleResetZoom" />
       </div>
       <div v-else-if="isGaugeChart && chartSeries.length > 0" class="flex-1 min-h-0">
         <GaugeChart

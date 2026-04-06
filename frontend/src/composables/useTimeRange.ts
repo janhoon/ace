@@ -45,6 +45,14 @@ const lastRefreshTime = ref<number>(Date.now())
 const isRefreshing = ref(false)
 const isPaused = ref(false)
 
+// Pre-zoom snapshot for brush-to-zoom undo
+const preZoomSnapshot = ref<{
+  isCustom: boolean
+  preset: string
+  start: number
+  end: number
+} | null>(null)
+
 // Callbacks to be invoked on refresh
 const refreshCallbacks = new Set<() => void | Promise<void>>()
 
@@ -177,6 +185,29 @@ export function useTimeRange() {
     }
   }
 
+  function zoomToRange(start: number, end: number) {
+    if (!preZoomSnapshot.value) {
+      preZoomSnapshot.value = {
+        isCustom: isCustomRange.value,
+        preset: selectedPreset.value,
+        start: timeRange.value.start,
+        end: timeRange.value.end,
+      }
+    }
+    setCustomRange(start, end)
+  }
+
+  function resetZoom() {
+    if (preZoomSnapshot.value) {
+      if (preZoomSnapshot.value.isCustom) {
+        setCustomRange(preZoomSnapshot.value.start, preZoomSnapshot.value.end)
+      } else {
+        setPreset(preZoomSnapshot.value.preset)
+      }
+      preZoomSnapshot.value = null
+    }
+  }
+
   function cleanup() {
     stopAutoRefresh()
     refreshCallbacks.clear()
@@ -199,6 +230,9 @@ export function useTimeRange() {
     presets: TIME_RANGE_PRESETS,
     refreshIntervals: REFRESH_INTERVALS,
 
+    // Zoom state (readonly)
+    preZoomSnapshot: readonly(preZoomSnapshot),
+
     // Actions
     setPreset,
     setCustomRange,
@@ -208,6 +242,8 @@ export function useTimeRange() {
     cleanup,
     pauseAutoRefresh,
     resumeAutoRefresh,
+    zoomToRange,
+    resetZoom,
   }
 }
 
