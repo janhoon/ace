@@ -72,6 +72,10 @@ jobs:
           fi
           printf "branch=%s\n" "$branch" >> "$GITHUB_OUTPUT"
 
+      - name: Install helm-docs
+        if: steps.pr-info.outputs.branch != ''
+        uses: ./.github/actions/setup-helm-docs
+
       - name: Generate Helm docs
         if: steps.pr-info.outputs.branch != ''
         run: |
@@ -79,13 +83,6 @@ jobs:
           git fetch origin "${{ steps.pr-info.outputs.branch }}"
           git checkout "${{ steps.pr-info.outputs.branch }}"
 
-          # Install helm-docs
-          HELM_DOCS_VERSION="1.14.2"
-          curl -sL "https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.tar.gz" \
-            | tar xz helm-docs
-          chmod +x helm-docs
-
-          # Generate docs
           ./helm-docs --chart-search-root charts --log-level warn
 
           # Commit if changed
