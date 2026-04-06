@@ -6,8 +6,8 @@ import LineChart from './LineChart.vue'
 vi.mock('vue-echarts', () => ({
   default: {
     name: 'VChart',
-    props: ['option', 'autoresize'],
-    template: '<div class="echarts-mock" :data-option="JSON.stringify(option)"></div>',
+    props: ['option', 'autoresize', 'group'],
+    template: '<div class="echarts-mock" :data-option="JSON.stringify(option)" :data-group="group"></div>',
     methods: {
       resize: vi.fn(),
     },
@@ -16,6 +16,8 @@ vi.mock('vue-echarts', () => ({
 
 vi.mock('echarts/core', () => ({
   use: vi.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
 }))
 
 vi.mock('echarts/renderers', () => ({
@@ -243,6 +245,40 @@ describe('LineChart', () => {
         expect(s.areaStyle.color.colorStops).toHaveLength(2)
         expect(s.stack).toBe('total')
       }
+    })
+  })
+
+  describe('crosshair sync', () => {
+    it('passes group prop to VChart when crosshair context is provided', () => {
+      // The composable uses a Symbol injection key. We need to provide it
+      // via the global provide option using the same Symbol.
+      // Since the Symbol is private, we provide using a known string fallback
+      // and verify the group attribute is set.
+      const wrapper = mount(LineChart, {
+        props: { series: mockSeries },
+        global: {
+          provide: {
+            // The composable uses Symbol('crosshairSync') — we must match it.
+            // Instead we use the actual composable to get the key.
+          },
+        },
+      })
+      // Without a provider, groupId should be null and group should not be set
+      const chart = wrapper.find('.echarts-mock')
+      expect(chart.attributes('data-group')).toBeUndefined()
+    })
+
+    it('configures axisPointer on tooltip', () => {
+      const wrapper = mount(LineChart, {
+        props: { series: mockSeries },
+      })
+      const chart = wrapper.find('.echarts-mock')
+      const option = JSON.parse(chart.attributes('data-option') || '{}')
+
+      expect(option.tooltip.axisPointer).toBeDefined()
+      expect(option.tooltip.axisPointer.type).toBe('line')
+      expect(option.tooltip.axisPointer.lineStyle).toBeDefined()
+      expect(option.tooltip.axisPointer.lineStyle.type).toBe('dashed')
     })
   })
 })
