@@ -1,4 +1,4 @@
-# ace
+# ace-observability-platform
 
 Production-ready Helm chart for deploying the **Ace Observability Platform** to Kubernetes, including the full VictoriaMetrics stack for metrics, logs, and traces.
 
