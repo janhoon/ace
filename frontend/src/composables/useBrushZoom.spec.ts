@@ -67,10 +67,10 @@ describe('useBrushZoom', () => {
     const wrapper = mount(createTestComponent(mockChart))
     const vm = wrapper.vm as unknown as ReturnType<typeof createTestComponent extends { setup(): infer R } ? () => R : never> & {
       isDragging: boolean
-      handleMouseDown: (event: { zrX: number; zrY: number }) => void
+      handleMouseDown: (event: { offsetX: number; offsetY: number }) => void
     }
 
-    vm.handleMouseDown({ zrX: 200, zrY: 150 })
+    vm.handleMouseDown({ offsetX: 200, offsetY: 150 })
 
     expect(vm.isDragging).toBe(true)
     expect(mockChart.containPixel).toHaveBeenCalledWith('grid', [200, 150])
@@ -81,10 +81,10 @@ describe('useBrushZoom', () => {
     const wrapper = mount(createTestComponent(mockChart))
     const vm = wrapper.vm as unknown as {
       isDragging: boolean
-      handleMouseDown: (event: { zrX: number; zrY: number }) => void
+      handleMouseDown: (event: { offsetX: number; offsetY: number }) => void
     }
 
-    vm.handleMouseDown({ zrX: 10, zrY: 10 })
+    vm.handleMouseDown({ offsetX: 10, offsetY: 10 })
 
     expect(vm.isDragging).toBe(false)
   })
@@ -95,10 +95,10 @@ describe('useBrushZoom', () => {
     const vm = wrapper.vm as unknown as {
       isDragging: boolean
       brushRect: { left: number; top: number; width: number; height: number }
-      handleMouseDown: (event: { zrX: number; zrY: number }) => void
+      handleMouseDown: (event: { offsetX: number; offsetY: number }) => void
     }
 
-    vm.handleMouseDown({ zrX: 200, zrY: 150 })
+    vm.handleMouseDown({ offsetX: 200, offsetY: 150 })
 
     // Get the mousemove handler that was registered
     const mousemoveCall = addEventListenerSpy.mock.calls.find((c) => c[0] === 'mousemove')
@@ -120,11 +120,11 @@ describe('useBrushZoom', () => {
     const wrapper = mount(createTestComponent(mockChart))
     const vm = wrapper.vm as unknown as {
       isDragging: boolean
-      handleMouseDown: (event: { zrX: number; zrY: number }) => void
+      handleMouseDown: (event: { offsetX: number; offsetY: number }) => void
       zoomCallback: ReturnType<typeof vi.fn>
     }
 
-    vm.handleMouseDown({ zrX: 200, zrY: 150 })
+    vm.handleMouseDown({ offsetX: 200, offsetY: 150 })
 
     const mouseupCall = addEventListenerSpy.mock.calls.find((c) => c[0] === 'mouseup')
     const mouseupHandler = mouseupCall![1] as EventListener
@@ -142,11 +142,11 @@ describe('useBrushZoom', () => {
     const mockChart = createMockChart({ containPixelResult: true })
     const wrapper = mount(createTestComponent(mockChart))
     const vm = wrapper.vm as unknown as {
-      handleMouseDown: (event: { zrX: number; zrY: number }) => void
+      handleMouseDown: (event: { offsetX: number; offsetY: number }) => void
       zoomCallback: ReturnType<typeof vi.fn>
     }
 
-    vm.handleMouseDown({ zrX: 200, zrY: 150 })
+    vm.handleMouseDown({ offsetX: 200, offsetY: 150 })
 
     const mouseupCall = addEventListenerSpy.mock.calls.find((c) => c[0] === 'mouseup')
     const mouseupHandler = mouseupCall![1] as EventListener
@@ -161,12 +161,12 @@ describe('useBrushZoom', () => {
     const mockChart = createMockChart({ containPixelResult: true })
     const wrapper = mount(createTestComponent(mockChart))
     const vm = wrapper.vm as unknown as {
-      handleMouseDown: (event: { zrX: number; zrY: number }) => void
+      handleMouseDown: (event: { offsetX: number; offsetY: number }) => void
       zoomCallback: ReturnType<typeof vi.fn>
     }
 
     // Start at X=400, end at X=200 (right-to-left)
-    vm.handleMouseDown({ zrX: 400, zrY: 150 })
+    vm.handleMouseDown({ offsetX: 400, offsetY: 150 })
 
     const mouseupCall = addEventListenerSpy.mock.calls.find((c) => c[0] === 'mouseup')
     const mouseupHandler = mouseupCall![1] as EventListener
@@ -196,10 +196,10 @@ describe('useBrushZoom', () => {
     const mockChart = createMockChart({ containPixelResult: true })
     const wrapper = mount(createTestComponent(mockChart))
     const vm = wrapper.vm as unknown as {
-      handleMouseDown: (event: { zrX: number; zrY: number }) => void
+      handleMouseDown: (event: { offsetX: number; offsetY: number }) => void
     }
 
-    vm.handleMouseDown({ zrX: 200, zrY: 150 })
+    vm.handleMouseDown({ offsetX: 200, offsetY: 150 })
 
     const mouseupCall = addEventListenerSpy.mock.calls.find((c) => c[0] === 'mouseup')
     const mouseupHandler = mouseupCall![1] as EventListener
@@ -214,11 +214,11 @@ describe('useBrushZoom', () => {
     const mockChart = createMockChart({ containPixelResult: true })
     const wrapper = mount(createTestComponent(mockChart))
     const vm = wrapper.vm as unknown as {
-      handleMouseDown: (event: { zrX: number; zrY: number }) => void
+      handleMouseDown: (event: { offsetX: number; offsetY: number }) => void
     }
 
     // Start a drag but don't finish it
-    vm.handleMouseDown({ zrX: 200, zrY: 150 })
+    vm.handleMouseDown({ offsetX: 200, offsetY: 150 })
 
     // Unmount the component
     wrapper.unmount()

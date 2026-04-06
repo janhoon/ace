@@ -20,13 +20,13 @@ export function useBrushZoom(
   let gridTop = 0
   let gridHeight = 0
 
-  function handleMouseDown(event: { zrX: number; zrY: number }) {
+  function handleMouseDown(event: { offsetX: number; offsetY: number }) {
     const chart = chartRef.value
     if (!chart) return
 
-    if (!chart.containPixel('grid', [event.zrX, event.zrY])) return
+    if (!chart.containPixel('grid', [event.offsetX, event.offsetY])) return
 
-    startX = event.zrX
+    startX = event.offsetX
 
     // Get grid pixel bounds for the overlay height
     const el = chart.$el as HTMLElement
