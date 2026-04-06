@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ArrowLeft, Loader2, Send, Wrench } from 'lucide-vue-next'
-import { nextTick, onMounted, ref, watch } from 'vue'
-import type { ToolCall } from '../composables/useAIProvider'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAIProvider } from '../composables/useAIProvider'
-import { getToolsForDatasourceType, useCopilotToolExecutor } from '../composables/useCopilotTools'
+import { getToolsForDatasourceType } from '../composables/useCopilotTools'
+import { useDashboardGeneration } from '../composables/useDashboardGeneration'
 import { useOrganization } from '../composables/useOrganization'
 import type { DashboardSpec } from '../utils/dashboardSpec'
 import { initMarkdown, renderMarkdown } from '../utils/markdown'
@@ -18,14 +18,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'exit-chat': [] }>()
 
-const { sendChatRequest, chatMessages, models, selectedModel, selectedProviderId, fetchModels, isLoading, error, providers } =
+const { chatMessages, models, selectedModel, selectedProviderId, fetchModels, providers } =
   useAIProvider()
 
 const { currentOrg } = useOrganization()
 
 const lastUsedDatasourceType = ref('')
 
-const { executeTool } = useCopilotToolExecutor(
+const { generate, toolStatuses, isGenerating, error: genError, cancel } = useDashboardGeneration(
   () => props.datasourceId,
   () => currentOrg.value?.id ?? '',
   () => props.datasourceType || lastUsedDatasourceType.value,
@@ -38,22 +38,10 @@ const dashboardSpec = ref<DashboardSpec | null>(null)
 const renderedHtml = ref<Record<number, string>>({})
 const messagesContainer = ref<HTMLDivElement | null>(null)
 
-interface ToolStatus {
-  name: string
-  status: 'running' | 'complete' | 'error'
-}
-const toolStatuses = ref<ToolStatus[]>([])
-
-const MAX_TOOL_ITERATIONS = 10
-
-// --- Chat request message types ---
+// --- Build request messages from AIMessage[] ---
 
 type ChatRequestMessage =
   | { role: 'user' | 'assistant' | 'system'; content: string }
-  | { role: 'assistant'; content: string | null; tool_calls: ToolCall[] }
-  | { role: 'tool'; tool_call_id: string; content: string }
-
-// --- Build request messages from AIMessage[] ---
 
 function buildChatRequestMessages(): ChatRequestMessage[] {
   const messages: ChatRequestMessage[] = []
@@ -75,84 +63,42 @@ function buildChatRequestMessages(): ChatRequestMessage[] {
   return messages
 }
 
-// --- Core tool-calling loop ---
+// --- Core generation via composable ---
 
 async function handleSend(userMessage: string) {
   chatMessages.value.push({ role: 'user', content: userMessage })
   const requestMessages = buildChatRequestMessages()
   const tools = getToolsForDatasourceType(props.datasourceType)
-  toolStatuses.value = []
   dashboardSpec.value = null
 
-  isLoading.value = true
-  error.value = null
+  const result = await generate(requestMessages, tools, props.datasourceName, {
+    onContent(text) {
+      chatMessages.value.push({ role: 'assistant', content: text })
+    },
+    onDashboardSpec(spec) {
+      dashboardSpec.value = spec
+      chatMessages.value.push({
+        role: 'assistant',
+        content: 'Dashboard generated. See the preview below.',
+        dashboardSpec: spec,
+      })
+    },
+  })
 
-  try {
-    for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-      const { content, toolCalls } = await sendChatRequest(
-        props.datasourceType,
-        props.datasourceName,
-        requestMessages,
-        tools,
-      )
-
-      if (content) {
-        chatMessages.value.push({ role: 'assistant', content })
-        requestMessages.push({ role: 'assistant', content })
-      }
-
-      if (!toolCalls.length) break
-
-      for (const tc of toolCalls) {
-        if (tc.function.name === 'generate_dashboard') {
-          try {
-            const spec = JSON.parse(tc.function.arguments) as DashboardSpec
-            spec.panels?.forEach((p) => {
-              if (p.query) p.query.datasource_id = props.datasourceId
-            })
-            dashboardSpec.value = spec
-            chatMessages.value.push({
-              role: 'assistant',
-              content: 'Dashboard generated. See the preview below.',
-              dashboardSpec: spec,
-            })
-          } catch {
-            chatMessages.value.push({
-              role: 'assistant',
-              content: 'Failed to parse dashboard specification.',
-            })
-          }
-          return // exit loop on generate_dashboard
-        }
-
-        // Execute other tools
-        toolStatuses.value.push({ name: tc.function.name, status: 'running' })
-        const statusIndex = toolStatuses.value.length - 1
-        const result = await executeTool(tc).catch((err: unknown) => {
-          toolStatuses.value[statusIndex]!.status = 'error'
-          return `Error: ${err instanceof Error ? err.message : 'Tool execution failed'}`
-        })
-        if (toolStatuses.value[statusIndex]!.status === 'running') {
-          toolStatuses.value[statusIndex]!.status = 'complete'
-        }
-        requestMessages.push(
-          { role: 'assistant', content: null, tool_calls: [tc] },
-          { role: 'tool', tool_call_id: tc.id, content: result },
-        )
-      }
-    }
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Chat request failed'
-  } finally {
-    isLoading.value = false
+  if (result.spec && !dashboardSpec.value) {
+    dashboardSpec.value = result.spec
   }
 }
+
+onUnmounted(() => {
+  cancel()
+})
 
 // --- Follow-up ---
 
 function handleFollowUp() {
   const msg = followUp.value.trim()
-  if (!msg || isLoading.value) return
+  if (!msg || isGenerating.value) return
   followUp.value = ''
   handleSend(msg)
 }
@@ -192,7 +138,7 @@ onMounted(async () => {
 
 // --- Tool status icon ---
 
-function toolStatusIcon(status: ToolStatus['status']): string {
+function toolStatusIcon(status: 'running' | 'complete' | 'error'): string {
   switch (status) {
     case 'running':
       return '...'
@@ -291,7 +237,7 @@ function toolStatusIcon(status: ToolStatus['status']): string {
       </div>
 
       <!-- Loading indicator -->
-      <div v-if="isLoading && toolStatuses.length === 0" class="flex items-center gap-2 text-xs"
+      <div v-if="isGenerating && toolStatuses.length === 0" class="flex items-center gap-2 text-xs"
         :style="{ color: 'var(--color-on-surface-variant)' }"
       >
         <Loader2 :size="14" class="animate-spin" />
@@ -300,14 +246,14 @@ function toolStatusIcon(status: ToolStatus['status']): string {
 
       <!-- Error -->
       <div
-        v-if="error"
+        v-if="genError"
         class="rounded-lg px-3 py-2 text-sm"
         :style="{
           backgroundColor: 'var(--color-error-container)',
           color: 'var(--color-on-error-container)',
         }"
       >
-        {{ error }}
+        {{ genError }}
       </div>
 
       <!-- Dashboard spec preview -->
@@ -334,7 +280,7 @@ function toolStatusIcon(status: ToolStatus['status']): string {
           borderColor: 'var(--color-outline-variant)',
         }"
         placeholder="Ask a follow-up..."
-        :disabled="isLoading"
+        :disabled="isGenerating"
         @keydown.enter.exact.prevent="handleFollowUp"
       />
       <button
@@ -344,7 +290,7 @@ function toolStatusIcon(status: ToolStatus['status']): string {
           backgroundColor: 'var(--color-primary)',
           color: 'var(--color-on-primary)',
         }"
-        :disabled="isLoading || !followUp.trim()"
+        :disabled="isGenerating || !followUp.trim()"
         @click="handleFollowUp"
       >
         <Send :size="16" />
