@@ -3,6 +3,7 @@
 [![CodeQL](https://github.com/aceobservability/ace/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/aceobservability/ace/actions/workflows/security.yml)
 [![Lint](https://github.com/aceobservability/ace/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/aceobservability/ace/actions/workflows/lint.yml)
 [![Security](https://github.com/aceobservability/ace/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/aceobservability/ace/actions/workflows/security.yml)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ace-observability)](https://artifacthub.io/packages/search?repo=ace-observability)
 
 A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
 
