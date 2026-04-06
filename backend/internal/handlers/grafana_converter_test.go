@@ -40,8 +40,8 @@ func TestGrafanaConverterHandler_Convert_Success(t *testing.T) {
 	if response.Format != "yaml" {
 		t.Fatalf("expected yaml format, got %q", response.Format)
 	}
-	if response.Document.Dashboard.Title != "API Overview" {
-		t.Fatalf("expected converted title, got %q", response.Document.Dashboard.Title)
+	if response.Document.Title != "API Overview" {
+		t.Fatalf("expected converted title, got %q", response.Document.Title)
 	}
 }
 

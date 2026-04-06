@@ -92,18 +92,12 @@ function normalizeYamlValue(value: string): string {
 }
 
 function buildYamlPreview(rawYaml: string): ImportPreview {
-  const schemaVersionMatch = rawYaml.match(/(?:^|\n)schema_version:\s*(.+)/)
-  if (!schemaVersionMatch) {
-    throw new Error('Missing schema_version')
+  const versionMatch = rawYaml.match(/(?:^|\n)version:\s*(.+)/)
+  if (!versionMatch) {
+    throw new Error('Missing version')
   }
 
-  const dashboardSectionMatch = rawYaml.match(/(?:^|\n)dashboard:\s*\n([\s\S]*)/)
-  if (!dashboardSectionMatch) {
-    throw new Error('Missing dashboard section')
-  }
-
-  const dashboardSection = dashboardSectionMatch[1]
-  const titleMatch = dashboardSection.match(/(?:^|\n)\s{2}title:\s*(.+)/)
+  const titleMatch = rawYaml.match(/(?:^|\n)title:\s*(.+)/)
   if (!titleMatch) {
     throw new Error('Missing dashboard title')
   }
@@ -113,11 +107,11 @@ function buildYamlPreview(rawYaml: string): ImportPreview {
     throw new Error('Dashboard title is empty')
   }
 
-  const descriptionMatch = dashboardSection.match(/(?:^|\n)\s{2}description:\s*(.+)/)
-  const panelsSectionMatch = dashboardSection.match(
-    /(?:^|\n)\s{2}panels:\s*\n([\s\S]*?)(?=\n\s{2}[a-zA-Z_][\w-]*:\s*|\s*$)/,
+  const descriptionMatch = rawYaml.match(/(?:^|\n)description:\s*(.+)/)
+  const panelsSectionMatch = rawYaml.match(
+    /(?:^|\n)panels:\s*\n([\s\S]*?)(?=\n[a-zA-Z_][\w-]*:\s*|\s*$)/,
   )
-  const panelCount = (panelsSectionMatch?.[1]?.match(/(?:^|\n)\s{4}-\s+/g) ?? []).length
+  const panelCount = (panelsSectionMatch?.[1]?.match(/(?:^|\n)\s{2}-\s+/g) ?? []).length
 
   return {
     title: extractedTitle,
@@ -132,16 +126,14 @@ function setMode(nextMode: CreationMode) {
 }
 
 function setImportPreviewFromDocument(document: {
-  dashboard: {
-    title: string
-    description?: string
-    panels: unknown[]
-  }
+  title: string
+  description?: string
+  panels: unknown[]
 }) {
   importPreview.value = {
-    title: document.dashboard.title,
-    description: document.dashboard.description ?? '',
-    panelCount: document.dashboard.panels.length,
+    title: document.title,
+    description: document.description ?? '',
+    panelCount: document.panels.length,
   }
 }
 
@@ -307,18 +299,8 @@ async function convertGrafana() {
     setImportPreviewFromDocument(response.document)
     extractGrafanaDatasources(grafanaSource.value)
 
-    // Extract variables for persistence
-    const vars = response.document?.dashboard?.variables
-    if (vars && vars.length > 0) {
-      convertedVariables.value = vars.map(v => ({
-        name: v.name,
-        type: v.type || 'query',
-        label: v.label,
-        query: v.query,
-        multi: v.multi ?? false,
-        include_all: v.include_all ?? false,
-      }))
-    }
+    // Variables are not included in v2 export format (counted in report only)
+    convertedVariables.value = []
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to convert Grafana dashboard'
   } finally {

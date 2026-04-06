@@ -55,20 +55,23 @@ function makeSpec(overrides?: Partial<DashboardSpec>): DashboardSpec {
       {
         title: 'Requests',
         type: 'line_chart',
-        grid_pos: { x: 0, y: 0, w: 6, h: 2 },
-        query: { datasource_id: 'ds-1', expr: 'rate(up[5m])' },
+        position: { x: 0, y: 0, w: 6, h: 2 },
+        datasource_id: 'ds-1',
+        query: { expr: 'rate(up[5m])' },
       },
       {
         title: 'Errors',
         type: 'stat',
-        grid_pos: { x: 6, y: 0, w: 6, h: 2 },
-        query: { datasource_id: 'ds-1', expr: 'sum(errors_total)' },
+        position: { x: 6, y: 0, w: 6, h: 2 },
+        datasource_id: 'ds-1',
+        query: { expr: 'sum(errors_total)' },
       },
       {
         title: 'CPU',
         type: 'gauge',
-        grid_pos: { x: 0, y: 2, w: 4, h: 2 },
-        query: { datasource_id: 'ds-1', expr: 'process_cpu_seconds_total' },
+        position: { x: 0, y: 2, w: 4, h: 2 },
+        datasource_id: 'ds-1',
+        query: { expr: 'process_cpu_seconds_total' },
       },
     ],
     ...overrides,
@@ -128,7 +131,7 @@ describe('DashboardSpecPreview', () => {
   it('shows validation errors and disables save when spec is invalid', async () => {
     mockValidateDashboardSpec.mockReturnValue({
       valid: false,
-      errors: ['Panel 1: grid_pos.x + w must be <= 12, got 14'],
+      errors: ['Panel 1: position.x + w must be <= 12, got 14'],
     })
 
     const spec = makeSpec({
@@ -136,8 +139,9 @@ describe('DashboardSpecPreview', () => {
         {
           title: 'Wide panel',
           type: 'line_chart',
-          grid_pos: { x: 8, y: 0, w: 6, h: 2 },
-          query: { datasource_id: 'ds-1', expr: 'up' },
+          position: { x: 8, y: 0, w: 6, h: 2 },
+          datasource_id: 'ds-1',
+        query: { expr: 'up' },
         },
       ],
     })
@@ -149,7 +153,7 @@ describe('DashboardSpecPreview', () => {
     await flushPromises()
 
     // Validation errors should appear
-    expect(wrapper.text()).toContain('grid_pos.x + w must be <= 12')
+    expect(wrapper.text()).toContain('position.x + w must be <= 12')
     // Save button should be disabled after validation errors are set
     expect(saveBtn.attributes('disabled')).toBeDefined()
   })
@@ -161,8 +165,9 @@ describe('DashboardSpecPreview', () => {
         {
           title: 'HTTP Requests',
           type: 'line_chart',
-          grid_pos: { x: 0, y: 0, w: 12, h: 2 },
-          query: { datasource_id: 'ds-1', expr: 'rate(http_requests_total[5m])' },
+          position: { x: 0, y: 0, w: 12, h: 2 },
+          datasource_id: 'ds-1',
+        query: { expr: 'rate(http_requests_total[5m])' },
         },
       ],
     })
@@ -177,8 +182,9 @@ describe('DashboardSpecPreview', () => {
         {
           title: 'Custom metric',
           type: 'line_chart',
-          grid_pos: { x: 0, y: 0, w: 12, h: 2 },
-          query: { datasource_id: 'ds-1', expr: 'rate(my_custom_metric[5m])' },
+          position: { x: 0, y: 0, w: 12, h: 2 },
+          datasource_id: 'ds-1',
+        query: { expr: 'rate(my_custom_metric[5m])' },
         },
       ],
     })

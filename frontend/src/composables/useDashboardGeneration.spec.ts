@@ -41,8 +41,9 @@ const validSpec = {
     {
       title: 'Panel 1',
       type: 'line_chart',
-      grid_pos: { x: 0, y: 0, w: 6, h: 3 },
-      query: { expr: 'up', datasource_id: '' },
+      position: { x: 0, y: 0, w: 6, h: 3 },
+      datasource_id: '',
+      query: { expr: 'up' },
     },
   ],
 }
@@ -92,7 +93,7 @@ describe('useDashboardGeneration', () => {
       expect(mockExecuteTool).toHaveBeenCalledOnce()
     })
 
-    it('injects datasourceId into every panel query.datasource_id', async () => {
+    it('injects datasourceId into every panel datasource_id', async () => {
       mockSendChatRequest.mockResolvedValueOnce({
         content: null,
         toolCalls: [makeToolCall('generate_dashboard', validSpec)],
@@ -105,7 +106,7 @@ describe('useDashboardGeneration', () => {
         'MyDS',
       )
 
-      expect(result.spec!.panels[0].query.datasource_id).toBe('ds-1')
+      expect(result.spec!.panels[0].datasource_id).toBe('ds-1')
     })
 
     it('calls onContent callback when AI returns content between iterations', async () => {

@@ -27,7 +27,7 @@ describe('importDashboardYaml', () => {
         }),
     })
 
-    const yamlPayload = 'schema_version: 1\ndashboard:\n  title: Imported Dashboard\n'
+    const yamlPayload = 'version: 2\ntitle: Imported Dashboard\n'
     const result = await importDashboardYaml('org-1', yamlPayload)
 
     expect(mockFetch).toHaveBeenCalledWith(
