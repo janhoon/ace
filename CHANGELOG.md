@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.13.0](https://github.com/aceobservability/ace/compare/v0.12.0...v0.13.0) (2026-04-06)
+
+
+### Features
+
+* implement all P2 TODOs — rate limiting, spec refinement, favorites, audit hardening, trusted proxies ([#215](https://github.com/aceobservability/ace/issues/215)) ([05d281d](https://github.com/aceobservability/ace/commit/05d281d7411805081976ecd2101349f4eaaca55d))
+
+
+### Bug Fixes
+
+* consolidate duplicate refresh controls in dashboard toolbar ([#214](https://github.com/aceobservability/ace/issues/214)) ([95991fb](https://github.com/aceobservability/ace/commit/95991fb1b2dfcd6d2ede14d1d7e2086686a8dc4f))
+* prevent org switcher popup from immediately closing ([#211](https://github.com/aceobservability/ace/issues/211)) ([a6dc4dc](https://github.com/aceobservability/ace/commit/a6dc4dcc725e451d71c3f1a689bff4554aa7d9ab))
+
 ## [0.12.0](https://github.com/aceobservability/ace/compare/v0.11.7...v0.12.0) (2026-04-06)
 
 
