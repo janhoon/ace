@@ -106,6 +106,10 @@ func (h *DashboardHandler) Export(w http.ResponseWriter, r *http.Request) {
 		}
 		rawPanels = append(rawPanels, rp)
 	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, `{"error":"failed to read dashboard panels"}`, http.StatusInternalServerError)
+		return
+	}
 
 	// Batch-resolve datasource UUIDs to name+type
 	resolver := NewDatasourceResolver(h.pool)
