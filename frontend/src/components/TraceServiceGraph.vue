@@ -299,7 +299,7 @@ function handleSelectEdge(edge: PositionedEdge) {
               stroke: edgeColor(edge),
               strokeWidth: edgeWidth(edge),
               strokeOpacity: selectedEdgeKey === edge.key ? 1 : 0.84,
-              filter: selectedEdgeKey === edge.key ? 'drop-shadow(0 0 4px rgba(201, 150, 15, 0.3))' : 'none',
+              filter: selectedEdgeKey === edge.key ? 'drop-shadow(0 0 4px color-mix(in srgb, var(--color-primary) 30%, transparent))' : 'none',
             }"
             marker-end="url(#service-graph-arrow)"
             @click="handleSelectEdge(edge)"
