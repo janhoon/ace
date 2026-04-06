@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/aceobservability/ace/compare/v0.13.0...v0.14.0) (2026-04-06)
+
+
+### Features
+
+* Explore page enhancements — label browser, AI assist, export to dashboard, full infra stack ([#216](https://github.com/aceobservability/ace/issues/216)) ([fa787b5](https://github.com/aceobservability/ace/commit/fa787b5f782e73d1c833e112f5d8315db90269d3))
+
 ## [0.13.0](https://github.com/aceobservability/ace/compare/v0.12.0...v0.13.0) (2026-04-06)
 
 
