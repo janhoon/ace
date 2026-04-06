@@ -272,9 +272,12 @@ async function sendChatRequest(
 
   let response = await fetch(`${API_BASE}/api/orgs/${orgId}/ai/chat`, fetchOptions)
 
-  // Retry once on 429 after 2s
+  // Retry once on 429 after 2s, respecting abort signal
   if (response.status === 429) {
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await Promise.race([
+      new Promise((resolve) => setTimeout(resolve, 2000)),
+      ...(signal ? [new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true }))] : []),
+    ])
     response = await fetch(`${API_BASE}/api/orgs/${orgId}/ai/chat`, fetchOptions)
   }
 

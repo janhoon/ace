@@ -127,7 +127,7 @@ export function useDashboardGeneration(
         }
       }
 
-      if (!resultSpec && !signal.aborted) {
+      if (!resultSpec && !abortController?.signal.aborted) {
         error.value = 'Could not generate a dashboard. Try a more specific prompt.'
       }
     } catch (e) {

@@ -352,7 +352,8 @@ describe('useDashboardGeneration', () => {
       )
 
       const { generate, cancel, isGenerating } = getDeps()
-      const promise = generate(
+      // Fire and forget — cancel will abort it
+      void generate(
         [{ role: 'user', content: 'test' }],
         [],
         'MyDS',
@@ -364,9 +365,6 @@ describe('useDashboardGeneration', () => {
 
       cancel()
       expect(isGenerating.value).toBe(false)
-
-      // The promise should eventually resolve without error
-      // (AbortController causes the fetch to reject, caught internally)
     })
 
     it('is a no-op when not generating', () => {

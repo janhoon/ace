@@ -71,7 +71,7 @@ function toolStatusLabel(name: string): string {
 }
 
 async function startGeneration() {
-  if (!prompt.value.trim() || isGenerating.value) return
+  if (!canGenerate.value) return
   currentStep.value = 'generate'
   generatedSpec.value = null
 
