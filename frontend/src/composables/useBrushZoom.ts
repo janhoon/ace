@@ -1,5 +1,4 @@
 import { type Ref, onUnmounted, reactive, ref } from 'vue'
-import type VChart from 'vue-echarts'
 
 interface BrushRect {
   left: number
@@ -8,8 +7,15 @@ interface BrushRect {
   height: number
 }
 
+interface ChartInstance {
+  $el: HTMLElement
+  containPixel: (finder: string, point: number[]) => boolean
+  convertFromPixel: (finder: string, point: number[]) => number[]
+  getModel?: () => unknown
+}
+
 export function useBrushZoom(
-  chartRef: Ref<InstanceType<typeof VChart> | null>,
+  chartRef: Ref<ChartInstance | null>,
   onBrushZoom: (startMs: number, endMs: number) => void,
   onResetZoom: () => void,
 ) {
