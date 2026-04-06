@@ -10,6 +10,7 @@ import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import VChart from 'vue-echarts'
+import { useBrushZoom } from '../composables/useBrushZoom'
 import { useCrosshairSync } from '../composables/useCrosshairSync'
 import { chartPalette, chartColors, crosshairPointerStyle } from '../utils/chartTheme'
 
@@ -53,7 +54,15 @@ const props = withDefaults(
   },
 )
 
+const emit = defineEmits<{ 'brush-zoom': [start: number, end: number]; 'reset-zoom': [] }>()
+
 const chartRef = ref<typeof VChart | null>(null)
+
+const { isDragging, brushRect, handleMouseDown, handleDblClick } = useBrushZoom(
+  chartRef,
+  (start, end) => emit('brush-zoom', start, end),
+  () => emit('reset-zoom'),
+)
 
 // Format timestamp for display (compact format for axis labels)
 function formatTime(timestamp: number): string {
@@ -235,13 +244,27 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-full w-full" :style="{ height: typeof height === 'number' ? `${height}px` : height }">
+  <div class="relative h-full w-full" :style="{ height: typeof height === 'number' ? `${height}px` : height }">
+    <div
+      v-if="isDragging"
+      class="absolute pointer-events-none z-10"
+      :style="{
+        left: brushRect.left + 'px',
+        top: brushRect.top + 'px',
+        width: brushRect.width + 'px',
+        height: brushRect.height + 'px',
+        backgroundColor: 'color-mix(in srgb, var(--color-primary) 15%, transparent)',
+        border: '1px solid var(--color-primary)',
+      }"
+    />
     <VChart
       ref="chartRef"
       :option="chartOption"
       :autoresize="true"
       :group="groupId ?? undefined"
       class="h-full w-full"
+      @zr:mousedown="handleMouseDown"
+      @zr:dblclick="handleDblClick"
     />
   </div>
 </template>

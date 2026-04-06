@@ -9,7 +9,8 @@ describe('useTimeRange', () => {
 
   afterEach(() => {
     // Clean up between tests - must be done before restoring timers
-    const { cleanup, setPreset, setRefreshInterval, resumeAutoRefresh } = useTimeRange()
+    const { cleanup, setPreset, setRefreshInterval, resumeAutoRefresh, resetZoom } = useTimeRange()
+    resetZoom() // Clear any pre-zoom snapshot
     cleanup()
     // Reset to default values
     setPreset('1h')
@@ -371,6 +372,85 @@ describe('useTimeRange', () => {
 
       vi.advanceTimersByTime(5000)
       expect(callback).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('zoomToRange', () => {
+    it('should save pre-zoom snapshot and set custom range', () => {
+      const { zoomToRange, timeRange, isCustomRange, preZoomSnapshot } = useTimeRange()
+      const now = Date.now()
+
+      const zoomStart = now - 10 * 60 * 1000
+      const zoomEnd = now - 5 * 60 * 1000
+
+      zoomToRange(zoomStart, zoomEnd)
+
+      expect(isCustomRange.value).toBe(true)
+      expect(timeRange.value.start).toBe(zoomStart)
+      expect(timeRange.value.end).toBe(zoomEnd)
+      expect(preZoomSnapshot.value).not.toBeNull()
+      expect(preZoomSnapshot.value?.preset).toBe('1h')
+      expect(preZoomSnapshot.value?.isCustom).toBe(false)
+    })
+
+    it('should only save the first snapshot on multiple zooms (chain zoom behavior)', () => {
+      const { zoomToRange, preZoomSnapshot } = useTimeRange()
+      const now = Date.now()
+
+      // First zoom
+      zoomToRange(now - 10 * 60 * 1000, now - 5 * 60 * 1000)
+      const firstSnapshot = { ...preZoomSnapshot.value }
+
+      // Second zoom (chain zoom) — snapshot should not change
+      zoomToRange(now - 8 * 60 * 1000, now - 6 * 60 * 1000)
+
+      expect(preZoomSnapshot.value?.preset).toBe(firstSnapshot.preset)
+      expect(preZoomSnapshot.value?.isCustom).toBe(firstSnapshot.isCustom)
+    })
+  })
+
+  describe('resetZoom', () => {
+    it('should restore preset when pre-zoom was a preset range', () => {
+      const { setPreset, zoomToRange, resetZoom, selectedPreset, isCustomRange } = useTimeRange()
+      const now = Date.now()
+
+      setPreset('15m')
+      zoomToRange(now - 10 * 60 * 1000, now - 5 * 60 * 1000)
+
+      expect(isCustomRange.value).toBe(true)
+
+      resetZoom()
+
+      expect(selectedPreset.value).toBe('15m')
+      expect(isCustomRange.value).toBe(false)
+    })
+
+    it('should restore custom range when pre-zoom was a custom range', () => {
+      const { setCustomRange, zoomToRange, resetZoom, timeRange, isCustomRange } = useTimeRange()
+      const now = Date.now()
+      const originalStart = now - 2 * 60 * 60 * 1000
+      const originalEnd = now - 60 * 60 * 1000
+
+      setCustomRange(originalStart, originalEnd)
+      expect(isCustomRange.value).toBe(true)
+
+      zoomToRange(now - 30 * 60 * 1000, now - 20 * 60 * 1000)
+
+      resetZoom()
+
+      expect(isCustomRange.value).toBe(true)
+      expect(timeRange.value.start).toBe(originalStart)
+      expect(timeRange.value.end).toBe(originalEnd)
+    })
+
+    it('should do nothing when there is no pre-zoom snapshot', () => {
+      const { resetZoom, selectedPreset, isCustomRange } = useTimeRange()
+
+      resetZoom()
+
+      // Should remain in default state
+      expect(selectedPreset.value).toBe('1h')
+      expect(isCustomRange.value).toBe(false)
     })
   })
 })

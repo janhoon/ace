@@ -6,6 +6,8 @@ export default defineConfig({
   appearance: "dark",
   ignoreDeadLinks: [/^https?:\/\/localhost/],
 
+  head: [["link", { rel: "icon", href: "/favicon.ico" }]],
+
   themeConfig: {
     nav: [
       { text: "Guide", link: "/guide/getting-started" },
