@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { Trace, TraceSpan } from '../types/datasource'
+import { chartPalette, thresholdColors } from '../utils/chartTheme'
 
 interface SpanRow {
   span: TraceSpan
@@ -152,18 +153,7 @@ const svgHeight = computed(
 )
 const svgWidth = labelWidth + barsWidth + 12
 
-const serviceColorPalette = [
-  '#059669',
-  '#10b981',
-  '#f59e0b',
-  '#f97316',
-  '#ef4444',
-  '#14b8a6',
-  '#6366f1',
-  '#ec4899',
-  '#84cc16',
-  '#eab308',
-]
+const serviceColorPalette = chartPalette
 
 const serviceColorMap = computed(() => {
   const services = [
@@ -177,7 +167,7 @@ const serviceColorMap = computed(() => {
 })
 
 function getServiceColor(serviceName: string): string {
-  return serviceColorMap.value.get(serviceName || 'unknown') || '#94a3b8'
+  return serviceColorMap.value.get(serviceName || 'unknown') || chartPalette[7]
 }
 
 function clamped(value: number, min: number, max: number): number {
@@ -301,9 +291,9 @@ const criticalPathSpanIds = computed(() => {
 })
 
 function spanBarStroke(span: TraceSpan): string {
-  if (span.status === 'error') return '#f87171'
-  if (criticalPathSpanIds.value.has(span.spanId)) return '#f59e0b'
-  if (span.spanId === props.selectedSpanId) return '#334155'
+  if (span.status === 'error') return thresholdColors.critical
+  if (criticalPathSpanIds.value.has(span.spanId)) return thresholdColors.warning
+  if (span.spanId === props.selectedSpanId) return 'var(--color-outline-variant)'
   return 'transparent'
 }
 
@@ -319,7 +309,7 @@ function spanBarOpacity(span: TraceSpan): number {
 }
 
 function rowBgFill(rowIndex: number): string {
-  return rowIndex % 2 === 0 ? '#f8fafc' : '#ffffff'
+  return rowIndex % 2 === 0 ? 'var(--color-surface-container-low)' : 'var(--color-surface-container-high)'
 }
 </script>
 
@@ -374,7 +364,7 @@ function rowBgFill(rowIndex: number): string {
             y1="0"
             :x2="marker.x"
             :y2="svgHeight"
-            stroke="#e2e8f0"
+            stroke="var(--color-stroke-subtle)"
             stroke-width="1"
           />
           <text
@@ -383,16 +373,16 @@ function rowBgFill(rowIndex: number): string {
             :x="marker.x"
             y="14"
             text-anchor="middle"
-            fill="#94a3b8"
+            fill="var(--color-outline)"
             font-size="10"
-            font-family="IBM Plex Mono, monospace"
+            font-family="JetBrains Mono, monospace"
           >
             {{ marker.label }}
           </text>
         </g>
 
         <g>
-          <line :x1="labelWidth" y1="0" :x2="labelWidth" :y2="svgHeight" stroke="#cbd5e1" stroke-width="1" />
+          <line :x1="labelWidth" y1="0" :x2="labelWidth" :y2="svgHeight" stroke="var(--color-stroke-strong)" stroke-width="1" />
         </g>
 
         <g v-for="(row, rowIndex) in visibleRows" :key="row.span.spanId">
@@ -407,7 +397,7 @@ function rowBgFill(rowIndex: number): string {
           <text
             :x="12 + row.depth * 14"
             :y="rowY(rowIndex) + 19"
-            fill="#0f172a"
+            fill="var(--color-on-surface)"
             font-size="11"
             class="select-none"
             :title="`${row.span.operationName} (${row.span.serviceName})`"
@@ -434,9 +424,9 @@ function rowBgFill(rowIndex: number): string {
           <text
             :x="spanStartToX(row.span.startTimeUnixNano) + spanWidth(row.span.durationNano, row.span.startTimeUnixNano) + 6"
             :y="rowY(rowIndex) + 19"
-            fill="#64748b"
+            fill="var(--color-on-surface-variant)"
             font-size="10"
-            font-family="IBM Plex Mono, monospace"
+            font-family="JetBrains Mono, monospace"
           >
             {{ formatDurationNano(row.span.durationNano) }}
           </text>

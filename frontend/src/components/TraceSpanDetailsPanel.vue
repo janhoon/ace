@@ -307,16 +307,16 @@ function exportSpanJson() {
       <table v-if="sortedTags.length > 0" class="w-full border-collapse text-sm">
         <thead>
           <tr>
-            <th class="border-b  pb-1.5 text-left text-xs text-[var(--color-outline)]">Key</th>
-            <th class="border-b  pb-1.5 text-left text-xs text-[var(--color-outline)]">Value</th>
+            <th class="border-b border-[var(--color-stroke-subtle)] pb-1.5 text-left text-xs text-[var(--color-outline)]">Key</th>
+            <th class="border-b border-[var(--color-stroke-subtle)] pb-1.5 text-left text-xs text-[var(--color-outline)]">Value</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="([key, value]) in sortedTags" :key="key">
-            <td class="border-b  py-1.5 align-top">
+            <td class="border-b border-[var(--color-stroke-subtle)] py-1.5 align-top">
               <code class="rounded-sm bg-[var(--color-surface-container-high)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-outline)]">{{ key }}</code>
             </td>
-            <td class="border-b  py-1.5 align-top">
+            <td class="border-b border-[var(--color-stroke-subtle)] py-1.5 align-top">
               <code class="rounded-sm bg-[var(--color-surface-container-high)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-on-surface)]">{{ value }}</code>
             </td>
           </tr>
