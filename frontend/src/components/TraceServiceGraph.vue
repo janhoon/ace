@@ -180,12 +180,12 @@ function edgeWidth(edge: TraceServiceGraphEdge): number {
 
 function edgeColor(edge: TraceServiceGraphEdge): string {
   if (edge.errorRate >= 0.4) {
-    return '#fb7185'
+    return 'var(--color-error)'
   }
   if (edge.errorRate >= 0.15) {
-    return '#f59e0b'
+    return 'var(--color-tertiary)'
   }
-  return '#34d399'
+  return 'var(--color-secondary)'
 }
 
 function nodeRadius(node: TraceServiceGraphNode): number {
@@ -194,14 +194,16 @@ function nodeRadius(node: TraceServiceGraphNode): number {
 }
 
 function nodeColor(node: TraceServiceGraphNode): string {
-  return node.errorRate >= 0.25 ? '#e11d48' : '#10b981'
+  return node.errorRate >= 0.25 ? 'var(--color-error)' : 'var(--color-secondary)'
 }
 
 function nodeStroke(node: TraceServiceGraphNode, isSelected: boolean): string {
   if (isSelected) {
-    return '#059669'
+    return 'var(--color-primary)'
   }
-  return node.errorRate >= 0.25 ? '#fda4af' : '#a7f3d0'
+  return node.errorRate >= 0.25
+    ? 'color-mix(in srgb, var(--color-error) 50%, white)'
+    : 'color-mix(in srgb, var(--color-secondary) 50%, white)'
 }
 
 function nodeStrokeWidth(isSelected: boolean): number {
@@ -282,7 +284,7 @@ function handleSelectEdge(edge: PositionedEdge) {
             refY="2.5"
             orient="auto"
           >
-            <path d="M0,0 L5,2.5 L0,5 z" fill="#64748b" />
+            <path d="M0,0 L5,2.5 L0,5 z" fill="var(--color-outline)" />
           </marker>
         </defs>
 
@@ -297,7 +299,7 @@ function handleSelectEdge(edge: PositionedEdge) {
               stroke: edgeColor(edge),
               strokeWidth: edgeWidth(edge),
               strokeOpacity: selectedEdgeKey === edge.key ? 1 : 0.84,
-              filter: selectedEdgeKey === edge.key ? 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.4))' : 'none',
+              filter: selectedEdgeKey === edge.key ? 'drop-shadow(0 0 4px color-mix(in srgb, var(--color-primary) 30%, transparent))' : 'none',
             }"
             marker-end="url(#service-graph-arrow)"
             @click="handleSelectEdge(edge)"
@@ -322,7 +324,7 @@ function handleSelectEdge(edge: PositionedEdge) {
       </svg>
     </div>
 
-    <div class="border-t  pt-2 text-xs text-[var(--color-outline)]">
+    <div class="border-t border-[var(--color-stroke-subtle)] pt-2 text-xs text-[var(--color-outline)]">
       <p v-if="selectedService" class="m-0 flex flex-wrap gap-1.5">
         <strong class="text-[var(--color-on-surface)]">{{ selectedService }}</strong>
         <span>

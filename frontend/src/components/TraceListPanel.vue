@@ -84,27 +84,27 @@ function sortIndicator(field: TraceSortField): string {
     <table class="w-full border-collapse text-sm">
       <thead class="sticky top-0 z-10 bg-[var(--color-surface-container-high)]">
         <tr>
-          <th class="border-b  px-4 py-3 text-left align-middle">
+          <th class="border-b border-[var(--color-stroke-subtle)] px-4 py-3 text-left align-middle">
             <button type="button" class="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-[var(--color-outline)] transition hover:text-[var(--color-on-surface)]" @click="toggleSort('traceId')">
               Trace {{ sortIndicator('traceId') }}
             </button>
           </th>
-          <th class="border-b  px-4 py-3 text-left align-middle">
+          <th class="border-b border-[var(--color-stroke-subtle)] px-4 py-3 text-left align-middle">
             <button type="button" class="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-[var(--color-outline)] transition hover:text-[var(--color-on-surface)]" @click="toggleSort('startTimeUnixNano')">
               Start {{ sortIndicator('startTimeUnixNano') }}
             </button>
           </th>
-          <th class="border-b  px-4 py-3 text-left align-middle">
+          <th class="border-b border-[var(--color-stroke-subtle)] px-4 py-3 text-left align-middle">
             <button type="button" class="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-[var(--color-outline)] transition hover:text-[var(--color-on-surface)]" @click="toggleSort('durationNano')">
               Duration {{ sortIndicator('durationNano') }}
             </button>
           </th>
-          <th class="border-b  px-4 py-3 text-left align-middle">
+          <th class="border-b border-[var(--color-stroke-subtle)] px-4 py-3 text-left align-middle">
             <button type="button" class="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-[var(--color-outline)] transition hover:text-[var(--color-on-surface)]" @click="toggleSort('spanCount')">
               Spans {{ sortIndicator('spanCount') }}
             </button>
           </th>
-          <th class="border-b  px-4 py-3 text-left align-middle">
+          <th class="border-b border-[var(--color-stroke-subtle)] px-4 py-3 text-left align-middle">
             <button type="button" class="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-[var(--color-outline)] transition hover:text-[var(--color-on-surface)]" @click="toggleSort('errorSpanCount')">
               Errors {{ sortIndicator('errorSpanCount') }}
             </button>
@@ -113,15 +113,15 @@ function sortIndicator(field: TraceSortField): string {
       </thead>
       <tbody>
         <tr v-for="trace in sortedTraces" :key="trace.traceId" class="transition hover:bg-[var(--color-surface-container-high)]">
-          <td class="max-w-[220px] px-4 py-3 align-middle">
+          <td class="max-w-[220px] border-b border-[var(--color-stroke-subtle)] px-4 py-3 align-middle">
             <button type="button" class="inline-block w-full cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap border-none bg-transparent p-0 text-left font-mono text-xs text-[var(--color-primary)] transition hover:text-[var(--color-primary)] hover:underline" @click="openTrace(trace.traceId)">
               {{ trace.traceId }}
             </button>
           </td>
-          <td class="border-b  px-4 py-3 align-middle text-sm text-[var(--color-on-surface-variant)]">{{ formatStart(trace.startTimeUnixNano) }}</td>
-          <td class="border-b  px-4 py-3 align-middle font-mono text-xs text-[var(--color-outline)]">{{ formatDuration(trace.durationNano) }}</td>
-          <td class="border-b  px-4 py-3 align-middle text-sm text-[var(--color-on-surface-variant)]">{{ trace.spanCount }}</td>
-          <td class="border-b  px-4 py-3 align-middle">
+          <td class="border-b border-[var(--color-stroke-subtle)] px-4 py-3 align-middle text-sm text-[var(--color-on-surface-variant)]">{{ formatStart(trace.startTimeUnixNano) }}</td>
+          <td class="border-b border-[var(--color-stroke-subtle)] px-4 py-3 align-middle font-mono text-xs text-[var(--color-outline)]">{{ formatDuration(trace.durationNano) }}</td>
+          <td class="border-b border-[var(--color-stroke-subtle)] px-4 py-3 align-middle text-sm text-[var(--color-on-surface-variant)]">{{ trace.spanCount }}</td>
+          <td class="border-b border-[var(--color-stroke-subtle)] px-4 py-3 align-middle">
             <span :class="trace.errorSpanCount > 0 ? 'font-semibold text-[var(--color-error)]' : 'text-[var(--color-on-surface-variant)]'">
               {{ trace.errorSpanCount }}
             </span>

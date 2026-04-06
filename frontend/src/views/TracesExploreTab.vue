@@ -892,6 +892,7 @@ onUnmounted(() => {
                 data-testid="explore-traces-service-select"
                 :disabled="loadingServices || services.length === 0"
                 class="rounded-sm bg-[var(--color-surface-container-low)] px-3 py-2 text-sm text-[var(--color-on-surface)] disabled:opacity-50 disabled:cursor-not-allowed"
+                :style="{ border: '1px solid var(--color-outline-variant)' }"
               >
                 <option value="">All services</option>
                 <option v-for="service in services" :key="service" :value="service">{{ service }}</option>
@@ -904,6 +905,7 @@ onUnmounted(() => {
                 v-model.number="limit"
                 data-testid="explore-traces-limit-select"
                 class="rounded-sm bg-[var(--color-surface-container-low)] px-3 py-2 text-sm text-[var(--color-on-surface)]"
+                :style="{ border: '1px solid var(--color-outline-variant)' }"
               >
                 <option :value="10">10</option>
                 <option :value="20">20</option>
@@ -931,6 +933,7 @@ onUnmounted(() => {
             data-testid="explore-traces-search-input"
             type="text"
             class="rounded-sm bg-[var(--color-surface-container-low)] px-3 py-2 text-sm text-[var(--color-on-surface)] placeholder:text-[var(--color-outline)]"
+            :style="{ border: '1px solid var(--color-outline-variant)' }"
             placeholder="service.name=api error=true"
           />
         </div>
@@ -976,6 +979,7 @@ onUnmounted(() => {
               type="text"
               placeholder="Paste trace id"
               class="flex-1 rounded-sm bg-[var(--color-surface-container-low)] px-3 py-2 text-sm text-[var(--color-on-surface)] placeholder:text-[var(--color-outline)]"
+              :style="{ border: '1px solid var(--color-outline-variant)' }"
             />
             <button
               data-testid="explore-traces-open-btn"
@@ -991,7 +995,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Error -->
-        <div v-if="error" class="flex items-center gap-2 rounded border border-rose-500/25 bg-[var(--color-error)]/10 p-4 text-sm text-[var(--color-error)]">
+        <div v-if="error" class="flex items-center gap-2 rounded border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 p-4 text-sm text-[var(--color-error)]">
           <AlertCircle :size="16" />
           <span>{{ error }}</span>
         </div>
@@ -1025,7 +1029,7 @@ onUnmounted(() => {
         <!-- Standard trace layout: list + detail -->
         <div v-else class="grid grid-cols-[320px_minmax(0,1fr)] min-h-[460px] flex-1 max-lg:grid-cols-1">
           <!-- Trace results sidebar -->
-          <aside class="flex flex-col max-lg:border-r-0 max-lg:border-b max-lg:max-h-[320px]">
+          <aside class="flex flex-col max-lg:border-r-0 max-lg:border-b max-lg:border-[var(--color-stroke-subtle)] max-lg:max-h-[320px]">
             <div class="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-container-high)]">
               <h2 class="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-on-surface-variant)]">Matching traces</h2>
               <span class="text-xs text-[var(--color-outline)]">{{ traceSummaries.length }} result{{ traceSummaries.length === 1 ? '' : 's' }}</span>
@@ -1043,7 +1047,7 @@ onUnmounted(() => {
                 class="flex flex-col gap-1 text-left p-3 rounded-sm border cursor-pointer transition"
                 :class="selectedTraceId === summary.traceId
                   ? 'border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10'
-                  : ' bg-[var(--color-surface-container-low)]  hover:bg-[var(--color-surface-container-high)]'"
+                  : 'border-[var(--color-stroke-subtle)] bg-[var(--color-surface-container-low)] hover:bg-[var(--color-surface-container-high)]'"
                 @click="loadTrace(summary.traceId)"
               >
                 <code class="text-xs font-mono text-[var(--color-primary)] break-all">{{ summary.traceId }}</code>
@@ -1094,7 +1098,7 @@ onUnmounted(() => {
                   <span class="text-sm">Loading service graph...</span>
                 </div>
 
-                <div v-else-if="serviceGraphError" class="flex items-center gap-2 rounded-sm border border-rose-500/25 bg-[var(--color-error)]/10 px-3 py-2 text-sm text-[var(--color-error)]">
+                <div v-else-if="serviceGraphError" class="flex items-center gap-2 rounded-sm border border-[var(--color-error)]/25 bg-[var(--color-error)]/10 px-3 py-2 text-sm text-[var(--color-error)]">
                   <AlertCircle :size="14" />
                   <span>{{ serviceGraphError }}</span>
                 </div>
