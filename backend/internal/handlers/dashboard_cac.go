@@ -71,7 +71,7 @@ func (h *DashboardHandler) Export(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.pool.Query(ctx,
-		`SELECT title, type, grid_pos, query, datasource_id
+		`SELECT title, type, grid_pos, query
 		 FROM panels
 		 WHERE dashboard_id = $1
 		 ORDER BY created_at ASC`,
@@ -83,38 +83,84 @@ func (h *DashboardHandler) Export(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	panels := make([]converter.PanelResource, 0)
-	for rows.Next() {
-		var panel converter.PanelResource
-		var gridPosRaw []byte
-		var queryRaw []byte
-		var datasourceID *uuid.UUID
+	// Collect panels and extract datasource IDs from query blobs
+	type rawPanel struct {
+		title     string
+		panelType string
+		gridPos   json.RawMessage
+		queryBlob json.RawMessage
+		datasrcID string // extracted from query blob
+	}
+	var rawPanels []rawPanel
+	dsIDs := make(map[string]bool)
 
-		if err := rows.Scan(&panel.Title, &panel.Type, &gridPosRaw, &queryRaw, &datasourceID); err != nil {
+	for rows.Next() {
+		var rp rawPanel
+		if err := rows.Scan(&rp.title, &rp.panelType, &rp.gridPos, &rp.queryBlob); err != nil {
 			http.Error(w, `{"error":"failed to read dashboard panels"}`, http.StatusInternalServerError)
 			return
 		}
-		if err := json.Unmarshal(gridPosRaw, &panel.GridPos); err != nil {
+		rp.datasrcID = converter.ExtractDatasourceID(rp.queryBlob)
+		if rp.datasrcID != "" {
+			dsIDs[rp.datasrcID] = true
+		}
+		rawPanels = append(rawPanels, rp)
+	}
+
+	// Batch-resolve datasource UUIDs to name+type
+	resolver := NewDatasourceResolver(h.pool)
+	var dsUUIDs []uuid.UUID
+	for idStr := range dsIDs {
+		if id, err := uuid.Parse(idStr); err == nil {
+			dsUUIDs = append(dsUUIDs, id)
+		}
+	}
+	dsRefs, err := resolver.LookupRefs(ctx, dsUUIDs)
+	if err != nil {
+		http.Error(w, `{"error":"failed to resolve datasources"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Build v2 panels
+	panels := make([]converter.PanelResource, 0, len(rawPanels))
+	for _, rp := range rawPanels {
+		var pos converter.GridPosition
+		if err := json.Unmarshal(rp.gridPos, &pos); err != nil {
 			http.Error(w, `{"error":"failed to decode panel layout"}`, http.StatusInternalServerError)
 			return
 		}
-		if len(queryRaw) > 0 {
-			panel.Query = queryRaw
+
+		q, d := converter.QueryBlobToResources(rp.queryBlob)
+
+		panel := converter.PanelResource{
+			Title:    rp.title,
+			Type:     rp.panelType,
+			Position: pos,
+			Query:    q,
+			Display:  d,
 		}
-		if datasourceID != nil {
-			panel.DataSourceID = datasourceID
+
+		if rp.datasrcID != "" {
+			if dsID, err := uuid.Parse(rp.datasrcID); err == nil {
+				if ref, ok := dsRefs[dsID]; ok {
+					panel.Datasource = &ref
+				}
+			}
 		}
+
 		panels = append(panels, panel)
 	}
 
+	description := ""
+	if dashboard.Description != nil {
+		description = *dashboard.Description
+	}
+
 	doc := converter.DashboardDocument{
-		SchemaVersion: converter.CurrentSchemaVersion,
-		Dashboard: converter.DashboardResource{
-			ID:          &dashboard.ID,
-			Title:       dashboard.Title,
-			Description: dashboard.Description,
-			Panels:      panels,
-		},
+		Version:     converter.CurrentSchemaVersion,
+		Title:       dashboard.Title,
+		Description: description,
+		Panels:      panels,
 	}
 
 	payload, err := converter.EncodeDashboardDocument(doc, format)
@@ -182,13 +228,18 @@ func (h *DashboardHandler) Import(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(ctx)
 
+	descPtr := &doc.Description
+	if doc.Description == "" {
+		descPtr = nil
+	}
+
 	var imported models.Dashboard
 	err = tx.QueryRow(ctx,
 		`INSERT INTO dashboards (title, description, organization_id, created_by)
 		 VALUES ($1, $2, $3, $4)
 		 RETURNING id, title, description, folder_id, sort_order, created_at, updated_at, organization_id, created_by`,
-		doc.Dashboard.Title,
-		doc.Dashboard.Description,
+		doc.Title,
+		descPtr,
 		orgID,
 		userID,
 	).Scan(&imported.ID, &imported.Title, &imported.Description, &imported.FolderID, &imported.SortOrder, &imported.CreatedAt, &imported.UpdatedAt, &imported.OrganizationID, &imported.CreatedBy)
@@ -197,17 +248,31 @@ func (h *DashboardHandler) Import(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, panel := range doc.Dashboard.Panels {
-		gridPosRaw, err := json.Marshal(panel.GridPos)
+	resolver := NewDatasourceResolver(h.pool)
+
+	for _, panel := range doc.Panels {
+		gridPosRaw, err := json.Marshal(panel.Position)
 		if err != nil {
 			http.Error(w, `{"error":"failed to encode panel layout"}`, http.StatusBadRequest)
 			return
 		}
 
+		// Resolve datasource ref to UUID
+		var dsIDStr *string
 		var datasourceID any
-		if panel.DataSourceID != nil {
-			datasourceID = *panel.DataSourceID
+		if panel.Datasource != nil {
+			resolved, err := resolver.ResolveRef(ctx, orgID, *panel.Datasource)
+			if err != nil {
+				http.Error(w, `{"error":"datasource not found: `+panel.Datasource.Type+`"}`, http.StatusBadRequest)
+				return
+			}
+			datasourceID = *resolved
+			s := resolved.String()
+			dsIDStr = &s
 		}
+
+		// Re-assemble query blob from structured fields
+		queryBlob := converter.ResourcesToQueryBlob(panel.Query, panel.Display, dsIDStr)
 
 		_, err = tx.Exec(ctx,
 			`INSERT INTO panels (dashboard_id, title, type, grid_pos, query, datasource_id, created_by)
@@ -216,7 +281,7 @@ func (h *DashboardHandler) Import(w http.ResponseWriter, r *http.Request) {
 			panel.Title,
 			panel.Type,
 			gridPosRaw,
-			panel.Query,
+			queryBlob,
 			datasourceID,
 			userID,
 		)
